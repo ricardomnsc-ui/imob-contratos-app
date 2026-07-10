@@ -8,6 +8,7 @@ const bcrypt = require("bcryptjs");
 const multer = require("multer");
 const { nanoid } = require("nanoid");
 const { gerarContrato } = require("./lib/generator");
+const { convertDocxToPdf } = require("./lib/pdf");
 
 const app = express();
 const PORT = process.env.PORT || 4173;
@@ -202,8 +203,9 @@ app.post("/api/tenant", requireAuth, upload.single("logo"), (req, res) => {
 // ================= GERAÇÃO DE CONTRATO =================
 app.post("/api/gerar", requireAuth, async (req, res) => {
   try {
-    const { dados } = req.body;
+    const { dados, formato } = req.body;
     if (!dados) return res.status(400).json({ error: "dados são obrigatórios" });
+    const querPdf = formato === "pdf";
     const tenants = readTenants();
     const tenant = tenants[req.user.tenantId];
     if (!tenant) return res.status(404).json({ error: "Imobiliária não encontrada" });
@@ -214,10 +216,22 @@ app.post("/api/gerar", requireAuth, async (req, res) => {
       if (fs.existsSync(logoFile)) branding.logoBuffer = fs.readFileSync(logoFile);
     }
 
-    const buffer = await gerarContrato(dados, branding);
-    const nomeArquivo = `Contrato_${(dados.tipo || "contrato").replace(/_/g, "-")}_${(dados.imovel && dados.imovel.endereco || "").slice(0, 20).replace(/[^a-zA-Z0-9]+/g, "")}.docx`;
-    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
-    res.setHeader("Content-Disposition", `attachment; filename="${nomeArquivo || "contrato.docx"}"`);
+    let buffer = await gerarContrato(dados, branding);
+    const nomeBase = `Contrato_${(dados.tipo || "contrato").replace(/_/g, "-")}_${(dados.imovel && dados.imovel.endereco || "").slice(0, 20).replace(/[^a-zA-Z0-9]+/g, "")}` || "contrato";
+
+    if (querPdf) {
+      try {
+        buffer = await convertDocxToPdf(buffer);
+      } catch (err) {
+        console.error("Falha ao converter para PDF:", err);
+        return res.status(502).json({ error: "Não foi possível gerar o PDF agora. Tente novamente ou baixe em .docx." });
+      }
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="${nomeBase}.pdf"`);
+    } else {
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+      res.setHeader("Content-Disposition", `attachment; filename="${nomeBase}.docx"`);
+    }
     res.send(buffer);
   } catch (err) {
     console.error(err);

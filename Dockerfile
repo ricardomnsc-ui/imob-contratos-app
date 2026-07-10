@@ -1,5 +1,11 @@
 FROM node:20-slim
 
+# LibreOffice headless é usado para converter o .docx gerado em PDF sob
+# demanda (ver lib/pdf.js). --no-install-recommends mantém a imagem menor.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends libreoffice-writer && \
+    rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 COPY package*.json ./
 RUN npm install --omit=dev
