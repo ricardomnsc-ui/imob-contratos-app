@@ -1,0 +1,739 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Minutei</title>
+<link rel="icon" type="image/svg+xml" href="/logo-mark.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --brand: #1f6d4c;
+    --brand-dark: #14523a;
+    --brand-soft: #eef4f0;
+    --gold: #b08a3e;
+    --ink: #1b1f27;
+    --muted: #6b7280;
+    --border: #e7e4dc;
+    --bg: #faf9f6;
+    --paper: #ffffff;
+    --shadow-sm: 0 1px 2px rgba(20, 20, 15, 0.05);
+    --shadow-md: 0 6px 20px rgba(20, 25, 20, 0.07);
+    --serif: "Fraunces", Georgia, serif;
+    --sans: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: var(--sans); margin: 0; background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; }
+
+  /* Brand lockup */
+  .brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .brand-mark { width: 30px; height: 30px; flex-shrink: 0; display: block; filter: drop-shadow(0 2px 6px rgba(20, 82, 58, 0.3)); }
+  .brand-word { font-family: var(--serif); font-weight: 600; font-size: 19px; letter-spacing: 0.01em; color: var(--ink); }
+  .auth-card .brand-mark { width: 38px; height: 38px; }
+  .auth-card .brand-word { font-size: 23px; }
+
+  header { background: var(--paper); border-bottom: 1px solid var(--border); padding: 16px 28px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  header .tenant-badge { font-size: 13px; color: var(--muted); display: flex; align-items: center; justify-content: flex-end; gap: 16px; min-width: 0; flex: 1; }
+  header .tenant-badge span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  header .tenant-badge button { background: none; border: none; color: var(--muted); text-decoration: none; cursor: pointer; font-size: 13px; padding: 6px 12px; border-radius: 6px; transition: background .15s, color .15s; flex-shrink: 0; }
+  header .tenant-badge button:hover { background: var(--bg); color: var(--ink); }
+
+  nav { display: flex; gap: 4px; padding: 10px 28px; background: var(--paper); border-bottom: 1px solid var(--border); overflow-x: auto; }
+  nav button { border: none; background: none; padding: 9px 16px; border-radius: 999px; cursor: pointer; font-size: 13.5px; font-weight: 500; color: var(--muted); transition: background .15s, color .15s; white-space: nowrap; flex-shrink: 0; }
+  nav button:hover { color: var(--ink); }
+  nav button.active { background: var(--brand-soft); color: var(--brand-dark); font-weight: 600; }
+
+  @media (max-width: 640px) {
+    header { padding: 14px 16px; }
+    header .tenant-badge { font-size: 12px; max-width: 100%; }
+    nav { padding: 8px 16px; }
+    main { margin: 20px auto; padding: 0 14px 50px; }
+    .card { padding: 20px; border-radius: 12px; }
+    .grid, .grid.cols3 { grid-template-columns: 1fr; }
+    .auth-card { width: 100%; padding: 28px 24px; }
+  }
+
+  main { max-width: 880px; margin: 32px auto; padding: 0 20px 70px; }
+  .card { background: var(--paper); border: 1px solid var(--border); border-radius: 14px; padding: 28px; margin-bottom: 22px; box-shadow: var(--shadow-sm); }
+  .card h2 { font-family: var(--serif); font-weight: 600; font-size: 18px; margin: 0 0 5px; letter-spacing: 0.01em; }
+  .card .hint { font-size: 13.5px; color: var(--muted); margin: 0 0 20px; line-height: 1.5; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid.cols3 { grid-template-columns: 1fr 1fr 1fr; }
+  label { display: block; font-size: 12px; font-weight: 600; color: #4b5058; margin-bottom: 6px; letter-spacing: 0.01em; }
+  input, select, textarea {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 14px; font-family: inherit; background: var(--paper); color: var(--ink);
+    transition: border-color .15s, box-shadow .15s;
+  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgba(31, 109, 76, 0.12); }
+  textarea { resize: vertical; min-height: 50px; }
+  .field { margin-bottom: 15px; }
+
+  button { font-family: inherit; }
+  button.primary {
+    background: var(--brand); color: #fff; border: none; padding: 11px 24px; border-radius: 9px;
+    font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 8px rgba(31, 109, 76, 0.25);
+    transition: background .15s, box-shadow .15s, transform .1s;
+  }
+  button.primary:hover { background: var(--brand-dark); box-shadow: 0 3px 10px rgba(31, 109, 76, 0.32); }
+  button.primary:active { transform: translateY(1px); }
+  button.primary:disabled { opacity: .55; cursor: default; box-shadow: none; }
+  button.secondary {
+    background: var(--paper); border: 1px solid var(--border); padding: 10px 18px; border-radius: 9px;
+    font-size: 13.5px; cursor: pointer; color: var(--ink); font-weight: 500; transition: border-color .15s, background .15s;
+  }
+  button.secondary:hover { border-color: #c9c5b9; background: var(--bg); }
+  button.link { background: none; border: none; color: #a13a3a; font-size: 13px; cursor: pointer; text-decoration: underline; padding: 0; }
+
+  .row-list { display: flex; flex-direction: column; gap: 16px; }
+  .person-card, .parcela-card { border: 1px dashed var(--border); border-radius: 10px; padding: 18px; position: relative; background: #fdfdfb; }
+  .row-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+
+  .tabs-tipo { display: flex; gap: 10px; margin-bottom: 22px; }
+  .tabs-tipo button {
+    flex: 1; padding: 13px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--paper);
+    cursor: pointer; font-size: 14px; font-weight: 600; color: var(--muted); transition: all .15s;
+  }
+  .tabs-tipo button.active { border-color: var(--brand); color: var(--brand-dark); background: var(--brand-soft); }
+
+  .section-title {
+    font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--gold); margin: 26px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border);
+  }
+  .logo-preview { width: 64px; height: 64px; object-fit: contain; border: 1px solid var(--border); border-radius: 10px; padding: 6px; background: #fafafa; }
+  .team-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; background: var(--paper); }
+  .empty { color: var(--muted); font-size: 14px; padding: 24px; text-align: center; }
+
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; background: var(--ink); color: #fff; padding: 13px 20px;
+    border-radius: 10px; font-size: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.22); opacity: 0;
+    transform: translateY(10px); transition: all .25s; pointer-events: none; z-index: 50;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.error { background: #942d2d; }
+  .footer-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
+  .error-msg { color: #a13a3a; font-size: 13px; margin-top: 8px; min-height: 16px; }
+
+  .auth-wrap {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background:
+      radial-gradient(circle at 15% 20%, rgba(31,109,76,0.06), transparent 45%),
+      radial-gradient(circle at 85% 80%, rgba(176,138,62,0.07), transparent 45%),
+      var(--bg);
+  }
+  .auth-card { width: 400px; background: var(--paper); border: 1px solid var(--border); border-radius: 16px; padding: 36px; box-shadow: var(--shadow-md); }
+  .auth-card .brand { margin-bottom: 6px; }
+  .auth-card .hint { font-size: 13.5px; color: var(--muted); margin: 0 0 24px; }
+  .auth-switch { text-align: center; font-size: 13.5px; color: var(--muted); margin-top: 18px; }
+  .auth-switch button { background: none; border: none; color: var(--brand); font-weight: 600; cursor: pointer; font-size: 13.5px; }
+  .badge-role { font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; background: var(--brand-soft); color: var(--brand-dark); border-radius: 5px; padding: 3px 8px; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const state = {
+  user: null,
+  tenant: null,
+  team: [],
+  tipo: "compra_venda",
+  authMode: "login", // login | signup
+};
+
+function toast(msg, isError) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.className = "toast show" + (isError ? " error" : "");
+  setTimeout(() => el.className = "toast", 2600);
+}
+
+async function api(url, opts = {}) {
+  const res = await fetch(url, {
+    ...opts,
+    headers: opts.body instanceof FormData ? opts.headers : { "Content-Type": "application/json", ...(opts.headers || {}) },
+  });
+  return res;
+}
+
+// ================= AUTH SCREENS =================
+function renderAuth() {
+  const app = document.getElementById("app");
+  const isSignup = state.authMode === "signup";
+  app.innerHTML = `
+    <div class="auth-wrap">
+      <div class="auth-card">
+        <div class="brand"><img src="/logo-mark.svg" alt="Minutei" class="brand-mark" /><span class="brand-word">Minutei</span></div>
+        <p class="hint">${isSignup ? "Crie a conta da sua imobiliária" : "Entre na sua conta"}</p>
+        <form id="authForm">
+          ${isSignup ? `
+            <div class="field"><label>Nome da imobiliária *</label><input name="imobiliariaNome" required placeholder="Ex.: Imob Gest Imobiliária LTDA" /></div>
+            <div class="field"><label>Seu nome</label><input name="nome" placeholder="Nome do responsável" /></div>
+          ` : ""}
+          <div class="field"><label>E-mail *</label><input name="email" type="email" required /></div>
+          <div class="field"><label>Senha *</label><input name="password" type="password" required minlength="8" placeholder="mínimo 8 caracteres" /></div>
+          <div class="error-msg" id="authError"></div>
+          <button type="submit" class="primary" style="width:100%">${isSignup ? "Criar conta" : "Entrar"}</button>
+        </form>
+        <div class="auth-switch">
+          ${isSignup
+            ? `Já tem conta? <button id="toLogin">Entrar</button>`
+            : `Ainda não tem conta? <button id="toSignup">Criar conta da imobiliária</button>`}
+        </div>
+      </div>
+    </div>
+  `;
+
+  const toLogin = app.querySelector("#toLogin");
+  if (toLogin) toLogin.addEventListener("click", () => { state.authMode = "login"; renderAuth(); });
+  const toSignup = app.querySelector("#toSignup");
+  if (toSignup) toSignup.addEventListener("click", () => { state.authMode = "signup"; renderAuth(); });
+
+  app.querySelector("#authForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const errEl = app.querySelector("#authError");
+    errEl.textContent = "";
+    const fd = new FormData(e.target);
+    const body = Object.fromEntries(fd.entries());
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    try {
+      const res = await api(isSignup ? "/api/auth/signup" : "/api/auth/login", { method: "POST", body: JSON.stringify(body) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao autenticar");
+      state.user = data.user;
+      await bootstrapApp();
+    } catch (err) {
+      errEl.textContent = err.message;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
+// ================= APP SHELL =================
+async function bootstrapApp() {
+  await loadTenant();
+  await loadTeam();
+  renderApp();
+}
+
+async function loadTenant() {
+  const res = await api("/api/tenant");
+  if (res.status === 401) { state.user = null; renderAuth(); return; }
+  state.tenant = await res.json();
+}
+async function loadTeam() {
+  const res = await api("/api/team");
+  state.team = res.ok ? await res.json() : [];
+}
+
+function renderApp() {
+  const app = document.getElementById("app");
+  app.innerHTML = `
+    <header>
+      <div class="brand"><img src="/logo-mark.svg" alt="Minutei" class="brand-mark" /><span class="brand-word">Minutei</span></div>
+      <div class="tenant-badge">
+        <span>${state.tenant?.nome || ""} · ${state.user?.email || ""}</span>
+        <button id="btnLogout">sair</button>
+      </div>
+    </header>
+    <nav>
+      <button data-view="gerar" class="active">Gerar contrato</button>
+      <button data-view="config">Configurar imobiliária</button>
+      <button data-view="equipe">Equipe</button>
+    </nav>
+    <main>
+      <div id="view-gerar"></div>
+      <div id="view-config" style="display:none"></div>
+      <div id="view-equipe" style="display:none"></div>
+    </main>
+  `;
+
+  document.querySelectorAll("nav button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("nav button").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      const view = btn.dataset.view;
+      document.getElementById("view-gerar").style.display = view === "gerar" ? "" : "none";
+      document.getElementById("view-config").style.display = view === "config" ? "" : "none";
+      document.getElementById("view-equipe").style.display = view === "equipe" ? "" : "none";
+      if (view === "gerar") renderGerar();
+      if (view === "config") renderConfig();
+      if (view === "equipe") renderEquipe();
+    });
+  });
+
+  document.getElementById("btnLogout").addEventListener("click", async () => {
+    await api("/api/auth/logout", { method: "POST" });
+    state.user = null; state.tenant = null; state.team = [];
+    renderAuth();
+  });
+
+  renderGerar();
+}
+
+// ================= CONFIG (marca da imobiliária) =================
+function renderConfig() {
+  const t = state.tenant || {};
+  const el = document.getElementById("view-config");
+  el.innerHTML = `
+    <div class="card">
+      <h2>Identidade visual da sua imobiliária</h2>
+      <p class="hint">Esses dados aparecem no cabeçalho, rodapé e cláusula de corretagem de todos os contratos gerados pela sua conta.</p>
+      <form id="tenantForm">
+        <div class="grid">
+          <div class="field"><label>Nome da imobiliária *</label><input name="nome" required value="${t.nome || ""}" placeholder="Ex.: Imob Gest Imobiliária LTDA" /></div>
+          <div class="field"><label>CRECI</label><input name="creci" value="${t.creci || ""}" placeholder="8726-J" /></div>
+          <div class="field"><label>CNPJ</label><input name="cnpj" value="${t.cnpj || ""}" placeholder="00.000.000/0001-00" /></div>
+          <div class="field"><label>E-mail</label><input name="email" type="email" value="${t.email || ""}" placeholder="contato@imobiliaria.com.br" /></div>
+          <div class="field"><label>Endereço completo</label><input name="endereco" value="${t.endereco || ""}" placeholder="Rua X, nº 000, Bairro, Cidade/UF" /></div>
+          <div class="field"><label>Cidade (para "Cidade, data")</label><input name="cidade" value="${t.cidade || "Natal"}" /></div>
+          <div class="field"><label>Foro padrão</label><input name="foroPadrao" value="${t.foroPadrao || "Natal/RN"}" /></div>
+          <div class="field"><label>Cor da marca</label><input name="corPrimaria" type="color" value="#${t.corPrimaria || "00A859"}" style="height:38px;padding:4px" /></div>
+        </div>
+        <div class="field">
+          <label>Logo (PNG ou JPG, fundo transparente de preferência)</label>
+          <input name="logo" type="file" accept="image/png,image/jpeg" />
+          ${t.logoPath ? `<img src="${t.logoPath}" class="logo-preview" style="margin-top:8px" />` : ""}
+        </div>
+        <div class="footer-actions">
+          <button type="submit" class="primary">Salvar</button>
+        </div>
+      </form>
+    </div>
+  `;
+
+  el.querySelector("#tenantForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const colorInput = e.target.querySelector('[name="corPrimaria"]').value;
+    fd.set("corPrimaria", colorInput.replace("#", ""));
+    const res = await api("/api/tenant", { method: "POST", body: fd });
+    if (!res.ok) { const d = await res.json().catch(() => ({})); toast(d.error || "Erro ao salvar", true); return; }
+    state.tenant = await res.json();
+    renderConfig();
+    document.querySelector(".tenant-badge span").textContent = `${state.tenant.nome} · ${state.user.email}`;
+    toast("Imobiliária salva!");
+  });
+}
+
+// ================= EQUIPE =================
+function renderEquipe() {
+  const el = document.getElementById("view-equipe");
+  const isOwner = state.user?.role === "owner";
+  el.innerHTML = `
+    <div class="card">
+      <h2>Sua equipe</h2>
+      <p class="hint">Pessoas com acesso à sua imobiliária, todas gerando contratos com a mesma identidade visual.</p>
+      <div id="teamList"></div>
+      ${isOwner ? `
+        <div class="section-title">Convidar corretor(a)</div>
+        <form id="inviteForm">
+          <div class="grid cols3">
+            <div class="field"><label>Nome</label><input name="nome" /></div>
+            <div class="field"><label>E-mail *</label><input name="email" type="email" required /></div>
+            <div class="field"><label>Senha inicial *</label><input name="password" type="password" required minlength="8" /></div>
+          </div>
+          <div class="error-msg" id="inviteError"></div>
+          <button type="submit" class="secondary">Adicionar à equipe</button>
+        </form>
+      ` : `<p class="hint">Só o dono da conta pode convidar novas pessoas.</p>`}
+    </div>
+
+    <div class="card">
+      <h2>Excluir minha conta</h2>
+      <p class="hint">${isOwner && state.team.length > 1
+        ? "Você é o dono da conta. Remova ou promova os demais membros da equipe antes de poder excluir sua conta."
+        : isOwner
+          ? "Você é o único usuário desta imobiliária — excluir sua conta também apaga a identidade visual e os contratos configurados. Essa ação não pode ser desfeita."
+          : "Isso remove seu acesso a esta imobiliária. Essa ação não pode ser desfeita."}</p>
+      <form id="deleteAccountForm">
+        <div class="field" style="max-width:280px">
+          <label>Confirme sua senha</label>
+          <input name="password" type="password" required />
+        </div>
+        <div class="error-msg" id="deleteAccountError"></div>
+        <button type="submit" class="link" ${isOwner && state.team.length > 1 ? "disabled" : ""}>excluir minha conta permanentemente</button>
+      </form>
+    </div>
+  `;
+
+  const deleteForm = el.querySelector("#deleteAccountForm");
+  deleteForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const errEl = el.querySelector("#deleteAccountError");
+    errEl.textContent = "";
+    const fd = new FormData(e.target);
+    const password = fd.get("password");
+    if (!confirm("Tem certeza? Essa ação não pode ser desfeita.")) return;
+    const res = await api("/api/auth/me", { method: "DELETE", body: JSON.stringify({ password }) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { errEl.textContent = data.error || "Erro ao excluir conta"; return; }
+    state.user = null; state.tenant = null; state.team = [];
+    renderAuth();
+    toast("Conta excluída.");
+  });
+
+  const list = el.querySelector("#teamList");
+  list.innerHTML = state.team.map(u => `
+    <div class="team-row">
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:14px">${u.nome || u.email}</div>
+        <div style="font-size:12px;color:var(--muted)">${u.email}</div>
+      </div>
+      <span class="badge-role">${u.role === "owner" ? "dono" : "corretor"}</span>
+      ${isOwner && u.role !== "owner" ? `<button class="link" data-remove="${u.id}">remover</button>` : ""}
+    </div>
+  `).join("");
+
+  list.querySelectorAll("[data-remove]").forEach(b => b.addEventListener("click", async () => {
+    if (!confirm("Remover esse membro da equipe?")) return;
+    const res = await api(`/api/team/${b.dataset.remove}`, { method: "DELETE" });
+    if (!res.ok) { const d = await res.json().catch(() => ({})); toast(d.error || "Erro ao remover", true); return; }
+    await loadTeam();
+    renderEquipe();
+    toast("Membro removido");
+  }));
+
+  const inviteForm = el.querySelector("#inviteForm");
+  if (inviteForm) inviteForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const errEl = el.querySelector("#inviteError");
+    errEl.textContent = "";
+    const fd = new FormData(e.target);
+    const body = Object.fromEntries(fd.entries());
+    const res = await api("/api/team/invite", { method: "POST", body: JSON.stringify(body) });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || "Erro ao convidar"; return; }
+    await loadTeam();
+    renderEquipe();
+    toast("Corretor(a) adicionado(a)!");
+  });
+}
+
+// ================= GERAR CONTRATO =================
+function pessoaFields(prefix, idx, tipoLabel) {
+  return `
+    <div class="person-card" data-person="${prefix}-${idx}">
+      <div class="grid">
+        <div class="field"><label>Nome completo *</label><input data-f="nome" required /></div>
+        <div class="field"><label>Gênero</label><select data-f="genero"><option value="m">Masculino</option><option value="f">Feminino</option></select></div>
+        <div class="field"><label>CPF *</label><input data-f="cpf" placeholder="000.000.000-00" required /></div>
+        <div class="field"><label>RG *</label><input data-f="rg" placeholder="1.234.567 SSP/RN" required /></div>
+        <div class="field"><label>Estado civil</label>
+          <select data-f="estadoCivil">
+            <option value="solteiro(a)">Solteiro(a)</option>
+            <option value="casado(a)">Casado(a)</option>
+            <option value="divorciado(a)">Divorciado(a)</option>
+            <option value="viúvo(a)">Viúvo(a)</option>
+            <option value="união estável">União estável</option>
+          </select>
+        </div>
+        <div class="field"><label>Profissão</label><input data-f="profissao" /></div>
+        <div class="field"><label>Nacionalidade</label><input data-f="nacionalidade" value="Brasileiro(a)" /></div>
+      </div>
+      <div class="field"><label>Endereço residencial completo</label><input data-f="endereco" placeholder="Rua, nº, bairro, cidade/UF, CEP" /></div>
+      <div class="row-actions">
+        <span style="font-size:12px;color:var(--muted)">${tipoLabel} ${idx + 1}</span>
+        <button type="button" class="link" data-remove-person>remover</button>
+      </div>
+    </div>`;
+}
+
+function addPersonRow(containerId, prefix, tipoLabel) {
+  const container = document.getElementById(containerId);
+  const idx = container.children.length;
+  container.insertAdjacentHTML("beforeend", pessoaFields(prefix, idx, tipoLabel));
+  wireRemoveButtons(container);
+}
+function wireRemoveButtons(container) {
+  container.querySelectorAll("[data-remove-person]").forEach(b => {
+    b.onclick = () => { b.closest(".person-card").remove(); };
+  });
+}
+function collectPessoas(containerId) {
+  const container = document.getElementById(containerId);
+  return [...container.querySelectorAll(".person-card")].map(card => {
+    const obj = {};
+    card.querySelectorAll("[data-f]").forEach(inp => obj[inp.dataset.f] = inp.value);
+    return obj;
+  });
+}
+
+function parcelaRow(idx) {
+  return `<div class="parcela-card" data-parcela>
+    <div class="grid cols3">
+      <div class="field"><label>Rótulo</label><input data-f="rotulo" value="${idx === 0 ? "Entrada" : idx + "ª Parcela"}" /></div>
+      <div class="field"><label>Vencimento</label><input data-f="vencimento" type="date" /></div>
+      <div class="field"><label>Valor (R$)</label><input data-f="valor" type="number" step="0.01" /></div>
+    </div>
+    <div class="field"><label>Observação (opcional, ex.: "chaves")</label><input data-f="observacao" /></div>
+    <div class="row-actions"><span></span><button type="button" class="link" data-remove-parcela>remover</button></div>
+  </div>`;
+}
+function addParcelaRow() {
+  const container = document.getElementById("parcelasContainer");
+  container.insertAdjacentHTML("beforeend", parcelaRow(container.children.length));
+  wireRemoveParcelas(container);
+}
+function wireRemoveParcelas(container) {
+  container.querySelectorAll("[data-remove-parcela]").forEach(b => {
+    b.onclick = () => b.closest("[data-parcela]").remove();
+  });
+}
+function collectParcelas() {
+  return [...document.querySelectorAll("#parcelasContainer [data-parcela]")].map(card => {
+    const obj = {};
+    card.querySelectorAll("[data-f]").forEach(inp => obj[inp.dataset.f] = inp.dataset.f === "valor" ? parseFloat(inp.value || 0) : inp.value);
+    return obj;
+  });
+}
+
+function renderGerar() {
+  const el = document.getElementById("view-gerar");
+  el.innerHTML = `
+    <div class="card">
+      <h2>Tipo de contrato</h2>
+      <div class="tabs-tipo">
+        <button data-tipo="compra_venda" class="${state.tipo === "compra_venda" ? "active" : ""}">Compra e Venda</button>
+        <button data-tipo="locacao_caucao" class="${state.tipo === "locacao_caucao" ? "active" : ""}">Locação (Caução)</button>
+        <button data-tipo="locacao_fiador" class="${state.tipo === "locacao_fiador" ? "active" : ""}">Locação (Fiador)</button>
+      </div>
+
+      <form id="contratoForm">
+        <div class="section-title">Imóvel</div>
+        <div class="grid">
+          <div class="field"><label>Endereço completo *</label><input name="imovel.endereco" required placeholder="Rua, nº, complemento, bairro, cidade/UF" /></div>
+          <div class="field"><label>Matrícula (opcional)</label><input name="imovel.matricula" /></div>
+        </div>
+        <div class="field"><label>Características (opcional)</label><input name="imovel.caracteristicas" placeholder="Ex.: 3 quartos, 2 vagas, 120m²" /></div>
+
+        <div class="section-title" id="labelVendedores">Vendedor(es)</div>
+        <div class="row-list" id="vendedores"></div>
+        <button type="button" class="secondary" id="btnAddVendedor" style="margin-top:10px">+ adicionar</button>
+
+        <div class="section-title" id="labelCompradores">Comprador(es)</div>
+        <div class="row-list" id="compradores"></div>
+        <button type="button" class="secondary" id="btnAddComprador" style="margin-top:10px">+ adicionar</button>
+
+        <div id="fiadorSection" style="display:none">
+          <div class="section-title">Fiador(es)</div>
+          <div class="row-list" id="fiadores"></div>
+          <button type="button" class="secondary" id="btnAddFiador" style="margin-top:10px">+ adicionar</button>
+        </div>
+
+        <div id="compraVendaFields">
+          <div class="section-title">Valor e pagamento</div>
+          <div class="grid">
+            <div class="field"><label>Modalidade</label>
+              <select name="pagamento.modalidade">
+                <option value="a_vista">À vista</option>
+                <option value="parcelado">Parcelado (direto)</option>
+                <option value="financiado">Financiado (banco)</option>
+                <option value="misto">Misto</option>
+              </select>
+            </div>
+            <div class="field"><label>Valor total (R$)</label><input name="valor.total" type="number" step="0.01" /></div>
+          </div>
+          <div class="field"><label>Valor por extenso (opcional)</label><input name="valor.extenso" placeholder="Ex.: um milhão e seiscentos mil reais" /></div>
+          <div id="parcelasContainer" class="row-list"></div>
+          <button type="button" class="secondary" id="btnAddParcela" style="margin-top:10px">+ adicionar parcela</button>
+
+          <div class="section-title">Dados bancários (opcional)</div>
+          <div class="grid">
+            <div class="field"><label>Titular</label><input name="pagamento.dadosBancarios.titular" /></div>
+            <div class="field"><label>CPF/CNPJ</label><input name="pagamento.dadosBancarios.cpf" /></div>
+            <div class="field"><label>Banco</label><input name="pagamento.dadosBancarios.banco" /></div>
+            <div class="field"><label>Tipo de conta</label><input name="pagamento.dadosBancarios.tipo" /></div>
+            <div class="field"><label>Agência</label><input name="pagamento.dadosBancarios.agencia" /></div>
+            <div class="field"><label>Conta</label><input name="pagamento.dadosBancarios.conta" /></div>
+            <div class="field"><label>Chave PIX</label><input name="pagamento.dadosBancarios.pix" /></div>
+          </div>
+
+          <div class="section-title">Comissão de corretagem</div>
+          <div class="grid">
+            <div class="field"><label>Percentual (%)</label><input name="corretagem.percentual" type="number" value="5" /></div>
+          </div>
+        </div>
+
+        <div id="locacaoFields" style="display:none">
+          <div class="section-title">Vigência</div>
+          <div class="grid cols3">
+            <div class="field"><label>Meses</label><input name="vigencia.meses" type="number" value="30" /></div>
+            <div class="field"><label>Início</label><input name="vigencia.inicio" type="date" /></div>
+            <div class="field"><label>Fim</label><input name="vigencia.fim" type="date" /></div>
+          </div>
+
+          <div class="section-title">Aluguel</div>
+          <div class="grid cols3">
+            <div class="field"><label>Valor mensal (R$)</label><input name="aluguel.valor" type="number" step="0.01" /></div>
+            <div class="field"><label>Dia de vencimento</label><input name="aluguel.diaVencimento" type="number" value="10" /></div>
+            <div class="field"><label>Índice de reajuste</label><input name="aluguel.indice" value="IGP-M" /></div>
+          </div>
+
+          <div class="section-title" id="garantiaTitle">Garantia (caução)</div>
+          <div class="grid" id="garantiaFields">
+            <div class="field"><label>Valor da caução (R$)</label><input name="garantia.valor" type="number" step="0.01" /></div>
+          </div>
+        </div>
+
+        <div class="section-title">Entrega de chaves</div>
+        <div class="grid">
+          <div class="field"><label>Modo</label>
+            <select name="entregaChaves.modo">
+              <option value="na_assinatura">Na assinatura</option>
+              <option value="ultima_parcela">Condicionada à última parcela</option>
+              <option value="data_fixa">Data fixa</option>
+            </select>
+          </div>
+          <div class="field"><label>Data</label><input name="entregaChaves.data" type="date" /></div>
+        </div>
+
+        <div class="section-title">Assinatura</div>
+        <div class="grid">
+          <div class="field"><label>Data do contrato</label><input name="data" type="date" /></div>
+          <div class="field"><label>Foro (opcional, usa o padrão se vazio)</label><input name="foro" /></div>
+        </div>
+
+        <div class="footer-actions" style="margin-top:20px">
+          <button type="submit" class="secondary" data-formato="docx">Gerar .docx (editável)</button>
+          <button type="submit" class="primary" data-formato="pdf">Gerar .pdf (pronto p/ assinatura)</button>
+        </div>
+      </form>
+    </div>
+  `;
+
+  document.querySelectorAll("[data-tipo]").forEach(b => b.addEventListener("click", () => {
+    state.tipo = b.dataset.tipo;
+    renderGerar();
+  }));
+
+  const isLocacao = state.tipo !== "compra_venda";
+  el.querySelector("#compraVendaFields").style.display = isLocacao ? "none" : "";
+  el.querySelector("#locacaoFields").style.display = isLocacao ? "" : "none";
+  el.querySelector("#fiadorSection").style.display = state.tipo === "locacao_fiador" ? "" : "none";
+  el.querySelector("#labelVendedores").textContent = isLocacao ? "Locador(es)" : "Vendedor(es)";
+  el.querySelector("#labelCompradores").textContent = isLocacao ? "Locatário(s)" : "Comprador(es)";
+  if (state.tipo === "locacao_fiador") {
+    el.querySelector("#garantiaTitle").textContent = "Garantia (fiador — ver seção acima)";
+    el.querySelector("#garantiaFields").style.display = "none";
+  }
+
+  addPersonRow("vendedores", "vend", isLocacao ? "Locador" : "Vendedor");
+  addPersonRow("compradores", "comp", isLocacao ? "Locatário" : "Comprador");
+  if (state.tipo === "locacao_fiador") addPersonRow("fiadores", "fiad", "Fiador");
+  if (!isLocacao) addParcelaRow();
+
+  el.querySelector("#btnAddVendedor").addEventListener("click", () => addPersonRow("vendedores", "vend", isLocacao ? "Locador" : "Vendedor"));
+  el.querySelector("#btnAddComprador").addEventListener("click", () => addPersonRow("compradores", "comp", isLocacao ? "Locatário" : "Comprador"));
+  const btnAddFiador = el.querySelector("#btnAddFiador");
+  if (btnAddFiador) btnAddFiador.addEventListener("click", () => addPersonRow("fiadores", "fiad", "Fiador"));
+  const btnAddParcela = el.querySelector("#btnAddParcela");
+  if (btnAddParcela) btnAddParcela.addEventListener("click", addParcelaRow);
+
+  el.querySelector("#contratoForm").addEventListener("submit", handleSubmit);
+}
+
+function getByPath(fd, name) {
+  return fd.get(name) || "";
+}
+
+async function handleSubmit(e) {
+  e.preventDefault();
+  const form = e.target;
+  const fd = new FormData(form);
+
+  const dados = { tipo: state.tipo };
+  dados.data = getByPath(fd, "data");
+  dados.foro = getByPath(fd, "foro");
+  dados.imovel = {
+    endereco: getByPath(fd, "imovel.endereco"),
+    matricula: getByPath(fd, "imovel.matricula"),
+    caracteristicas: getByPath(fd, "imovel.caracteristicas"),
+  };
+  dados.entregaChaves = { modo: getByPath(fd, "entregaChaves.modo"), data: getByPath(fd, "entregaChaves.data") };
+
+  const isLocacao = state.tipo !== "compra_venda";
+  const vendedores = collectPessoas("vendedores");
+  const compradores = collectPessoas("compradores");
+
+  if (isLocacao) {
+    dados.locadores = vendedores;
+    dados.locatarios = compradores;
+    if (state.tipo === "locacao_fiador") dados.fiadores = collectPessoas("fiadores");
+    dados.vigencia = { meses: getByPath(fd, "vigencia.meses"), inicio: getByPath(fd, "vigencia.inicio"), fim: getByPath(fd, "vigencia.fim") };
+    dados.aluguel = { valor: parseFloat(getByPath(fd, "aluguel.valor") || 0), diaVencimento: getByPath(fd, "aluguel.diaVencimento"), indice: getByPath(fd, "aluguel.indice") };
+    if (state.tipo === "locacao_caucao") dados.garantia = { valor: parseFloat(getByPath(fd, "garantia.valor") || 0) };
+    dados.uso = "residencial";
+  } else {
+    dados.vendedores = vendedores;
+    dados.compradores = compradores;
+    const parcelas = collectParcelas();
+    dados.pagamento = {
+      modalidade: getByPath(fd, "pagamento.modalidade"),
+      parcelas,
+      dadosBancarios: {
+        titular: getByPath(fd, "pagamento.dadosBancarios.titular"),
+        cpf: getByPath(fd, "pagamento.dadosBancarios.cpf"),
+        banco: getByPath(fd, "pagamento.dadosBancarios.banco"),
+        tipo: getByPath(fd, "pagamento.dadosBancarios.tipo"),
+        agencia: getByPath(fd, "pagamento.dadosBancarios.agencia"),
+        conta: getByPath(fd, "pagamento.dadosBancarios.conta"),
+        pix: getByPath(fd, "pagamento.dadosBancarios.pix"),
+      },
+    };
+    const valorTotalInput = parseFloat(getByPath(fd, "valor.total") || 0);
+    const valorTotal = valorTotalInput || parcelas.reduce((a, p) => a + (p.valor || 0), 0);
+    dados.valor = { total: valorTotal, extenso: getByPath(fd, "valor.extenso") };
+    dados.corretagem = { percentual: parseFloat(getByPath(fd, "corretagem.percentual") || 5) };
+  }
+
+  const formato = (e.submitter && e.submitter.dataset.formato) || "docx";
+  const buttons = form.querySelectorAll('button[type="submit"]');
+  const btn = e.submitter;
+  const originalText = btn.textContent;
+  buttons.forEach(b => b.disabled = true);
+  btn.textContent = formato === "pdf" ? "Gerando PDF..." : "Gerando...";
+  try {
+    const res = await api("/api/gerar", { method: "POST", body: JSON.stringify({ dados, formato }) });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Erro ao gerar contrato");
+    }
+    const blob = await res.blob();
+    const disposition = res.headers.get("Content-Disposition") || "";
+    const match = /filename="(.+?)"/.exec(disposition);
+    const filename = match ? match[1] : `contrato.${formato}`;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    toast("Contrato gerado com sucesso!");
+  } catch (err) {
+    toast(err.message, true);
+  } finally {
+    buttons.forEach(b => b.disabled = false);
+    btn.textContent = originalText;
+  }
+}
+
+(async function init() {
+  if (window.location.hash === "#signup") state.authMode = "signup";
+  const res = await api("/api/auth/me");
+  if (res.ok) {
+    const data = await res.json();
+    state.user = data.user;
+    await bootstrapApp();
+  } else {
+    renderAuth();
+  }
+})();
+</script>
+</body>
+</html>
