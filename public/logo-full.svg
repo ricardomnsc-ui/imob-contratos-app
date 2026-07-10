@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 40">
+  <defs>
+    <linearGradient id="g" x1="2" y1="2" x2="38" y2="38" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2c8a61"/>
+      <stop offset="1" stop-color="#123f2c"/>
+    </linearGradient>
+  </defs>
+  <rect x="1" y="1" width="38" height="38" rx="10.5" fill="url(#g)"/>
+  <path d="M11.5 29.5 L11.5 11.5 L20 21 L28.5 11.5 L28.5 29.5"
+        fill="none" stroke="#ffffff" stroke-width="3"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="31.5" cy="8" r="2.6" fill="#c79a4b"/>
+  <text x="50" y="27" font-family="Fraunces, Georgia, serif" font-weight="600" font-size="24" fill="#1b1f27">Minutei</text>
+</svg>
