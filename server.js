@@ -9,6 +9,7 @@ const multer = require("multer");
 const { nanoid } = require("nanoid");
 const { gerarContrato } = require("./lib/generator");
 const { convertDocxToPdf } = require("./lib/pdf");
+const store = require("./lib/store");
 
 const app = express();
 const PORT = process.env.PORT || 4173;
@@ -20,24 +21,14 @@ if (IS_PROD) app.set("trust proxy", 1);
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "data");
 // Por padrão, uploads fica dentro de DATA_DIR — assim um único volume
-// persistente montado em DATA_DIR cobre tudo (contas, sessões e logos).
+// persistente montado em DATA_DIR cobre tudo (sessões e logos; contas e
+// imobiliárias vão para o Postgres quando DATABASE_URL está definido).
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(DATA_DIR, "uploads");
 const SESSIONS_DIR = path.join(DATA_DIR, "sessions");
-const TENANTS_FILE = path.join(DATA_DIR, "tenants.json");
-const USERS_FILE = path.join(DATA_DIR, "users.json");
 const SECRET_FILE = path.join(DATA_DIR, "session-secret.txt");
 [DATA_DIR, UPLOAD_DIR, SESSIONS_DIR].forEach(d => fs.mkdirSync(d, { recursive: true }));
-if (!fs.existsSync(TENANTS_FILE)) fs.writeFileSync(TENANTS_FILE, "{}");
-if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, "{}");
 if (!fs.existsSync(SECRET_FILE)) fs.writeFileSync(SECRET_FILE, crypto.randomBytes(32).toString("hex"));
 const SESSION_SECRET = process.env.SESSION_SECRET || fs.readFileSync(SECRET_FILE, "utf8").trim();
-
-function readJson(file) { return JSON.parse(fs.readFileSync(file, "utf8")); }
-function writeJson(file, obj) { fs.writeFileSync(file, JSON.stringify(obj, null, 2)); }
-const readTenants = () => readJson(TENANTS_FILE);
-const writeTenants = (o) => writeJson(TENANTS_FILE, o);
-const readUsers = () => readJson(USERS_FILE);
-const writeUsers = (o) => writeJson(USERS_FILE, o);
 
 const upload = multer({
   storage: multer.diskStorage({
@@ -62,10 +53,9 @@ app.use(session({
 app.use(express.static(path.join(__dirname, "public")));
 app.use("/uploads", express.static(UPLOAD_DIR));
 
-function requireAuth(req, res, next) {
+async function requireAuth(req, res, next) {
   if (!req.session.userId) return res.status(401).json({ error: "Não autenticado" });
-  const users = readUsers();
-  const user = users[req.session.userId];
+  const user = await store.getUser(req.session.userId);
   if (!user) { req.session.destroy(() => {}); return res.status(401).json({ error: "Sessão inválida" }); }
   req.user = user;
   next();
@@ -86,27 +76,24 @@ app.post("/api/auth/signup", async (req, res) => {
       return res.status(400).json({ error: "A senha precisa ter pelo menos 8 caracteres" });
     }
     const emailNorm = String(email).trim().toLowerCase();
-    const users = readUsers();
-    if (Object.values(users).some(u => u.email === emailNorm)) {
+    if (await store.getUserByEmail(emailNorm)) {
       return res.status(409).json({ error: "Já existe uma conta com esse e-mail" });
     }
 
     const tenantId = nanoid(8);
-    const tenants = readTenants();
-    tenants[tenantId] = {
+    await store.setTenant(tenantId, {
       nome: imobiliariaNome,
       creci: "", cnpj: "", email: emailNorm, endereco: "",
       cidade: "Natal", foroPadrao: "Natal/RN", corPrimaria: "00A859", logoPath: null,
-    };
-    writeTenants(tenants);
+    });
 
     const userId = nanoid(10);
     const passwordHash = await bcrypt.hash(password, 10);
-    users[userId] = { id: userId, email: emailNorm, passwordHash, nome: nome || "", tenantId, role: "owner" };
-    writeUsers(users);
+    const user = { id: userId, email: emailNorm, passwordHash, nome: nome || "", tenantId, role: "owner" };
+    await store.setUser(userId, user);
 
     req.session.userId = userId;
-    res.json({ user: publicUser(users[userId]) });
+    res.json({ user: publicUser(user) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Erro ao criar conta" });
@@ -117,8 +104,7 @@ app.post("/api/auth/login", async (req, res) => {
   try {
     const { email, password } = req.body || {};
     const emailNorm = String(email || "").trim().toLowerCase();
-    const users = readUsers();
-    const user = Object.values(users).find(u => u.email === emailNorm);
+    const user = await store.getUserByEmail(emailNorm);
     if (!user) return res.status(401).json({ error: "E-mail ou senha inválidos" });
     const ok = await bcrypt.compare(String(password || ""), user.passwordHash);
     if (!ok) return res.status(401).json({ error: "E-mail ou senha inválidos" });
@@ -143,37 +129,32 @@ app.delete("/api/auth/me", requireAuth, async (req, res) => {
   const ok = await bcrypt.compare(String(password || ""), req.user.passwordHash);
   if (!ok) return res.status(401).json({ error: "Senha incorreta" });
 
-  const users = readUsers();
-  const teammates = Object.values(users).filter(u => u.tenantId === req.user.tenantId && u.id !== req.user.id);
+  const allUsers = await store.getAllUsers();
+  const teammates = allUsers.filter(u => u.tenantId === req.user.tenantId && u.id !== req.user.id);
 
   if (req.user.role === "owner" && teammates.length > 0) {
     return res.status(400).json({ error: "Remova ou promova os demais membros da equipe antes de excluir a conta do dono." });
   }
 
-  delete users[req.user.id];
-  writeUsers(users);
+  await store.deleteUser(req.user.id);
 
   // Dono era o último usuário do tenant: apaga a imobiliária e os uploads junto.
   if (req.user.role === "owner") {
-    const tenants = readTenants();
-    const tenant = tenants[req.user.tenantId];
+    const tenant = await store.getTenant(req.user.tenantId);
     if (tenant && tenant.logoPath) {
       const logoFile = path.join(UPLOAD_DIR, path.basename(tenant.logoPath));
       fs.rm(logoFile, { force: true }, () => {});
     }
-    delete tenants[req.user.tenantId];
-    writeTenants(tenants);
+    await store.deleteTenant(req.user.tenantId);
   }
 
   req.session.destroy(() => res.json({ ok: true }));
 });
 
 // ================= EQUIPE (usuários do mesmo tenant) =================
-app.get("/api/team", requireAuth, (req, res) => {
-  const users = readUsers();
-  const team = Object.values(users)
-    .filter(u => u.tenantId === req.user.tenantId)
-    .map(publicUser);
+app.get("/api/team", requireAuth, async (req, res) => {
+  const allUsers = await store.getAllUsers();
+  const team = allUsers.filter(u => u.tenantId === req.user.tenantId).map(publicUser);
   res.json(team);
 });
 
@@ -183,37 +164,32 @@ app.post("/api/team/invite", requireAuth, async (req, res) => {
   if (!email || !password) return res.status(400).json({ error: "E-mail e senha são obrigatórios" });
   if (String(password).length < 8) return res.status(400).json({ error: "A senha precisa ter pelo menos 8 caracteres" });
   const emailNorm = String(email).trim().toLowerCase();
-  const users = readUsers();
-  if (Object.values(users).some(u => u.email === emailNorm)) {
+  if (await store.getUserByEmail(emailNorm)) {
     return res.status(409).json({ error: "Já existe uma conta com esse e-mail" });
   }
   const userId = nanoid(10);
   const passwordHash = await bcrypt.hash(password, 10);
-  users[userId] = { id: userId, email: emailNorm, passwordHash, nome: nome || "", tenantId: req.user.tenantId, role: "corretor" };
-  writeUsers(users);
-  res.json(publicUser(users[userId]));
+  const user = { id: userId, email: emailNorm, passwordHash, nome: nome || "", tenantId: req.user.tenantId, role: "corretor" };
+  await store.setUser(userId, user);
+  res.json(publicUser(user));
 });
 
-app.delete("/api/team/:id", requireAuth, (req, res) => {
+app.delete("/api/team/:id", requireAuth, async (req, res) => {
   if (req.user.role !== "owner") return res.status(403).json({ error: "Só o dono da conta pode remover corretores" });
-  const users = readUsers();
-  const target = users[req.params.id];
+  const target = await store.getUser(req.params.id);
   if (!target || target.tenantId !== req.user.tenantId) return res.status(404).json({ error: "Usuário não encontrado" });
   if (target.role === "owner") return res.status(400).json({ error: "Não é possível remover o dono da conta" });
-  delete users[req.params.id];
-  writeUsers(users);
+  await store.deleteUser(req.params.id);
   res.json({ ok: true });
 });
 
 // ================= TENANT (marca da própria imobiliária) =================
-app.get("/api/tenant", requireAuth, (req, res) => {
-  const tenants = readTenants();
-  res.json(tenants[req.user.tenantId] || null);
+app.get("/api/tenant", requireAuth, async (req, res) => {
+  res.json(await store.getTenant(req.user.tenantId));
 });
 
-app.post("/api/tenant", requireAuth, upload.single("logo"), (req, res) => {
-  const tenants = readTenants();
-  const existing = tenants[req.user.tenantId] || {};
+app.post("/api/tenant", requireAuth, upload.single("logo"), async (req, res) => {
+  const existing = (await store.getTenant(req.user.tenantId)) || {};
   const branding = {
     nome: req.body.nome || existing.nome || "",
     creci: req.body.creci || existing.creci || "",
@@ -225,8 +201,7 @@ app.post("/api/tenant", requireAuth, upload.single("logo"), (req, res) => {
     corPrimaria: req.body.corPrimaria || existing.corPrimaria || "00A859",
     logoPath: req.file ? `/uploads/${req.file.filename}` : existing.logoPath || null,
   };
-  tenants[req.user.tenantId] = branding;
-  writeTenants(tenants);
+  await store.setTenant(req.user.tenantId, branding);
   res.json(branding);
 });
 
@@ -236,8 +211,7 @@ app.post("/api/gerar", requireAuth, async (req, res) => {
     const { dados, formato } = req.body;
     if (!dados) return res.status(400).json({ error: "dados são obrigatórios" });
     const querPdf = formato === "pdf";
-    const tenants = readTenants();
-    const tenant = tenants[req.user.tenantId];
+    const tenant = await store.getTenant(req.user.tenantId);
     if (!tenant) return res.status(404).json({ error: "Imobiliária não encontrada" });
 
     const branding = { ...tenant };
@@ -274,4 +248,11 @@ app.use((err, req, res, next) => {
   next();
 });
 
-app.listen(PORT, () => console.log(`Imob Contratos rodando em http://localhost:${PORT}`));
+store.init(DATA_DIR).then(() => {
+  app.listen(PORT, () => {
+    console.log(`Imob Contratos rodando em http://localhost:${PORT} (armazenamento: ${store.usingPostgres ? "Postgres" : "arquivos JSON locais"})`);
+  });
+}).catch(err => {
+  console.error("Falha ao inicializar o armazenamento:", err);
+  process.exit(1);
+});
