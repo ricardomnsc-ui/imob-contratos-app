@@ -250,7 +250,7 @@ app.use((err, req, res, next) => {
 
 store.init(DATA_DIR).then(() => {
   app.listen(PORT, () => {
-    console.log(`Imob Contratos rodando em http://localhost:${PORT} (armazenamento: ${store.usingPostgres ? "Postgres" : "arquivos JSON locais"})`);
+    console.log(`Minutei rodando em http://localhost:${PORT} (armazenamento: ${store.usingPostgres ? "Postgres" : "arquivos JSON locais"})`);
   });
 }).catch(err => {
   console.error("Falha ao inicializar o armazenamento:", err);

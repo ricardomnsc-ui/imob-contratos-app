@@ -1,4 +1,4 @@
-# Deploy — Contratos Imobiliários
+# Deploy — Minutei
 
 O app já está pronto para produção: sessões persistentes em disco, cookies
 seguros atrás de proxy HTTPS, Dockerfile, e tudo escopado por conta

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Contratos Imobiliários</title>
+<title>Minutei</title>
 <style>
   :root {
     --brand: #00A859;
@@ -96,7 +96,7 @@ function renderAuth() {
   app.innerHTML = `
     <div class="auth-wrap">
       <div class="auth-card">
-        <h1>🏠 Contratos Imobiliários</h1>
+        <h1>📝 Minutei</h1>
         <p class="hint">${isSignup ? "Crie a conta da sua imobiliária" : "Entre na sua conta"}</p>
         <form id="authForm">
           ${isSignup ? `
@@ -165,7 +165,7 @@ function renderApp() {
   const app = document.getElementById("app");
   app.innerHTML = `
     <header>
-      <h1>🏠 Contratos Imobiliários</h1>
+      <h1>📝 Minutei</h1>
       <div class="tenant-badge">
         <span>${state.tenant?.nome || ""} · ${state.user?.email || ""}</span>
         <button id="btnLogout">sair</button>
