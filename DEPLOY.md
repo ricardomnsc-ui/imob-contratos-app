@@ -39,10 +39,11 @@ são para Railway; se preferir outra, me avisa e adapto.
 
 4. Railway vai detectar o `Dockerfile` automaticamente e buildar a imagem.
 
-5. **Adicione um Volume** (aba "Volumes" do serviço):
+5. **Anexe um volume** (clique com o botão direito no card do serviço no
+   canvas → "Attach volume"):
    - Mount path: `/app/data`
-   - Repita para `/app/uploads` (ou monte um único volume em `/app/data` e
-     mude `UPLOAD_DIR` para dentro dele — ver variáveis abaixo).
+   - Só precisa desse um volume — uploads (logos) ficam guardados dentro dele
+     por padrão, não precisa criar um segundo.
 
 6. **Variáveis de ambiente** (aba "Variables"):
    - `NODE_ENV=production`
@@ -50,7 +51,6 @@ são para Railway; se preferir outra, me avisa e adapto.
      `openssl rand -hex 32` no terminal. Sem isso o app gera uma sozinha, mas
      é melhor fixar para não invalidar sessões a cada redeploy sem volume.
    - `DATA_DIR=/app/data`
-   - `UPLOAD_DIR=/app/uploads`
 
 7. Railway expõe uma porta pública automaticamente. Em "Settings → Networking"
    gere um domínio (`algo.up.railway.app`) — já vem com HTTPS.

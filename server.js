@@ -18,7 +18,9 @@ const IS_PROD = process.env.NODE_ENV === "production";
 if (IS_PROD) app.set("trust proxy", 1);
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "data");
-const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, "uploads");
+// Por padrão, uploads fica dentro de DATA_DIR — assim um único volume
+// persistente montado em DATA_DIR cobre tudo (contas, sessões e logos).
+const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(DATA_DIR, "uploads");
 const SESSIONS_DIR = path.join(DATA_DIR, "sessions");
 const TENANTS_FILE = path.join(DATA_DIR, "tenants.json");
 const USERS_FILE = path.join(DATA_DIR, "users.json");
