@@ -138,6 +138,36 @@ app.get("/api/auth/me", requireAuth, (req, res) => {
   res.json({ user: publicUser(req.user) });
 });
 
+app.delete("/api/auth/me", requireAuth, async (req, res) => {
+  const { password } = req.body || {};
+  const ok = await bcrypt.compare(String(password || ""), req.user.passwordHash);
+  if (!ok) return res.status(401).json({ error: "Senha incorreta" });
+
+  const users = readUsers();
+  const teammates = Object.values(users).filter(u => u.tenantId === req.user.tenantId && u.id !== req.user.id);
+
+  if (req.user.role === "owner" && teammates.length > 0) {
+    return res.status(400).json({ error: "Remova ou promova os demais membros da equipe antes de excluir a conta do dono." });
+  }
+
+  delete users[req.user.id];
+  writeUsers(users);
+
+  // Dono era o último usuário do tenant: apaga a imobiliária e os uploads junto.
+  if (req.user.role === "owner") {
+    const tenants = readTenants();
+    const tenant = tenants[req.user.tenantId];
+    if (tenant && tenant.logoPath) {
+      const logoFile = path.join(UPLOAD_DIR, path.basename(tenant.logoPath));
+      fs.rm(logoFile, { force: true }, () => {});
+    }
+    delete tenants[req.user.tenantId];
+    writeTenants(tenants);
+  }
+
+  req.session.destroy(() => res.json({ ok: true }));
+});
+
 // ================= EQUIPE (usuários do mesmo tenant) =================
 app.get("/api/team", requireAuth, (req, res) => {
   const users = readUsers();

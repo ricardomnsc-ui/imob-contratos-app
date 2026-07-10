@@ -273,7 +273,40 @@ function renderEquipe() {
         </form>
       ` : `<p class="hint">Só o dono da conta pode convidar novas pessoas.</p>`}
     </div>
+
+    <div class="card">
+      <h2>Excluir minha conta</h2>
+      <p class="hint">${isOwner && state.team.length > 1
+        ? "Você é o dono da conta. Remova ou promova os demais membros da equipe antes de poder excluir sua conta."
+        : isOwner
+          ? "Você é o único usuário desta imobiliária — excluir sua conta também apaga a identidade visual e os contratos configurados. Essa ação não pode ser desfeita."
+          : "Isso remove seu acesso a esta imobiliária. Essa ação não pode ser desfeita."}</p>
+      <form id="deleteAccountForm">
+        <div class="field" style="max-width:280px">
+          <label>Confirme sua senha</label>
+          <input name="password" type="password" required />
+        </div>
+        <div class="error-msg" id="deleteAccountError"></div>
+        <button type="submit" class="link" ${isOwner && state.team.length > 1 ? "disabled" : ""}>excluir minha conta permanentemente</button>
+      </form>
+    </div>
   `;
+
+  const deleteForm = el.querySelector("#deleteAccountForm");
+  deleteForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const errEl = el.querySelector("#deleteAccountError");
+    errEl.textContent = "";
+    const fd = new FormData(e.target);
+    const password = fd.get("password");
+    if (!confirm("Tem certeza? Essa ação não pode ser desfeita.")) return;
+    const res = await api("/api/auth/me", { method: "DELETE", body: JSON.stringify({ password }) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { errEl.textContent = data.error || "Erro ao excluir conta"; return; }
+    state.user = null; state.tenant = null; state.team = [];
+    renderAuth();
+    toast("Conta excluída.");
+  });
 
   const list = el.querySelector("#teamList");
   list.innerHTML = state.team.map(u => `
