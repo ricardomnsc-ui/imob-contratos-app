@@ -243,12 +243,14 @@ function renderApp() {
       </div>
     </header>
     <nav>
-      <button data-view="gerar" class="active">Gerar contrato</button>
+      <button data-view="dashboard" class="active">Dashboard</button>
+      <button data-view="gerar">Gerar contrato</button>
       <button data-view="config">Configurar imobiliária</button>
       <button data-view="equipe">Equipe</button>
     </nav>
     <main>
-      <div id="view-gerar"></div>
+      <div id="view-dashboard"></div>
+      <div id="view-gerar" style="display:none"></div>
       <div id="view-config" style="display:none"></div>
       <div id="view-equipe" style="display:none"></div>
     </main>
@@ -259,9 +261,11 @@ function renderApp() {
       document.querySelectorAll("nav button").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       const view = btn.dataset.view;
+      document.getElementById("view-dashboard").style.display = view === "dashboard" ? "" : "none";
       document.getElementById("view-gerar").style.display = view === "gerar" ? "" : "none";
       document.getElementById("view-config").style.display = view === "config" ? "" : "none";
       document.getElementById("view-equipe").style.display = view === "equipe" ? "" : "none";
+      if (view === "dashboard") renderDashboard();
       if (view === "gerar") renderGerar();
       if (view === "config") renderConfig();
       if (view === "equipe") renderEquipe();
@@ -274,7 +278,117 @@ function renderApp() {
     renderAuth();
   });
 
-  renderGerar();
+  renderDashboard();
+}
+
+// ================= DASHBOARD =================
+async function renderDashboard() {
+  const el = document.getElementById("view-dashboard");
+  el.innerHTML = `<div class="card"><div class="empty">Carregando...</div></div>`;
+  const res = await api("/api/dashboard");
+  if (!res.ok) { el.innerHTML = `<div class="card"><div class="empty">Não foi possível carregar o dashboard.</div></div>`; return; }
+  const d = await res.json();
+
+  const fmtBRL = (n) => (n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+  const totalUso = d.comercialVsResidencial.comercial + d.comercialVsResidencial.residencial;
+  const pctComercial = totalUso ? Math.round((d.comercialVsResidencial.comercial / totalUso) * 100) : 0;
+  const pctResidencial = 100 - pctComercial;
+  const variacaoMes = d.contratosMesPassado > 0
+    ? Math.round(((d.contratosEsteMes - d.contratosMesPassado) / d.contratosMesPassado) * 100)
+    : (d.contratosEsteMes > 0 ? 100 : 0);
+
+  if (d.totalContratos === 0) {
+    el.innerHTML = `
+      <div class="card">
+        <h2>Seu dashboard</h2>
+        <p class="hint">Assim que você gerar seu primeiro contrato, as métricas aparecem aqui: bairro com mais efetividade, valor médio de venda, comissão recebida e mais.</p>
+        <div class="empty">Nenhum contrato gerado ainda.</div>
+      </div>
+    `;
+    return;
+  }
+
+  el.innerHTML = `
+    <div class="grid cols3" style="margin-bottom:20px">
+      <div class="card" style="margin-bottom:0">
+        <div class="section-title" style="margin-top:0">Contratos gerados</div>
+        <div style="font-family:var(--serif);font-size:28px;font-weight:600">${d.totalContratos}</div>
+        <div style="font-size:12.5px;color:var(--muted);margin-top:4px">${d.contratosEsteMes} este mês ${d.contratosMesPassado ? `(${variacaoMes >= 0 ? "+" : ""}${variacaoMes}% vs mês anterior)` : ""}</div>
+      </div>
+      <div class="card" style="margin-bottom:0">
+        <div class="section-title" style="margin-top:0">Valor médio de venda</div>
+        <div style="font-family:var(--serif);font-size:28px;font-weight:600">${fmtBRL(d.valorMedioVenda)}</div>
+        <div style="font-size:12.5px;color:var(--muted);margin-top:4px">${d.porTipo.compra_venda} contrato(s) de compra e venda</div>
+      </div>
+      <div class="card" style="margin-bottom:0">
+        <div class="section-title" style="margin-top:0">Comissão recebida</div>
+        <div style="font-family:var(--serif);font-size:28px;font-weight:600">${fmtBRL(d.comissaoTotalRecebida)}</div>
+        <div style="font-size:12.5px;color:var(--muted);margin-top:4px">soma de todas as vendas geradas</div>
+      </div>
+    </div>
+
+    <div class="grid" style="margin-bottom:20px">
+      <div class="card" style="margin-bottom:0">
+        <h2>Bairro com mais efetividade</h2>
+        <p class="hint">Onde você mais fecha contrato.</p>
+        ${d.bairroRanking.length ? d.bairroRanking.map((b, i) => `
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:${i === d.bairroRanking.length - 1 ? "0" : "10px"}">
+            <span style="width:22px;height:22px;border-radius:50%;background:${i === 0 ? "var(--brand-soft)" : "var(--bg)"};color:${i === 0 ? "var(--brand-dark)" : "var(--muted)"};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">${i + 1}</span>
+            <span style="flex:1;font-size:14px">${b.bairro}</span>
+            <span style="font-size:13px;color:var(--muted);font-weight:600">${b.total} contrato${b.total > 1 ? "s" : ""}</span>
+          </div>
+        `).join("") : `<div class="empty" style="padding:12px 0">Cadastre o bairro nos próximos contratos pra ver esse ranking.</div>`}
+      </div>
+      <div class="card" style="margin-bottom:0">
+        <h2>Comercial vs Residencial</h2>
+        <p class="hint">Perfil dos imóveis nos seus contratos.</p>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
+          <span>Residencial</span><span style="font-weight:600">${pctResidencial}%</span>
+        </div>
+        <div style="height:8px;border-radius:4px;background:var(--bg);overflow:hidden;margin-bottom:14px">
+          <div style="height:100%;width:${pctResidencial}%;background:var(--brand)"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
+          <span>Comercial</span><span style="font-weight:600">${pctComercial}%</span>
+        </div>
+        <div style="height:8px;border-radius:4px;background:var(--bg);overflow:hidden">
+          <div style="height:100%;width:${pctComercial}%;background:var(--gold)"></div>
+        </div>
+        <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);font-size:13px;color:var(--muted)">
+          Ticket médio de locação: <strong style="color:var(--ink)">${fmtBRL(d.ticketMedioLocacao)}/mês</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Últimos contratos</h2>
+      <p class="hint">Os 10 mais recentes gerados por você ou sua equipe.</p>
+      ${d.ultimosContratos.length ? `
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:13.5px">
+            <thead>
+              <tr style="text-align:left;color:var(--muted);border-bottom:1px solid var(--border)">
+                <th style="padding:8px 10px 8px 0;font-weight:600">Tipo</th>
+                <th style="padding:8px 10px;font-weight:600">Endereço</th>
+                <th style="padding:8px 10px;font-weight:600">Bairro</th>
+                <th style="padding:8px 0 8px 10px;font-weight:600;text-align:right">Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${d.ultimosContratos.map(c => `
+                <tr style="border-bottom:1px solid var(--border)">
+                  <td style="padding:10px 10px 10px 0">${c.tipo === "compra_venda" ? "Compra e Venda" : c.tipo === "locacao_fiador" ? "Locação (Fiador)" : "Locação (Caução)"}</td>
+                  <td style="padding:10px">${c.endereco || "—"}</td>
+                  <td style="padding:10px">${c.bairro || "—"}</td>
+                  <td style="padding:10px 0 10px 10px;text-align:right;font-weight:600">${fmtBRL(c.valor)}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      ` : `<div class="empty">Nenhum contrato ainda.</div>`}
+    </div>
+  `;
 }
 
 // ================= CONFIG (marca da imobiliária) =================
@@ -283,11 +397,23 @@ function renderConfig() {
   const el = document.getElementById("view-config");
   el.innerHTML = `
     <div class="card">
-      <h2>Identidade visual da sua imobiliária</h2>
+      <h2>Tipo de conta</h2>
+      <p class="hint">Isso ajusta os textos do sistema — não afeta o conteúdo dos contratos.</p>
+      <form id="tipoContaForm">
+        <div class="tabs-tipo" style="margin-bottom:0">
+          <button type="button" data-tipo-conta="imobiliaria" class="${(t.tipoConta || "imobiliaria") === "imobiliaria" ? "active" : ""}">Imobiliária</button>
+          <button type="button" data-tipo-conta="corretor" class="${t.tipoConta === "corretor" ? "active" : ""}">Corretor autônomo</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Identidade visual da sua ${t.tipoConta === "corretor" ? "conta" : "imobiliária"}</h2>
       <p class="hint">Esses dados aparecem no cabeçalho, rodapé e cláusula de corretagem de todos os contratos gerados pela sua conta.</p>
       <form id="tenantForm">
+        <input type="hidden" name="tipoConta" value="${t.tipoConta || "imobiliaria"}" />
         <div class="grid">
-          <div class="field"><label>Nome da imobiliária *</label><input name="nome" required value="${t.nome || ""}" placeholder="Ex.: Imob Gest Imobiliária LTDA" /></div>
+          <div class="field"><label>${t.tipoConta === "corretor" ? "Seu nome / nome fantasia *" : "Nome da imobiliária *"}</label><input name="nome" required value="${t.nome || ""}" placeholder="${t.tipoConta === "corretor" ? "Ex.: Ricardo Nascimento Corretor de Imóveis" : "Ex.: Imob Gest Imobiliária LTDA"}" /></div>
           <div class="field"><label>CRECI</label><input name="creci" value="${t.creci || ""}" placeholder="8726-J" /></div>
           <div class="field"><label>CNPJ</label><input name="cnpj" value="${t.cnpj || ""}" placeholder="00.000.000/0001-00" /></div>
           <div class="field"><label>E-mail</label><input name="email" type="email" value="${t.email || ""}" placeholder="contato@imobiliaria.com.br" /></div>
@@ -308,6 +434,18 @@ function renderConfig() {
     </div>
   `;
 
+  el.querySelectorAll("[data-tipo-conta]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const fd = new FormData();
+      fd.set("tipoConta", btn.dataset.tipoConta);
+      fd.set("nome", t.nome || "");
+      const res = await api("/api/tenant", { method: "POST", body: fd });
+      if (!res.ok) { toast("Erro ao salvar", true); return; }
+      state.tenant = await res.json();
+      renderConfig();
+    });
+  });
+
   el.querySelector("#tenantForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
@@ -318,7 +456,7 @@ function renderConfig() {
     state.tenant = await res.json();
     renderConfig();
     document.querySelector(".tenant-badge span").textContent = `${state.tenant.nome} · ${state.user.email}`;
-    toast("Imobiliária salva!");
+    toast("Salvo!");
   });
 }
 
@@ -532,6 +670,15 @@ function renderGerar() {
           <div class="field"><label>Endereço completo *</label><input name="imovel.endereco" required placeholder="Rua, nº, complemento, bairro, cidade/UF" /></div>
           <div class="field"><label>Matrícula (opcional)</label><input name="imovel.matricula" /></div>
         </div>
+        <div class="grid">
+          <div class="field"><label>Bairro (opcional, alimenta o dashboard)</label><input name="imovel.bairro" placeholder="Ex.: Candelária" /></div>
+          <div class="field"><label>Tipo de imóvel</label>
+            <select name="imovel.tipoUso">
+              <option value="residencial">Residencial</option>
+              <option value="comercial">Comercial</option>
+            </select>
+          </div>
+        </div>
         <div class="field"><label>Características (opcional)</label><input name="imovel.caracteristicas" placeholder="Ex.: 3 quartos, 2 vagas, 120m²" /></div>
 
         <div class="section-title" id="labelVendedores">Vendedor(es)</div>
@@ -676,6 +823,8 @@ async function handleSubmit(e) {
     endereco: getByPath(fd, "imovel.endereco"),
     matricula: getByPath(fd, "imovel.matricula"),
     caracteristicas: getByPath(fd, "imovel.caracteristicas"),
+    bairro: getByPath(fd, "imovel.bairro"),
+    tipoUso: getByPath(fd, "imovel.tipoUso") || "residencial",
   };
   dados.entregaChaves = { modo: getByPath(fd, "entregaChaves.modo"), data: getByPath(fd, "entregaChaves.data") };
 

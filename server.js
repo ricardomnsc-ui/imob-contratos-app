@@ -220,12 +220,40 @@ app.post("/api/tenant", requireAuth, upload.single("logo"), async (req, res) => 
     foroPadrao: req.body.foroPadrao || existing.foroPadrao || "Natal/RN",
     corPrimaria: req.body.corPrimaria || existing.corPrimaria || "00A859",
     logoPath: req.file ? `/uploads/${req.file.filename}` : existing.logoPath || null,
+    tipoConta: req.body.tipoConta || existing.tipoConta || "imobiliaria",
     plano: existing.plano || "gratis",
     usoMensal: existing.usoMensal || {},
   };
   await store.setTenant(req.user.tenantId, branding);
   res.json(branding);
 });
+
+// Extrai um resumo do contrato (pro histórico/dashboard) a partir do JSON
+// que já foi usado pra montar o documento — não depende do arquivo gerado.
+function resumoContrato(dados) {
+  const isLocacao = dados.tipo === "locacao_caucao" || dados.tipo === "locacao_fiador";
+  let valor = 0;
+  let comissaoValor = 0;
+  if (isLocacao) {
+    valor = Number((dados.aluguel && dados.aluguel.valor) || 0);
+  } else {
+    const parcelas = (dados.pagamento && dados.pagamento.parcelas) || [];
+    valor = Number((dados.valor && dados.valor.total) || parcelas.reduce((a, p) => a + Number(p.valor || 0), 0));
+    const percentual = Number((dados.corretagem && dados.corretagem.percentual) || 5);
+    comissaoValor = (dados.corretagem && dados.corretagem.valor !== undefined)
+      ? Number(dados.corretagem.valor)
+      : valor * (percentual / 100);
+  }
+  return {
+    tipo: dados.tipo || "compra_venda",
+    data: dados.data || null,
+    endereco: (dados.imovel && dados.imovel.endereco) || "",
+    bairro: (dados.imovel && dados.imovel.bairro) || "",
+    tipoUso: (dados.imovel && dados.imovel.tipoUso) || dados.uso || "residencial",
+    valor,
+    comissaoValor,
+  };
+}
 
 // ================= GERAÇÃO DE CONTRATO =================
 app.post("/api/gerar", requireAuth, async (req, res) => {
@@ -267,17 +295,67 @@ app.post("/api/gerar", requireAuth, async (req, res) => {
       res.setHeader("Content-Disposition", `attachment; filename="${nomeBase}.docx"`);
     }
 
-    // Só conta a cota depois que o documento final está pronto pra entrega.
+    // Só conta a cota e salva o histórico depois que o documento final está pronto pra entrega.
     const mes = mesAtual();
     const usoMensal = { ...(tenant.usoMensal || {}) };
     usoMensal[mes] = (usoMensal[mes] || 0) + 1;
     store.setTenant(req.user.tenantId, { ...tenant, usoMensal }).catch(err => console.error("Falha ao registrar uso do contrato:", err));
+    store.addContract(nanoid(12), req.user.tenantId, resumoContrato(dados)).catch(err => console.error("Falha ao salvar histórico do contrato:", err));
 
     res.send(buffer);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
   }
+});
+
+// ================= DASHBOARD =================
+app.get("/api/dashboard", requireAuth, async (req, res) => {
+  const contratos = await store.getContractsByTenant(req.user.tenantId);
+
+  const vendas = contratos.filter(c => c.tipo === "compra_venda" && c.valor > 0);
+  const locacoes = contratos.filter(c => c.tipo !== "compra_venda" && c.valor > 0);
+  const comercial = contratos.filter(c => c.tipoUso === "comercial").length;
+  const residencial = contratos.filter(c => c.tipoUso !== "comercial").length;
+
+  const media = (arr, campo) => arr.length ? arr.reduce((a, c) => a + Number(c[campo] || 0), 0) / arr.length : 0;
+  const soma = (arr, campo) => arr.reduce((a, c) => a + Number(c[campo] || 0), 0);
+
+  const bairros = {};
+  contratos.forEach(c => {
+    const b = (c.bairro || "").trim();
+    if (!b) return;
+    bairros[b] = (bairros[b] || 0) + 1;
+  });
+  const bairroRanking = Object.entries(bairros)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([bairro, total]) => ({ bairro, total }));
+
+  const hoje = new Date();
+  const mesAtualStr = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}`;
+  const mesPassado = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
+  const mesPassadoStr = `${mesPassado.getFullYear()}-${String(mesPassado.getMonth() + 1).padStart(2, "0")}`;
+  const contarNoMes = (mesStr) => contratos.filter(c => c.criadoEm && String(c.criadoEm).slice(0, 7) === mesStr).length;
+
+  res.json({
+    totalContratos: contratos.length,
+    porTipo: {
+      compra_venda: contratos.filter(c => c.tipo === "compra_venda").length,
+      locacao_caucao: contratos.filter(c => c.tipo === "locacao_caucao").length,
+      locacao_fiador: contratos.filter(c => c.tipo === "locacao_fiador").length,
+    },
+    valorMedioVenda: media(vendas, "valor"),
+    ticketMedioLocacao: media(locacoes, "valor"),
+    comissaoTotalRecebida: soma(vendas, "comissaoValor"),
+    comercialVsResidencial: { comercial, residencial },
+    bairroRanking,
+    contratosEsteMes: contarNoMes(mesAtualStr),
+    contratosMesPassado: contarNoMes(mesPassadoStr),
+    ultimosContratos: contratos.slice(0, 10).map(c => ({
+      tipo: c.tipo, endereco: c.endereco, bairro: c.bairro, valor: c.valor, data: c.data, criadoEm: c.criadoEm,
+    })),
+  });
 });
 
 app.use((err, req, res, next) => {
