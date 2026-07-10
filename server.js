@@ -10,6 +10,7 @@ const { nanoid } = require("nanoid");
 const { gerarContrato } = require("./lib/generator");
 const { convertDocxToPdf } = require("./lib/pdf");
 const store = require("./lib/store");
+const { limitesDoPlano, mesAtual, contratosUsadosNoMes } = require("./lib/planos");
 
 const app = express();
 const PORT = process.env.PORT || 4173;
@@ -85,6 +86,7 @@ app.post("/api/auth/signup", async (req, res) => {
       nome: imobiliariaNome,
       creci: "", cnpj: "", email: emailNorm, endereco: "",
       cidade: "Natal", foroPadrao: "Natal/RN", corPrimaria: "00A859", logoPath: null,
+      plano: "gratis", usoMensal: {},
     });
 
     const userId = nanoid(10);
@@ -163,6 +165,15 @@ app.post("/api/team/invite", requireAuth, async (req, res) => {
   const { email, password, nome } = req.body || {};
   if (!email || !password) return res.status(400).json({ error: "E-mail e senha são obrigatórios" });
   if (String(password).length < 8) return res.status(400).json({ error: "A senha precisa ter pelo menos 8 caracteres" });
+
+  const tenant = await store.getTenant(req.user.tenantId);
+  const limites = limitesDoPlano(tenant && tenant.plano);
+  const allUsers = await store.getAllUsers();
+  const tamanhoEquipe = allUsers.filter(u => u.tenantId === req.user.tenantId).length;
+  if (tamanhoEquipe >= limites.maxUsuarios) {
+    return res.status(402).json({ error: `Seu plano (${limites.nome}) permite até ${limites.maxUsuarios} usuário(s). Faça upgrade para convidar mais gente.` });
+  }
+
   const emailNorm = String(email).trim().toLowerCase();
   if (await store.getUserByEmail(emailNorm)) {
     return res.status(409).json({ error: "Já existe uma conta com esse e-mail" });
@@ -185,7 +196,16 @@ app.delete("/api/team/:id", requireAuth, async (req, res) => {
 
 // ================= TENANT (marca da própria imobiliária) =================
 app.get("/api/tenant", requireAuth, async (req, res) => {
-  res.json(await store.getTenant(req.user.tenantId));
+  const tenant = await store.getTenant(req.user.tenantId);
+  if (!tenant) return res.json(null);
+  const limites = limitesDoPlano(tenant.plano);
+  res.json({
+    ...tenant,
+    plano: tenant.plano || "gratis",
+    usoContratosNoMes: contratosUsadosNoMes(tenant),
+    limiteContratosPorMes: limites.contratosPorMes === Infinity ? null : limites.contratosPorMes,
+    limiteUsuarios: limites.maxUsuarios === Infinity ? null : limites.maxUsuarios,
+  });
 });
 
 app.post("/api/tenant", requireAuth, upload.single("logo"), async (req, res) => {
@@ -200,6 +220,8 @@ app.post("/api/tenant", requireAuth, upload.single("logo"), async (req, res) => 
     foroPadrao: req.body.foroPadrao || existing.foroPadrao || "Natal/RN",
     corPrimaria: req.body.corPrimaria || existing.corPrimaria || "00A859",
     logoPath: req.file ? `/uploads/${req.file.filename}` : existing.logoPath || null,
+    plano: existing.plano || "gratis",
+    usoMensal: existing.usoMensal || {},
   };
   await store.setTenant(req.user.tenantId, branding);
   res.json(branding);
@@ -213,6 +235,14 @@ app.post("/api/gerar", requireAuth, async (req, res) => {
     const querPdf = formato === "pdf";
     const tenant = await store.getTenant(req.user.tenantId);
     if (!tenant) return res.status(404).json({ error: "Imobiliária não encontrada" });
+
+    const limites = limitesDoPlano(tenant.plano);
+    const usados = contratosUsadosNoMes(tenant);
+    if (usados >= limites.contratosPorMes) {
+      return res.status(402).json({
+        error: `Seu plano (${limites.nome}) permite ${limites.contratosPorMes} contrato(s) por mês e você já usou todos. Faça upgrade para continuar gerando.`,
+      });
+    }
 
     const branding = { ...tenant };
     if (tenant.logoPath) {
@@ -236,6 +266,13 @@ app.post("/api/gerar", requireAuth, async (req, res) => {
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
       res.setHeader("Content-Disposition", `attachment; filename="${nomeBase}.docx"`);
     }
+
+    // Só conta a cota depois que o documento final está pronto pra entrega.
+    const mes = mesAtual();
+    const usoMensal = { ...(tenant.usoMensal || {}) };
+    usoMensal[mes] = (usoMensal[mes] || 0) + 1;
+    store.setTenant(req.user.tenantId, { ...tenant, usoMensal }).catch(err => console.error("Falha ao registrar uso do contrato:", err));
+
     res.send(buffer);
   } catch (err) {
     console.error(err);

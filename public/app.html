@@ -494,9 +494,30 @@ function collectParcelas() {
   });
 }
 
+function planoUsageBanner() {
+  const t = state.tenant;
+  if (!t || t.limiteContratosPorMes == null) return "";
+  const usados = t.usoContratosNoMes || 0;
+  const limite = t.limiteContratosPorMes;
+  const esgotado = usados >= limite;
+  return `
+    <div class="card" style="${esgotado ? "border-color:#d33;background:#fff5f5" : ""}">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div>
+          <strong>${usados}/${limite} contratos usados este mês</strong>
+          <span style="color:var(--muted);font-size:13px"> · plano ${t.plano === "gratis" ? "Grátis" : t.plano}</span>
+        </div>
+        ${esgotado ? `<a class="btn secondary" href="/#planos" style="text-decoration:none;padding:9px 16px;border:1px solid var(--border);border-radius:9px;font-weight:600;font-size:13.5px">Fazer upgrade</a>` : ""}
+      </div>
+      ${esgotado ? `<p style="color:#a13a3a;font-size:13.5px;margin:10px 0 0">Você atingiu o limite do plano grátis. Faça upgrade pra continuar gerando contratos este mês.</p>` : ""}
+    </div>
+  `;
+}
+
 function renderGerar() {
   const el = document.getElementById("view-gerar");
   el.innerHTML = `
+    ${planoUsageBanner()}
     <div class="card">
       <h2>Tipo de contrato</h2>
       <div class="tabs-tipo">
@@ -715,6 +736,8 @@ async function handleSubmit(e) {
     document.body.appendChild(a); a.click(); a.remove();
     URL.revokeObjectURL(url);
     toast("Contrato gerado com sucesso!");
+    await loadTenant();
+    renderGerar();
   } catch (err) {
     toast(err.message, true);
   } finally {
