@@ -137,12 +137,15 @@
 <div class="toast" id="toast"></div>
 
 <script>
+const PLANOS_PAGOS = { autonomo: { nome: "Autônomo", preco: "R$49/mês" }, imobiliaria: { nome: "Imobiliária", preco: "R$149/mês" } };
+
 const state = {
   user: null,
   tenant: null,
   team: [],
   tipo: "compra_venda",
   authMode: "login", // login | signup
+  pendingPlano: null,
 };
 
 function toast(msg, isError) {
@@ -164,11 +167,13 @@ async function api(url, opts = {}) {
 function renderAuth() {
   const app = document.getElementById("app");
   const isSignup = state.authMode === "signup";
+  const plano = isSignup ? PLANOS_PAGOS[state.pendingPlano] : null;
   app.innerHTML = `
     <div class="auth-wrap">
       <div class="auth-card">
         <div class="brand"><img src="/logo-mark.svg" alt="Minutei" class="brand-mark" /><span class="brand-word">Minutei</span></div>
         <p class="hint">${isSignup ? "Crie a conta da sua imobiliária" : "Entre na sua conta"}</p>
+        ${plano ? `<p class="hint" style="background:var(--brand-soft, #eef4f0);color:var(--brand,#1f6d4c);padding:8px 12px;border-radius:8px;font-weight:600">Plano ${plano.nome} — ${plano.preco}. Depois de criar a conta, você vai para o pagamento.</p>` : ""}
         <form id="authForm">
           ${isSignup ? `
             <div class="field"><label>Nome da imobiliária *</label><input name="imobiliariaNome" required placeholder="Ex.: Imob Gest Imobiliária LTDA" /></div>
@@ -177,7 +182,7 @@ function renderAuth() {
           <div class="field"><label>E-mail *</label><input name="email" type="email" required /></div>
           <div class="field"><label>Senha *</label><input name="password" type="password" required minlength="8" placeholder="mínimo 8 caracteres" /></div>
           <div class="error-msg" id="authError"></div>
-          <button type="submit" class="primary" style="width:100%">${isSignup ? "Criar conta" : "Entrar"}</button>
+          <button type="submit" class="primary" style="width:100%">${plano ? "Criar conta e ir para pagamento" : (isSignup ? "Criar conta" : "Entrar")}</button>
         </form>
         <div class="auth-switch">
           ${isSignup
@@ -206,6 +211,18 @@ function renderAuth() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Erro ao autenticar");
       state.user = data.user;
+
+      if (isSignup && state.pendingPlano) {
+        const planoId = state.pendingPlano;
+        const checkoutRes = await api("/api/billing/checkout", { method: "POST", body: JSON.stringify({ plano: planoId }) });
+        const checkoutData = await checkoutRes.json().catch(() => ({}));
+        if (checkoutRes.ok && checkoutData.url) {
+          window.location.href = checkoutData.url;
+          return;
+        }
+        toast(checkoutData.error || "Conta criada, mas não foi possível iniciar o pagamento agora. Você pode assinar depois em Configurações.", true);
+      }
+
       await bootstrapApp();
     } catch (err) {
       errEl.textContent = err.message;
@@ -936,6 +953,8 @@ async function handleSubmit(e) {
 
 (async function init() {
   if (window.location.hash === "#signup") state.authMode = "signup";
+  const planoParam = new URLSearchParams(window.location.search).get("plano");
+  if (PLANOS_PAGOS[planoParam]) state.pendingPlano = planoParam;
   const res = await api("/api/auth/me");
   if (res.ok) {
     const data = await res.json();
