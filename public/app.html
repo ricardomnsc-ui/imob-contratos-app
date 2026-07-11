@@ -395,7 +395,21 @@ async function renderDashboard() {
 function renderConfig() {
   const t = state.tenant || {};
   const el = document.getElementById("view-config");
+  const isOwner = state.user?.role === "owner";
+  const planoNome = { gratis: "Grátis", autonomo: "Autônomo", imobiliaria: "Imobiliária", rede: "Rede" }[t.plano || "gratis"];
   el.innerHTML = `
+    <div class="card">
+      <h2>Plano e cobrança</h2>
+      <p class="hint">Plano atual: <strong>${planoNome}</strong>${t.temAssinaturaAtiva ? " (assinatura ativa)" : ""}</p>
+      ${isOwner ? `
+        <div class="footer-actions" style="justify-content:flex-start;gap:10px">
+          ${t.plano !== "autonomo" ? `<button type="button" class="secondary" data-checkout="autonomo">Assinar Autônomo — R$49/mês</button>` : ""}
+          ${t.plano !== "imobiliaria" ? `<button type="button" class="secondary" data-checkout="imobiliaria">Assinar Imobiliária — R$149/mês</button>` : ""}
+          ${t.temAssinaturaAtiva ? `<button type="button" class="secondary" id="billingPortalBtn">Gerenciar assinatura</button>` : ""}
+        </div>
+      ` : `<p class="hint">Só o dono da conta pode alterar o plano.</p>`}
+    </div>
+
     <div class="card">
       <h2>Tipo de conta</h2>
       <p class="hint">Isso ajusta os textos do sistema — não afeta o conteúdo dos contratos.</p>
@@ -433,6 +447,31 @@ function renderConfig() {
       </form>
     </div>
   `;
+
+  el.querySelectorAll("[data-checkout]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      const res = await api("/api/billing/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plano: btn.dataset.checkout }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { toast(d.error || "Erro ao iniciar pagamento", true); btn.disabled = false; return; }
+      window.location.href = d.url;
+    });
+  });
+
+  const portalBtn = el.querySelector("#billingPortalBtn");
+  if (portalBtn) {
+    portalBtn.addEventListener("click", async () => {
+      portalBtn.disabled = true;
+      const res = await api("/api/billing/portal", { method: "POST" });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { toast(d.error || "Erro ao abrir portal", true); portalBtn.disabled = false; return; }
+      window.location.href = d.url;
+    });
+  }
 
   el.querySelectorAll("[data-tipo-conta]").forEach(btn => {
     btn.addEventListener("click", async () => {

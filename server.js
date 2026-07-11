@@ -1,3 +1,4 @@
+require("dotenv").config();
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
@@ -10,7 +11,8 @@ const { nanoid } = require("nanoid");
 const { gerarContrato } = require("./lib/generator");
 const { convertDocxToPdf } = require("./lib/pdf");
 const store = require("./lib/store");
-const { limitesDoPlano, mesAtual, contratosUsadosNoMes } = require("./lib/planos");
+const { PLANOS, limitesDoPlano, mesAtual, contratosUsadosNoMes } = require("./lib/planos");
+const stripe = require("./lib/stripe");
 
 const app = express();
 const PORT = process.env.PORT || 4173;
@@ -41,6 +43,56 @@ const upload = multer({
     if (!/^image\/(png|jpe?g)$/.test(file.mimetype)) return cb(new Error("Envie um arquivo PNG ou JPG"));
     cb(null, true);
   },
+});
+
+// Precisa vir antes do express.json() — o Stripe exige o corpo bruto (não
+// parseado) da requisição para validar a assinatura do webhook.
+app.post("/api/billing/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+  if (!stripe) return res.status(503).send("Stripe não configurado");
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(req.body, req.headers["stripe-signature"], process.env.STRIPE_WEBHOOK_SECRET);
+  } catch (err) {
+    console.error("Webhook Stripe: assinatura inválida:", err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  try {
+    switch (event.type) {
+      case "checkout.session.completed": {
+        const session = event.data.object;
+        const tenantId = session.metadata && session.metadata.tenantId;
+        const planoId = session.metadata && session.metadata.plano;
+        if (tenantId && planoId) {
+          const tenant = await store.getTenant(tenantId);
+          if (tenant) {
+            await store.setTenant(tenantId, {
+              ...tenant,
+              plano: planoId,
+              stripeCustomerId: session.customer,
+              stripeSubscriptionId: session.subscription,
+            });
+          }
+        }
+        break;
+      }
+      case "customer.subscription.deleted": {
+        const sub = event.data.object;
+        const tenants = await store.getAllTenants();
+        const tenant = tenants.find(t => t.stripeSubscriptionId === sub.id);
+        if (tenant) {
+          await store.setTenant(tenant.id, { ...tenant, plano: "gratis", stripeSubscriptionId: null });
+        }
+        break;
+      }
+      default:
+        break;
+    }
+    res.json({ received: true });
+  } catch (err) {
+    console.error("Erro processando webhook Stripe:", err);
+    res.status(500).json({ error: "Erro ao processar webhook" });
+  }
 });
 
 app.use(express.json({ limit: "2mb" }));
@@ -205,6 +257,7 @@ app.get("/api/tenant", requireAuth, async (req, res) => {
     usoContratosNoMes: contratosUsadosNoMes(tenant),
     limiteContratosPorMes: limites.contratosPorMes === Infinity ? null : limites.contratosPorMes,
     limiteUsuarios: limites.maxUsuarios === Infinity ? null : limites.maxUsuarios,
+    temAssinaturaAtiva: !!tenant.stripeCustomerId,
   });
 });
 
@@ -223,9 +276,65 @@ app.post("/api/tenant", requireAuth, upload.single("logo"), async (req, res) => 
     tipoConta: req.body.tipoConta || existing.tipoConta || "imobiliaria",
     plano: existing.plano || "gratis",
     usoMensal: existing.usoMensal || {},
+    stripeCustomerId: existing.stripeCustomerId || null,
+    stripeSubscriptionId: existing.stripeSubscriptionId || null,
   };
   await store.setTenant(req.user.tenantId, branding);
   res.json(branding);
+});
+
+// ================= BILLING (Stripe) =================
+app.post("/api/billing/checkout", requireAuth, async (req, res) => {
+  if (!stripe) return res.status(503).json({ error: "Pagamento indisponível no momento" });
+  if (req.user.role !== "owner") return res.status(403).json({ error: "Só o dono da conta pode alterar o plano" });
+
+  const { plano: planoId } = req.body || {};
+  const planoInfo = PLANOS[planoId];
+  if (!planoInfo || !planoInfo.stripePriceId) {
+    return res.status(400).json({ error: "Plano inválido para checkout" });
+  }
+
+  const tenant = await store.getTenant(req.user.tenantId);
+  if (!tenant) return res.status(404).json({ error: "Imobiliária não encontrada" });
+
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      line_items: [{ price: planoInfo.stripePriceId, quantity: 1 }],
+      customer: tenant.stripeCustomerId || undefined,
+      customer_email: tenant.stripeCustomerId ? undefined : req.user.email,
+      client_reference_id: req.user.tenantId,
+      metadata: { tenantId: req.user.tenantId, plano: planoId },
+      subscription_data: { metadata: { tenantId: req.user.tenantId, plano: planoId } },
+      success_url: `${req.protocol}://${req.get("host")}/app.html?upgrade=sucesso`,
+      cancel_url: `${req.protocol}://${req.get("host")}/app.html?upgrade=cancelado`,
+    });
+    res.json({ url: session.url });
+  } catch (err) {
+    console.error("Erro ao criar checkout do Stripe:", err);
+    res.status(500).json({ error: "Não foi possível iniciar o pagamento agora" });
+  }
+});
+
+app.post("/api/billing/portal", requireAuth, async (req, res) => {
+  if (!stripe) return res.status(503).json({ error: "Pagamento indisponível no momento" });
+  if (req.user.role !== "owner") return res.status(403).json({ error: "Só o dono da conta pode gerenciar a assinatura" });
+
+  const tenant = await store.getTenant(req.user.tenantId);
+  if (!tenant || !tenant.stripeCustomerId) {
+    return res.status(400).json({ error: "Nenhuma assinatura ativa encontrada para essa conta" });
+  }
+
+  try {
+    const session = await stripe.billingPortal.sessions.create({
+      customer: tenant.stripeCustomerId,
+      return_url: `${req.protocol}://${req.get("host")}/app.html`,
+    });
+    res.json({ url: session.url });
+  } catch (err) {
+    console.error("Erro ao abrir portal do Stripe:", err);
+    res.status(500).json({ error: "Não foi possível abrir o portal de assinatura agora" });
+  }
 });
 
 // Extrai um resumo do contrato (pro histórico/dashboard) a partir do JSON
