@@ -13,6 +13,7 @@ const { convertDocxToPdf } = require("./lib/pdf");
 const store = require("./lib/store");
 const { PLANOS, limitesDoPlano, mesAtual, contratosUsadosNoMes } = require("./lib/planos");
 const stripe = require("./lib/stripe");
+const ai = require("./lib/ai");
 
 const app = express();
 const PORT = process.env.PORT || 4173;
@@ -415,6 +416,18 @@ app.post("/api/gerar", requireAuth, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ================= AJUDANTE IA DE CLÁUSULAS =================
+app.post("/api/ia/clausula", requireAuth, async (req, res) => {
+  try {
+    const { tipoContrato, clausulaAtual, pedido } = req.body || {};
+    const resultado = await ai.avaliarClausula({ tipoContrato, clausulaAtual, pedido });
+    res.json(resultado);
+  } catch (err) {
+    const indisponivel = /indispon[íi]vel/i.test(err.message || "");
+    res.status(indisponivel ? 503 : 400).json({ error: err.message });
   }
 });
 

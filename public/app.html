@@ -98,6 +98,28 @@
   }
   .tabs-tipo button.active { border-color: var(--brand); color: var(--brand-dark); background: var(--brand-soft); }
 
+  .risk-badge { display: inline-flex; align-items: center; gap: 7px; padding: 6px 14px; border-radius: 999px; font-size: 12.5px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
+  .risk-badge::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+  .risk-badge.risk-baixo { background: #eaf4ee; color: #1f6d4c; }
+  .risk-badge.risk-medio { background: #fbf0e0; color: #9a6a12; }
+  .risk-badge.risk-alto { background: #fbe9e7; color: #b43d2f; }
+  .ia-resultado { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); }
+  .ia-resultado h3 { font-size: 14px; margin: 18px 0 8px; }
+  .ia-justificativa { font-size: 14px; line-height: 1.55; color: var(--ink); }
+  .ia-texto-sugerido { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 16px; font-size: 14px; line-height: 1.6; white-space: pre-wrap; }
+  .ia-disclaimer { font-size: 12px; color: var(--muted); margin-top: 14px; line-height: 1.5; }
+
+  .layout-picker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 22px; }
+  .layout-picker button {
+    text-align: left; padding: 13px 14px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--paper);
+    cursor: pointer; transition: all .15s;
+  }
+  .layout-picker button.active { border-color: var(--brand); background: var(--brand-soft); }
+  .layout-picker .lp-name { font-size: 13.5px; font-weight: 700; color: var(--ink); }
+  .layout-picker button.active .lp-name { color: var(--brand-dark); }
+  .layout-picker .lp-desc { font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.35; }
+  @media (max-width: 640px) { .layout-picker { grid-template-columns: 1fr; } }
+
   .section-title {
     font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
     color: var(--gold); margin: 26px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border);
@@ -144,9 +166,16 @@ const state = {
   tenant: null,
   team: [],
   tipo: "compra_venda",
+  layout: "padrao",
   authMode: "login", // login | signup
   pendingPlano: null,
 };
+
+const LAYOUTS_CONTRATO = [
+  { id: "padrao", label: "Padrão", desc: "Visual limpo e funcional, com a cor da sua marca em destaque." },
+  { id: "profissional", label: "Profissional", desc: "Tom jurídico clássico, tipografia serifada e tons de tinta." },
+  { id: "elegante", label: "Elegante", desc: "Serifado refinado, paleta neutra quente e mais espaçamento." },
+];
 
 function toast(msg, isError) {
   const el = document.getElementById("toast");
@@ -262,12 +291,14 @@ function renderApp() {
     <nav>
       <button data-view="dashboard" class="active">Dashboard</button>
       <button data-view="gerar">Gerar contrato</button>
+      <button data-view="ia">Ajudante IA</button>
       <button data-view="config">Configurar imobiliária</button>
       <button data-view="equipe">Equipe</button>
     </nav>
     <main>
       <div id="view-dashboard"></div>
       <div id="view-gerar" style="display:none"></div>
+      <div id="view-ia" style="display:none"></div>
       <div id="view-config" style="display:none"></div>
       <div id="view-equipe" style="display:none"></div>
     </main>
@@ -280,10 +311,12 @@ function renderApp() {
       const view = btn.dataset.view;
       document.getElementById("view-dashboard").style.display = view === "dashboard" ? "" : "none";
       document.getElementById("view-gerar").style.display = view === "gerar" ? "" : "none";
+      document.getElementById("view-ia").style.display = view === "ia" ? "" : "none";
       document.getElementById("view-config").style.display = view === "config" ? "" : "none";
       document.getElementById("view-equipe").style.display = view === "equipe" ? "" : "none";
       if (view === "dashboard") renderDashboard();
       if (view === "gerar") renderGerar();
+      if (view === "ia") renderAjudanteIA();
       if (view === "config") renderConfig();
       if (view === "equipe") renderEquipe();
     });
@@ -720,6 +753,16 @@ function renderGerar() {
         <button data-tipo="locacao_fiador" class="${state.tipo === "locacao_fiador" ? "active" : ""}">Locação (Fiador)</button>
       </div>
 
+      <h2>Layout do documento</h2>
+      <div class="layout-picker">
+        ${LAYOUTS_CONTRATO.map(l => `
+          <button type="button" data-layout="${l.id}" class="${state.layout === l.id ? "active" : ""}">
+            <div class="lp-name">${l.label}</div>
+            <div class="lp-desc">${l.desc}</div>
+          </button>
+        `).join("")}
+      </div>
+
       <form id="contratoForm">
         <div class="section-title">Imóvel</div>
         <div class="grid">
@@ -800,9 +843,50 @@ function renderGerar() {
             <div class="field"><label>Índice de reajuste</label><input name="aluguel.indice" value="IGP-M" /></div>
           </div>
 
-          <div class="section-title" id="garantiaTitle">Garantia (caução)</div>
-          <div class="grid" id="garantiaFields">
+          <div class="section-title">Administração</div>
+          <div class="field">
+            <label style="display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer">
+              <input type="checkbox" name="administracao.ativa" id="chkAdministracao" style="width:auto" />
+              Imobiliária administra o imóvel (recebe aluguel, repassa ao locador e presta contas)
+            </label>
+          </div>
+          <div class="grid" id="administracaoFields" style="display:none">
+            <div class="field"><label>Taxa de administração (%)</label><input name="administracao.taxaPercentual" type="number" step="0.1" value="10" /></div>
+          </div>
+
+          <div class="section-title" id="garantiaTitle">Tipo de garantia</div>
+          <div class="grid" id="garantiaTipoField">
+            <div class="field">
+              <label>Garantia</label>
+              <select name="garantiaTipo" id="selGarantiaTipo">
+                <option value="caucao">Caução</option>
+                <option value="seguro_fianca">Seguro Fiança</option>
+                <option value="titulo_capitalizacao">Título de Capitalização</option>
+                <option value="personalizada">Outra (cláusula específica da imobiliária)</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid" id="garantiaFieldsCaucao">
             <div class="field"><label>Valor da caução (R$)</label><input name="garantia.valor" type="number" step="0.01" /></div>
+          </div>
+          <div class="grid" id="garantiaFieldsSeguro" style="display:none">
+            <div class="field"><label>Seguradora</label><input name="garantia.seguradora" /></div>
+            <div class="field"><label>Nº da apólice</label><input name="garantia.apolice" /></div>
+          </div>
+          <div class="grid" id="garantiaFieldsTitulo" style="display:none">
+            <div class="field"><label>Instituição emissora</label><input name="garantia.instituicao" /></div>
+            <div class="field"><label>Número do título</label><input name="garantia.numero" /></div>
+            <div class="field"><label>Valor (R$)</label><input name="garantia.valorTitulo" type="number" step="0.01" /></div>
+          </div>
+          <div class="field" id="garantiaFieldsPersonalizada" style="display:none">
+            <label>Texto da cláusula de garantia</label>
+            <textarea name="garantia.descricao" rows="3" placeholder="Cole aqui a cláusula específica de garantia que a imobiliária utiliza."></textarea>
+          </div>
+
+          <div class="section-title">Comissão de corretagem (opcional)</div>
+          <div class="grid cols3">
+            <div class="field"><label>Percentual (%)</label><input name="corretagem.percentual" type="number" step="0.1" placeholder="Ex.: 100" /></div>
+            <div class="field"><label>Sobre quantos aluguéis</label><input name="corretagem.quantidadeAlugueis" type="number" value="1" min="1" /></div>
           </div>
         </div>
 
@@ -816,6 +900,12 @@ function renderGerar() {
             </select>
           </div>
           <div class="field"><label>Data</label><input name="entregaChaves.data" type="date" /></div>
+        </div>
+
+        <div class="section-title">Cláusula especial (opcional)</div>
+        <div class="field">
+          <label>Condições específicas deste contrato</label>
+          <textarea name="clausulaEspecial" rows="4" placeholder="Ex.: O imóvel será entregue com os móveis planejados descritos no laudo de vistoria anexo. Animais de estimação de pequeno porte autorizados mediante comunicação prévia ao locador."></textarea>
         </div>
 
         <div class="section-title">Assinatura</div>
@@ -836,6 +926,10 @@ function renderGerar() {
     state.tipo = b.dataset.tipo;
     renderGerar();
   }));
+  document.querySelectorAll("[data-layout]").forEach(b => b.addEventListener("click", () => {
+    state.layout = b.dataset.layout;
+    renderGerar();
+  }));
 
   const isLocacao = state.tipo !== "compra_venda";
   el.querySelector("#compraVendaFields").style.display = isLocacao ? "none" : "";
@@ -845,7 +939,23 @@ function renderGerar() {
   el.querySelector("#labelCompradores").textContent = isLocacao ? "Locatário(s)" : "Comprador(es)";
   if (state.tipo === "locacao_fiador") {
     el.querySelector("#garantiaTitle").textContent = "Garantia (fiador — ver seção acima)";
-    el.querySelector("#garantiaFields").style.display = "none";
+    el.querySelector("#garantiaTipoField").style.display = "none";
+    el.querySelector("#garantiaFieldsCaucao").style.display = "none";
+  } else if (isLocacao) {
+    const selGarantia = el.querySelector("#selGarantiaTipo");
+    const garantiaBlocos = {
+      caucao: el.querySelector("#garantiaFieldsCaucao"),
+      seguro_fianca: el.querySelector("#garantiaFieldsSeguro"),
+      titulo_capitalizacao: el.querySelector("#garantiaFieldsTitulo"),
+      personalizada: el.querySelector("#garantiaFieldsPersonalizada"),
+    };
+    selGarantia.addEventListener("change", () => {
+      Object.entries(garantiaBlocos).forEach(([tipo, bloco]) => { bloco.style.display = tipo === selGarantia.value ? "" : "none"; });
+    });
+    const chkAdmin = el.querySelector("#chkAdministracao");
+    chkAdmin.addEventListener("change", () => {
+      el.querySelector("#administracaoFields").style.display = chkAdmin.checked ? "" : "none";
+    });
   }
 
   addPersonRow("vendedores", "vend", isLocacao ? "Locador" : "Vendedor");
@@ -863,6 +973,92 @@ function renderGerar() {
   el.querySelector("#contratoForm").addEventListener("submit", handleSubmit);
 }
 
+// ================= AJUDANTE IA DE CLÁUSULAS =================
+const RISCO_LABEL = { baixo: "Risco baixo", medio: "Risco médio", alto: "Risco alto" };
+
+function renderAjudanteIA() {
+  const el = document.getElementById("view-ia");
+  el.innerHTML = `
+    <div class="card">
+      <h2>Ajudante IA de cláusulas</h2>
+      <p style="color:var(--muted);font-size:14px;margin-top:6px;max-width:640px">
+        Descreva o pedido de alteração que uma das partes fez sobre o contrato. A IA avalia o risco
+        e já redige um texto pronto pra colar no campo "Cláusula especial" na hora de gerar o documento.
+      </p>
+
+      <form id="iaForm" style="margin-top:20px">
+        <div class="field">
+          <label>Tipo de contrato</label>
+          <select name="tipoContrato">
+            <option value="compra_venda" ${state.tipo === "compra_venda" ? "selected" : ""}>Compra e Venda</option>
+            <option value="locacao_caucao" ${state.tipo !== "compra_venda" ? "selected" : ""}>Locação</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Cláusula ou contexto atual (opcional)</label>
+          <textarea name="clausulaAtual" rows="3" placeholder="Ex.: Cláusula de entrega das chaves condicionada ao pagamento da última parcela."></textarea>
+        </div>
+        <div class="field">
+          <label>O que a parte pediu *</label>
+          <textarea name="pedido" rows="4" required placeholder="Ex.: O comprador pediu para trocar a multa por atraso de 2% para 1% ao mês."></textarea>
+        </div>
+        <div class="footer-actions">
+          <button type="submit" class="primary">Analisar com IA</button>
+        </div>
+      </form>
+
+      <div id="iaResultado"></div>
+    </div>
+  `;
+
+  el.querySelector("#iaForm").addEventListener("submit", handleIaSubmit);
+}
+
+async function handleIaSubmit(e) {
+  e.preventDefault();
+  const form = e.target;
+  const fd = new FormData(form);
+  const body = {
+    tipoContrato: getByPath(fd, "tipoContrato"),
+    clausulaAtual: getByPath(fd, "clausulaAtual"),
+    pedido: getByPath(fd, "pedido"),
+  };
+  const btn = form.querySelector('button[type="submit"]');
+  const resultadoEl = document.getElementById("iaResultado");
+  btn.disabled = true;
+  btn.textContent = "Analisando...";
+  resultadoEl.innerHTML = "";
+
+  try {
+    const res = await api("/api/ia/clausula", { method: "POST", body: JSON.stringify(body) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || "Não foi possível analisar o pedido.");
+
+    resultadoEl.innerHTML = `
+      <div class="ia-resultado">
+        <span class="risk-badge risk-${data.risco}">${RISCO_LABEL[data.risco] || data.risco}</span>
+        <h3>Por quê</h3>
+        <p class="ia-justificativa">${(data.justificativa || "").replace(/</g, "&lt;")}</p>
+        <h3>Texto sugerido para a cláusula especial</h3>
+        <div class="ia-texto-sugerido" id="iaTextoSugerido">${(data.textoSugerido || "").replace(/</g, "&lt;")}</div>
+        <div class="footer-actions" style="margin-top:12px">
+          <button type="button" class="secondary" id="btnCopiarIa">Copiar texto</button>
+        </div>
+        <p class="ia-disclaimer">Sugestão gerada por IA — não substitui análise jurídica formal. Revise o texto antes de usá-lo em um contrato real, especialmente em pedidos de risco médio ou alto.</p>
+      </div>
+    `;
+    document.getElementById("btnCopiarIa").addEventListener("click", async () => {
+      await navigator.clipboard.writeText(data.textoSugerido || "");
+      toast("Texto copiado!");
+    });
+  } catch (err) {
+    resultadoEl.innerHTML = `<div class="ia-resultado"><p class="ia-justificativa" style="color:#b43d2f">${err.message}</p></div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Analisar com IA";
+  }
+}
+
 function getByPath(fd, name) {
   return fd.get(name) || "";
 }
@@ -872,7 +1068,7 @@ async function handleSubmit(e) {
   const form = e.target;
   const fd = new FormData(form);
 
-  const dados = { tipo: state.tipo };
+  const dados = { tipo: state.tipo, layout: state.layout };
   dados.data = getByPath(fd, "data");
   dados.foro = getByPath(fd, "foro");
   dados.imovel = {
@@ -883,6 +1079,7 @@ async function handleSubmit(e) {
     tipoUso: getByPath(fd, "imovel.tipoUso") || "residencial",
   };
   dados.entregaChaves = { modo: getByPath(fd, "entregaChaves.modo"), data: getByPath(fd, "entregaChaves.data") };
+  dados.clausulaEspecial = getByPath(fd, "clausulaEspecial");
 
   const isLocacao = state.tipo !== "compra_venda";
   const vendedores = collectPessoas("vendedores");
@@ -894,7 +1091,20 @@ async function handleSubmit(e) {
     if (state.tipo === "locacao_fiador") dados.fiadores = collectPessoas("fiadores");
     dados.vigencia = { meses: getByPath(fd, "vigencia.meses"), inicio: getByPath(fd, "vigencia.inicio"), fim: getByPath(fd, "vigencia.fim") };
     dados.aluguel = { valor: parseFloat(getByPath(fd, "aluguel.valor") || 0), diaVencimento: getByPath(fd, "aluguel.diaVencimento"), indice: getByPath(fd, "aluguel.indice") };
-    if (state.tipo === "locacao_caucao") dados.garantia = { valor: parseFloat(getByPath(fd, "garantia.valor") || 0) };
+
+    dados.administracao = { ativa: fd.get("administracao.ativa") === "on", taxaPercentual: parseFloat(getByPath(fd, "administracao.taxaPercentual") || 0) };
+
+    const garantiaTipo = state.tipo === "locacao_fiador" ? "fiador" : (getByPath(fd, "garantiaTipo") || "caucao");
+    dados.garantiaTipo = garantiaTipo;
+    if (garantiaTipo === "seguro_fianca") dados.garantia = { seguradora: getByPath(fd, "garantia.seguradora"), apolice: getByPath(fd, "garantia.apolice") };
+    else if (garantiaTipo === "titulo_capitalizacao") dados.garantia = { instituicao: getByPath(fd, "garantia.instituicao"), numero: getByPath(fd, "garantia.numero"), valor: parseFloat(getByPath(fd, "garantia.valorTitulo") || 0) };
+    else if (garantiaTipo === "personalizada") dados.garantia = { descricao: getByPath(fd, "garantia.descricao") };
+    else if (garantiaTipo === "caucao") dados.garantia = { valor: parseFloat(getByPath(fd, "garantia.valor") || 0) };
+
+    const corretPercentualLoc = getByPath(fd, "corretagem.percentual");
+    if (corretPercentualLoc !== "") {
+      dados.corretagem = { percentual: parseFloat(corretPercentualLoc), quantidadeAlugueis: parseInt(getByPath(fd, "corretagem.quantidadeAlugueis") || "1", 10) };
+    }
     dados.uso = "residencial";
   } else {
     dados.vendedores = vendedores;
