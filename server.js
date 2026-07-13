@@ -46,6 +46,17 @@ const upload = multer({
   },
 });
 
+// Documentos de identificação (CNH/RG) são processados só em memória, nunca gravados em
+// disco — é dado pessoal sensível e não deve ser persistido além do necessário pra extração.
+const uploadDocumento = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 8 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (!/^(application\/pdf|image\/(png|jpe?g))$/.test(file.mimetype)) return cb(new Error("Envie um arquivo PDF, PNG ou JPG"));
+    cb(null, true);
+  },
+});
+
 // Precisa vir antes do express.json() — o Stripe exige o corpo bruto (não
 // parseado) da requisição para validar a assinatura do webhook.
 app.post("/api/billing/webhook", express.raw({ type: "application/json" }), async (req, res) => {
@@ -424,6 +435,17 @@ app.post("/api/ia/clausula", requireAuth, async (req, res) => {
   try {
     const { tipoContrato, clausulaAtual, pedido } = req.body || {};
     const resultado = await ai.avaliarClausula({ tipoContrato, clausulaAtual, pedido });
+    res.json(resultado);
+  } catch (err) {
+    const indisponivel = /indispon[íi]vel/i.test(err.message || "");
+    res.status(indisponivel ? 503 : 400).json({ error: err.message });
+  }
+});
+
+app.post("/api/ia/extrair-documento", requireAuth, uploadDocumento.single("documento"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "Envie um arquivo (PDF, JPG ou PNG)." });
+    const resultado = await ai.extrairDadosDocumento(req.file.buffer, req.file.mimetype);
     res.json(resultado);
   } catch (err) {
     const indisponivel = /indispon[íi]vel/i.test(err.message || "");
