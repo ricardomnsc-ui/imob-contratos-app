@@ -262,6 +262,14 @@ function renderAuth() {
       if (!res.ok) throw new Error(data.error || "Erro ao autenticar");
       state.user = data.user;
 
+      if (isSignup && typeof gtag === "function") {
+        gtag('event', 'conversion', {
+          'send_to': 'AW-18326486969/faP6CPWRnNEcELn_36JE',
+          'value': 1.0,
+          'currency': 'BRL',
+        });
+      }
+
       if (isSignup && state.pendingPlano) {
         const planoId = state.pendingPlano;
         const checkoutRes = await api("/api/billing/checkout", { method: "POST", body: JSON.stringify({ plano: planoId }) });
