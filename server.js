@@ -393,6 +393,13 @@ app.post("/api/gerar", requireAuth, async (req, res) => {
       });
     }
 
+    const LAYOUTS_PAGOS = new Set(["profissional", "elegante"]);
+    if ((tenant.plano || "gratis") === "gratis" && LAYOUTS_PAGOS.has(dados.layout)) {
+      return res.status(402).json({
+        error: `O layout "${dados.layout === "profissional" ? "Profissional" : "Elegante"}" é exclusivo dos planos pagos. Faça upgrade para usar esse visual.`,
+      });
+    }
+
     const branding = { ...tenant };
     if (tenant.logoPath) {
       const logoFile = path.join(UPLOAD_DIR, path.basename(tenant.logoPath));
@@ -433,6 +440,10 @@ app.post("/api/gerar", requireAuth, async (req, res) => {
 // ================= AJUDANTE IA DE CLÁUSULAS =================
 app.post("/api/ia/clausula", requireAuth, async (req, res) => {
   try {
+    const tenant = await store.getTenant(req.user.tenantId);
+    if (!tenant || (tenant.plano || "gratis") === "gratis") {
+      return res.status(402).json({ error: "O Assistente de IA de cláusulas é exclusivo dos planos pagos. Faça upgrade para usar essa ferramenta." });
+    }
     const { tipoContrato, clausulaAtual, pedido } = req.body || {};
     const resultado = await ai.avaliarClausula({ tipoContrato, clausulaAtual, pedido });
     res.json(resultado);
@@ -444,6 +455,10 @@ app.post("/api/ia/clausula", requireAuth, async (req, res) => {
 
 app.post("/api/ia/extrair-documento", requireAuth, uploadDocumento.single("documento"), async (req, res) => {
   try {
+    const tenant = await store.getTenant(req.user.tenantId);
+    if (!tenant || (tenant.plano || "gratis") === "gratis") {
+      return res.status(402).json({ error: "O preenchimento automático por CNH/RG é exclusivo dos planos pagos. Faça upgrade para usar essa ferramenta." });
+    }
     if (!req.file) return res.status(400).json({ error: "Envie um arquivo (PDF, JPG ou PNG)." });
     const resultado = await ai.extrairDadosDocumento(req.file.buffer, req.file.mimetype);
     res.json(resultado);
