@@ -461,6 +461,7 @@ async function renderDashboard() {
                 <th style="padding:8px 10px;font-weight:600">Endereço</th>
                 <th style="padding:8px 10px;font-weight:600">Bairro</th>
                 <th style="padding:8px 0 8px 10px;font-weight:600;text-align:right">Valor</th>
+                <th style="padding:8px 0 8px 10px;font-weight:600;width:1%"></th>
               </tr>
             </thead>
             <tbody>
@@ -470,6 +471,7 @@ async function renderDashboard() {
                   <td style="padding:10px">${c.endereco || "—"}</td>
                   <td style="padding:10px">${c.bairro || "—"}</td>
                   <td style="padding:10px 0 10px 10px;text-align:right;font-weight:600">${fmtBRL(c.valor)}</td>
+                  <td style="padding:10px 0 10px 10px;text-align:right">${c.id ? `<button type="button" class="link" data-del-contrato="${c.id}" title="Excluir contrato">excluir</button>` : ""}</td>
                 </tr>
               `).join("")}
             </tbody>
@@ -478,6 +480,22 @@ async function renderDashboard() {
       ` : `<div class="empty">Nenhum contrato ainda.</div>`}
     </div>
   `;
+
+  el.querySelectorAll("[data-del-contrato]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      if (!confirm("Excluir esse contrato do histórico? Essa ação não pode ser desfeita.")) return;
+      btn.disabled = true;
+      const res = await api(`/api/dashboard/contratos/${btn.dataset.delContrato}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast(data.error || "Erro ao excluir contrato", true);
+        btn.disabled = false;
+        return;
+      }
+      toast("Contrato excluído.");
+      await renderDashboard();
+    });
+  });
 }
 
 // ================= CONFIG (marca da imobiliária) =================
@@ -823,7 +841,7 @@ function planoUsageBanner() {
   const limite = t.limiteContratosPorMes;
   const esgotado = usados >= limite;
   return `
-    <div class="card" style="${esgotado ? "border-color:#d33;background:#fff5f5" : ""}">
+    <div class="card" id="planoUsageBanner" style="${esgotado ? "border-color:#d33;background:#fff5f5" : ""}">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
         <div>
           <strong>${usados}/${limite} contratos usados este mês</strong>
@@ -1271,7 +1289,8 @@ async function handleSubmit(e) {
     URL.revokeObjectURL(url);
     toast("Contrato gerado com sucesso!");
     await loadTenant();
-    renderGerar();
+    const bannerEl = document.getElementById("planoUsageBanner");
+    if (bannerEl) bannerEl.outerHTML = planoUsageBanner();
   } catch (err) {
     toast(err.message, true);
   } finally {

@@ -512,9 +512,29 @@ app.get("/api/dashboard", requireAuth, async (req, res) => {
     contratosEsteMes: contarNoMes(mesAtualStr),
     contratosMesPassado: contarNoMes(mesPassadoStr),
     ultimosContratos: contratos.slice(0, 10).map(c => ({
-      tipo: c.tipo, endereco: c.endereco, bairro: c.bairro, valor: c.valor, data: c.data, criadoEm: c.criadoEm,
+      id: c.id, tipo: c.tipo, endereco: c.endereco, bairro: c.bairro, valor: c.valor, data: c.data, criadoEm: c.criadoEm,
     })),
   });
+});
+
+app.delete("/api/dashboard/contratos/:id", requireAuth, async (req, res) => {
+  const contrato = await store.getContract(req.params.id, req.user.tenantId);
+  if (!contrato) return res.status(404).json({ error: "Contrato não encontrado" });
+
+  await store.deleteContract(req.params.id, req.user.tenantId);
+
+  // Devolve a cota do mês em que o contrato foi gerado, já que ele deixou de existir.
+  const tenant = await store.getTenant(req.user.tenantId);
+  if (tenant && contrato.criadoEm) {
+    const mes = String(contrato.criadoEm).slice(0, 7);
+    const usoMensal = { ...(tenant.usoMensal || {}) };
+    if (usoMensal[mes]) {
+      usoMensal[mes] = Math.max(0, usoMensal[mes] - 1);
+      await store.setTenant(req.user.tenantId, { ...tenant, usoMensal });
+    }
+  }
+
+  res.json({ ok: true });
 });
 
 app.use((err, req, res, next) => {
