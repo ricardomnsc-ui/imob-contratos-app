@@ -698,7 +698,7 @@ function pessoaFields(prefix, idx, tipoLabel) {
         <div class="field"><label>Nome completo *</label><input data-f="nome" required /></div>
         <div class="field"><label>Gênero</label><select data-f="genero"><option value="m">Masculino</option><option value="f">Feminino</option></select></div>
         <div class="field"><label>CPF *</label><input data-f="cpf" placeholder="000.000.000-00" required /></div>
-        <div class="field"><label>RG *</label><input data-f="rg" placeholder="1.234.567 SSP/RN" required /></div>
+        <div class="field"><label>RG (opcional)</label><input data-f="rg" placeholder="1.234.567 SSP/RN" /></div>
         <div class="field"><label>Estado civil</label>
           <select data-f="estadoCivil">
             <option value="solteiro(a)">Solteiro(a)</option>
@@ -897,6 +897,18 @@ function renderGerar() {
           <button type="button" class="secondary" id="btnAddFiador" style="margin-top:10px">+ adicionar</button>
         </div>
 
+        <div class="section-title">Dados bancários (opcional)</div>
+        <p class="hint" style="margin-top:-8px;margin-bottom:10px">Usados no recebimento de valores por PIX/transferência — em compra e venda, ou em locação sem administração pela imobiliária.</p>
+        <div class="grid">
+          <div class="field"><label>Titular</label><input name="pagamento.dadosBancarios.titular" /></div>
+          <div class="field"><label>CPF/CNPJ</label><input name="pagamento.dadosBancarios.cpf" /></div>
+          <div class="field"><label>Banco</label><input name="pagamento.dadosBancarios.banco" /></div>
+          <div class="field"><label>Tipo de conta</label><input name="pagamento.dadosBancarios.tipo" /></div>
+          <div class="field"><label>Agência</label><input name="pagamento.dadosBancarios.agencia" /></div>
+          <div class="field"><label>Conta</label><input name="pagamento.dadosBancarios.conta" /></div>
+          <div class="field"><label>Chave PIX</label><input name="pagamento.dadosBancarios.pix" /></div>
+        </div>
+
         <div id="compraVendaFields">
           <div class="section-title">Valor e pagamento</div>
           <div class="grid">
@@ -913,17 +925,6 @@ function renderGerar() {
           <div class="field"><label>Valor por extenso (opcional)</label><input name="valor.extenso" placeholder="Ex.: um milhão e seiscentos mil reais" /></div>
           <div id="parcelasContainer" class="row-list"></div>
           <button type="button" class="secondary" id="btnAddParcela" style="margin-top:10px">+ adicionar parcela</button>
-
-          <div class="section-title">Dados bancários (opcional)</div>
-          <div class="grid">
-            <div class="field"><label>Titular</label><input name="pagamento.dadosBancarios.titular" /></div>
-            <div class="field"><label>CPF/CNPJ</label><input name="pagamento.dadosBancarios.cpf" /></div>
-            <div class="field"><label>Banco</label><input name="pagamento.dadosBancarios.banco" /></div>
-            <div class="field"><label>Tipo de conta</label><input name="pagamento.dadosBancarios.tipo" /></div>
-            <div class="field"><label>Agência</label><input name="pagamento.dadosBancarios.agencia" /></div>
-            <div class="field"><label>Conta</label><input name="pagamento.dadosBancarios.conta" /></div>
-            <div class="field"><label>Chave PIX</label><input name="pagamento.dadosBancarios.pix" /></div>
-          </div>
 
           <div class="section-title">Comissão de corretagem</div>
           <div class="grid">
@@ -986,11 +987,6 @@ function renderGerar() {
             <textarea name="garantia.descricao" rows="3" placeholder="Cole aqui a cláusula específica de garantia que a imobiliária utiliza."></textarea>
           </div>
 
-          <div class="section-title">Comissão de corretagem (opcional)</div>
-          <div class="grid cols3">
-            <div class="field"><label>Percentual (%)</label><input name="corretagem.percentual" type="number" step="0.1" placeholder="Ex.: 100" /></div>
-            <div class="field"><label>Sobre quantos aluguéis</label><input name="corretagem.quantidadeAlugueis" type="number" value="1" min="1" /></div>
-          </div>
         </div>
 
         <div class="section-title">Entrega de chaves</div>
@@ -1219,11 +1215,16 @@ async function handleSubmit(e) {
     else if (garantiaTipo === "personalizada") dados.garantia = { descricao: getByPath(fd, "garantia.descricao") };
     else if (garantiaTipo === "caucao") dados.garantia = { valor: parseFloat(getByPath(fd, "garantia.valor") || 0) };
 
-    const corretPercentualLoc = getByPath(fd, "corretagem.percentual");
-    if (corretPercentualLoc !== "") {
-      dados.corretagem = { percentual: parseFloat(corretPercentualLoc), quantidadeAlugueis: parseInt(getByPath(fd, "corretagem.quantidadeAlugueis") || "1", 10) };
-    }
-    dados.uso = "residencial";
+    dados.uso = dados.imovel.tipoUso === "comercial" ? "comercial" : "residencial";
+    dados.pagamento = {
+      dadosBancarios: {
+        titular: getByPath(fd, "pagamento.dadosBancarios.titular"),
+        banco: getByPath(fd, "pagamento.dadosBancarios.banco"),
+        agencia: getByPath(fd, "pagamento.dadosBancarios.agencia"),
+        conta: getByPath(fd, "pagamento.dadosBancarios.conta"),
+        pix: getByPath(fd, "pagamento.dadosBancarios.pix"),
+      },
+    };
   } else {
     dados.vendedores = vendedores;
     dados.compradores = compradores;
