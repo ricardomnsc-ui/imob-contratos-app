@@ -3,6 +3,8 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const express = require("express");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 const session = require("express-session");
 const FileStore = require("session-file-store")(session);
 const bcrypt = require("bcryptjs");
@@ -22,6 +24,26 @@ const IS_PROD = process.env.NODE_ENV === "production";
 // Plataformas como Railway/Render ficam atrás de um proxy HTTPS — sem isso,
 // o cookie "secure" nunca seria enviado de volta pelo navegador.
 if (IS_PROD) app.set("trust proxy", 1);
+
+// Cabeçalhos de segurança (proteção contra clickjacking, sniffing de MIME,
+// vazamento de referrer e HSTS em produção). O Content-Security-Policy fica
+// desligado por ora porque as páginas usam scripts/estilos inline e recursos
+// externos (Google Fonts e gtag); um CSP restritivo exigiria refatorar isso.
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+}));
+
+// Limita tentativas de login/cadastro por IP — barra ataques de força bruta
+// contra senhas e criação de contas em massa por robôs.
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Muitas tentativas. Aguarde alguns minutos e tente novamente." },
+});
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "data");
 // Por padrão, uploads fica dentro de DATA_DIR — assim um único volume
@@ -131,7 +153,7 @@ function publicUser(user) {
 }
 
 // ================= AUTH =================
-app.post("/api/auth/signup", async (req, res) => {
+app.post("/api/auth/signup", authLimiter, async (req, res) => {
   try {
     const { email, password, nome, imobiliariaNome } = req.body || {};
     if (!email || !password || !imobiliariaNome) {
@@ -166,7 +188,7 @@ app.post("/api/auth/signup", async (req, res) => {
   }
 });
 
-app.post("/api/auth/login", async (req, res) => {
+app.post("/api/auth/login", authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body || {};
     const emailNorm = String(email || "").trim().toLowerCase();
@@ -433,7 +455,8 @@ app.post("/api/gerar", requireAuth, async (req, res) => {
     res.send(buffer);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: err.message });
+    // Não expõe detalhes internos do erro ao cliente em produção.
+    res.status(500).json({ error: IS_PROD ? "Não foi possível gerar o contrato agora. Tente novamente." : err.message });
   }
 });
 
