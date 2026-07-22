@@ -730,6 +730,18 @@ function pessoaFields(prefix, idx, tipoLabel) {
         <div class="field"><label>Nacionalidade</label><input data-f="nacionalidade" value="Brasileiro(a)" /></div>
       </div>
       <div class="field"><label>Endereço residencial completo</label><input data-f="endereco" placeholder="Rua, nº, bairro, cidade/UF, CEP" /></div>
+      ${tipoLabel === "Fiador" ? `
+      <div class="field">
+        <label style="display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer">
+          <input type="checkbox" data-conjuge-toggle style="width:auto" />
+          Fiador(a) é casado(a) (fora do regime de separação total de bens)
+        </label>
+        <p class="hint" style="margin-top:4px">A fiança de pessoa casada exige a anuência do cônjuge (outorga conjugal), sob pena de nulidade quanto à meação — art. 1.647 do Código Civil.</p>
+      </div>
+      <div class="grid" data-conjuge-fields style="display:none">
+        <div class="field"><label>Nome completo do cônjuge</label><input data-f="conjugeNome" /></div>
+        <div class="field"><label>CPF do cônjuge</label><input data-f="conjugeCpf" placeholder="000.000.000-00" /></div>
+      </div>` : ""}
       <div class="row-actions">
         <span style="font-size:12px;color:var(--muted)">${tipoLabel} ${idx + 1}</span>
         <button type="button" class="link" data-remove-person>remover</button>
@@ -743,6 +755,15 @@ function addPersonRow(containerId, prefix, tipoLabel) {
   container.insertAdjacentHTML("beforeend", pessoaFields(prefix, idx, tipoLabel));
   wireRemoveButtons(container);
   wireCnhUploads(container);
+  wireConjugeToggle(container);
+}
+function wireConjugeToggle(container) {
+  container.querySelectorAll("[data-conjuge-toggle]").forEach(chk => {
+    if (chk.dataset.wired) return;
+    chk.dataset.wired = "1";
+    const fields = chk.closest(".person-card").querySelector("[data-conjuge-fields]");
+    chk.addEventListener("change", () => { fields.style.display = chk.checked ? "" : "none"; });
+  });
 }
 function wireRemoveButtons(container) {
   container.querySelectorAll("[data-remove-person]").forEach(b => {
