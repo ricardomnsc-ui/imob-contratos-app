@@ -67,6 +67,10 @@
 
   main { max-width: 880px; margin: 32px auto; padding: 0 20px 70px; }
   .card { background: var(--paper); border: 1px solid var(--border); border-radius: 14px; padding: 28px; margin-bottom: 22px; box-shadow: var(--shadow-sm); }
+  /* Microinteração: cards de métrica do dashboard reagem ao passar o mouse. */
+  #view-dashboard .grid .card { transition: transform .18s ease, box-shadow .18s ease; }
+  #view-dashboard .grid .card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+  @media (prefers-reduced-motion: reduce) { #view-dashboard .grid .card { transition: none; } #view-dashboard .grid .card:hover { transform: none; } }
   .card h2 { font-family: var(--serif); font-weight: 600; font-size: 18px; margin: 0 0 5px; letter-spacing: 0.01em; }
   .card .hint { font-size: 13.5px; color: var(--muted); margin: 0 0 20px; line-height: 1.5; }
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
@@ -122,6 +126,11 @@
   }
   .tabs-tipo button.active { border-color: var(--brand); color: var(--brand-dark); background: var(--brand-soft); }
 
+  .ciclo-toggle { display: inline-flex; gap: 4px; padding: 4px; background: var(--bg); border: 1px solid var(--border); border-radius: 999px; margin-bottom: 16px; }
+  .ciclo-toggle button { border: none; background: transparent; padding: 8px 18px; border-radius: 999px; cursor: pointer; font-size: 13.5px; font-weight: 600; color: var(--muted); display: inline-flex; align-items: center; gap: 8px; transition: all .15s; }
+  .ciclo-toggle button.active { background: var(--paper); color: var(--ink); box-shadow: 0 1px 3px rgba(20,20,15,0.1); }
+  .ciclo-badge { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--brand-dark); background: var(--brand-soft); padding: 2px 7px; border-radius: 999px; }
+
   .risk-badge { display: inline-flex; align-items: center; gap: 7px; padding: 6px 14px; border-radius: 999px; font-size: 12.5px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
   .risk-badge::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
   .risk-badge.risk-baixo { background: #eaf4ee; color: #1f6d4c; }
@@ -175,6 +184,7 @@
   .auth-card { width: 400px; background: var(--paper); border: 1px solid var(--border); border-radius: 16px; padding: 36px; box-shadow: var(--shadow-md); }
   .auth-card .brand { margin-bottom: 6px; }
   .auth-card .hint { font-size: 13.5px; color: var(--muted); margin: 0 0 24px; }
+  .auth-trust { text-align: center; font-size: 12px; color: var(--muted); margin: 12px 0 0; }
   .auth-switch { text-align: center; font-size: 13.5px; color: var(--muted); margin-top: 18px; }
   .auth-switch button { background: none; border: none; color: var(--brand); font-weight: 600; cursor: pointer; font-size: 13.5px; }
   .badge-role { font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; background: var(--brand-soft); color: var(--brand-dark); border-radius: 5px; padding: 3px 8px; font-weight: 600; }
@@ -186,7 +196,10 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const PLANOS_PAGOS = { autonomo: { nome: "Autônomo", preco: "R$49/mês" }, imobiliaria: { nome: "Imobiliária", preco: "R$149/mês" } };
+const PLANOS_PAGOS = {
+  autonomo: { nome: "Autônomo", preco: "R$49/mês", precoAnual: "R$490/ano (2 meses grátis)" },
+  imobiliaria: { nome: "Imobiliária", preco: "R$149/mês", precoAnual: "R$1.490/ano (2 meses grátis)" },
+};
 
 function isPlanoGratis() {
   return (state.tenant?.plano || "gratis") === "gratis";
@@ -200,6 +213,7 @@ const state = {
   layout: "padrao",
   authMode: "login", // login | signup
   pendingPlano: null,
+  pendingCiclo: "mensal", // mensal | anual
 };
 
 const LAYOUTS_CONTRATO = [
@@ -233,7 +247,7 @@ function renderAuth() {
       <div class="auth-card">
         <div class="brand"><img src="/logo-mark.svg" alt="Minutei" class="brand-mark" /><span class="brand-word">Minutei</span></div>
         <p class="hint">${isSignup ? "Crie a conta da sua imobiliária" : "Entre na sua conta"}</p>
-        ${plano ? `<p class="hint" style="background:var(--brand-soft, #eef4f0);color:var(--brand,#1f6d4c);padding:8px 12px;border-radius:8px;font-weight:600">Plano ${plano.nome} — ${plano.preco}. Depois de criar a conta, você vai para o pagamento.</p>` : ""}
+        ${plano ? `<p class="hint" style="background:var(--brand-soft, #eef4f0);color:var(--brand,#1f6d4c);padding:8px 12px;border-radius:8px;font-weight:600">Plano ${plano.nome} — ${state.pendingCiclo === "anual" ? plano.precoAnual : plano.preco}. Depois de criar a conta, você vai para o pagamento.</p>` : ""}
         <form id="authForm">
           ${isSignup ? `
             <div class="field"><label>Nome da imobiliária *</label><input name="imobiliariaNome" required placeholder="Ex.: Imob Gest Imobiliária LTDA" /></div>
@@ -243,6 +257,7 @@ function renderAuth() {
           <div class="field"><label>Senha *</label><input name="password" type="password" required minlength="8" placeholder="mínimo 8 caracteres" /></div>
           <div class="error-msg" id="authError"></div>
           <button type="submit" class="primary" style="width:100%">${plano ? "Criar conta e ir para pagamento" : (isSignup ? "Criar conta" : "Entrar")}</button>
+          ${isSignup && !plano ? `<p class="auth-trust">✓ Sem cartão de crédito&nbsp;&nbsp;·&nbsp;&nbsp;✓ 1 contrato grátis por mês</p>` : ""}
         </form>
         <div class="auth-switch">
           ${isSignup
@@ -282,7 +297,7 @@ function renderAuth() {
 
       if (isSignup && state.pendingPlano) {
         const planoId = state.pendingPlano;
-        const checkoutRes = await api("/api/billing/checkout", { method: "POST", body: JSON.stringify({ plano: planoId }) });
+        const checkoutRes = await api("/api/billing/checkout", { method: "POST", body: JSON.stringify({ plano: planoId, ciclo: state.pendingCiclo }) });
         const checkoutData = await checkoutRes.json().catch(() => ({}));
         if (checkoutRes.ok && checkoutData.url) {
           window.location.href = checkoutData.url;
@@ -509,9 +524,13 @@ function renderConfig() {
       <h2>Plano e cobrança</h2>
       <p class="hint">Plano atual: <strong>${planoNome}</strong>${t.temAssinaturaAtiva ? " (assinatura ativa)" : ""}</p>
       ${isOwner ? `
+        <div class="ciclo-toggle" role="group" aria-label="Ciclo de cobrança">
+          <button type="button" data-ciclo-opt="mensal" class="active">Mensal</button>
+          <button type="button" data-ciclo-opt="anual">Anual <span class="ciclo-badge">2 meses grátis</span></button>
+        </div>
         <div class="footer-actions" style="justify-content:flex-start;gap:10px">
-          ${t.plano !== "autonomo" ? `<button type="button" class="secondary" data-checkout="autonomo">Assinar Autônomo — R$49/mês</button>` : ""}
-          ${t.plano !== "imobiliaria" ? `<button type="button" class="secondary" data-checkout="imobiliaria">Assinar Imobiliária — R$149/mês</button>` : ""}
+          ${t.plano !== "autonomo" ? `<button type="button" class="secondary" data-checkout="autonomo" data-label-mensal="Assinar Autônomo — R$49/mês" data-label-anual="Assinar Autônomo — R$490/ano">Assinar Autônomo — R$49/mês</button>` : ""}
+          ${t.plano !== "imobiliaria" ? `<button type="button" class="secondary" data-checkout="imobiliaria" data-label-mensal="Assinar Imobiliária — R$149/mês" data-label-anual="Assinar Imobiliária — R$1.490/ano">Assinar Imobiliária — R$149/mês</button>` : ""}
           ${t.temAssinaturaAtiva ? `<button type="button" class="secondary" id="billingPortalBtn">Gerenciar assinatura</button>` : ""}
         </div>
       ` : `<p class="hint">Só o dono da conta pode alterar o plano.</p>`}
@@ -555,13 +574,22 @@ function renderConfig() {
     </div>
   `;
 
-  el.querySelectorAll("[data-checkout]").forEach(btn => {
+  let checkoutCiclo = "mensal";
+  const checkoutBtns = [...el.querySelectorAll("[data-checkout]")];
+  el.querySelectorAll("[data-ciclo-opt]").forEach(opt => {
+    opt.addEventListener("click", () => {
+      checkoutCiclo = opt.dataset.cicloOpt;
+      el.querySelectorAll("[data-ciclo-opt]").forEach(o => o.classList.toggle("active", o === opt));
+      checkoutBtns.forEach(b => { b.textContent = b.dataset[checkoutCiclo === "anual" ? "labelAnual" : "labelMensal"]; });
+    });
+  });
+  checkoutBtns.forEach(btn => {
     btn.addEventListener("click", async () => {
       btn.disabled = true;
       const res = await api("/api/billing/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plano: btn.dataset.checkout }),
+        body: JSON.stringify({ plano: btn.dataset.checkout, ciclo: checkoutCiclo }),
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) { toast(d.error || "Erro ao iniciar pagamento", true); btn.disabled = false; return; }
@@ -1344,8 +1372,10 @@ async function handleSubmit(e) {
 
 (async function init() {
   if (window.location.hash === "#signup") state.authMode = "signup";
-  const planoParam = new URLSearchParams(window.location.search).get("plano");
+  const params = new URLSearchParams(window.location.search);
+  const planoParam = params.get("plano");
   if (PLANOS_PAGOS[planoParam]) state.pendingPlano = planoParam;
+  if (params.get("ciclo") === "anual") state.pendingCiclo = "anual";
   const res = await api("/api/auth/me");
   if (res.ok) {
     const data = await res.json();

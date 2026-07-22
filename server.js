@@ -13,7 +13,7 @@ const { nanoid } = require("nanoid");
 const { gerarContrato } = require("./lib/generator");
 const { convertDocxToPdf } = require("./lib/pdf");
 const store = require("./lib/store");
-const { PLANOS, limitesDoPlano, mesAtual, contratosUsadosNoMes } = require("./lib/planos");
+const { PLANOS, limitesDoPlano, precoDoPlano, mesAtual, contratosUsadosNoMes } = require("./lib/planos");
 const stripe = require("./lib/stripe");
 const ai = require("./lib/ai");
 
@@ -322,9 +322,10 @@ app.post("/api/billing/checkout", requireAuth, async (req, res) => {
   if (!stripe) return res.status(503).json({ error: "Pagamento indisponível no momento" });
   if (req.user.role !== "owner") return res.status(403).json({ error: "Só o dono da conta pode alterar o plano" });
 
-  const { plano: planoId } = req.body || {};
-  const planoInfo = PLANOS[planoId];
-  if (!planoInfo || !planoInfo.stripePriceId) {
+  const { plano: planoId, ciclo } = req.body || {};
+  const cicloNorm = ciclo === "anual" ? "anual" : "mensal";
+  const priceId = precoDoPlano(planoId, cicloNorm);
+  if (!priceId) {
     return res.status(400).json({ error: "Plano inválido para checkout" });
   }
 
@@ -334,12 +335,12 @@ app.post("/api/billing/checkout", requireAuth, async (req, res) => {
   try {
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
-      line_items: [{ price: planoInfo.stripePriceId, quantity: 1 }],
+      line_items: [{ price: priceId, quantity: 1 }],
       customer: tenant.stripeCustomerId || undefined,
       customer_email: tenant.stripeCustomerId ? undefined : req.user.email,
       client_reference_id: req.user.tenantId,
-      metadata: { tenantId: req.user.tenantId, plano: planoId },
-      subscription_data: { metadata: { tenantId: req.user.tenantId, plano: planoId } },
+      metadata: { tenantId: req.user.tenantId, plano: planoId, ciclo: cicloNorm },
+      subscription_data: { metadata: { tenantId: req.user.tenantId, plano: planoId, ciclo: cicloNorm } },
       success_url: `${req.protocol}://${req.get("host")}/app.html?upgrade=sucesso`,
       cancel_url: `${req.protocol}://${req.get("host")}/app.html?upgrade=cancelado`,
     });
