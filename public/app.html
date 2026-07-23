@@ -1012,6 +1012,12 @@ function renderGerar() {
             <div class="field"><label>Valor mensal (R$)</label><input name="aluguel.valor" type="number" step="0.01" /></div>
             <div class="field"><label>Dia de vencimento</label><input name="aluguel.diaVencimento" type="number" value="10" /></div>
             <div class="field"><label>Índice de reajuste</label><input name="aluguel.indice" value="IGP-M" /></div>
+            <div class="field"><label>Data do 1º aluguel</label><input name="aluguel.primeiroVencimento" type="date" /></div>
+          </div>
+          <div class="field">
+            <label>Cosern, Água e Gás (opcional)</label>
+            <input name="imovel.concessionarias" placeholder="Ex.: Energia e água individualizadas; gás por medidor próprio" />
+            <p class="hint" style="margin-top:4px">Aparece no quadro-resumo da 1ª página. Use para indicar se as concessionárias são individualizadas.</p>
           </div>
 
           <div class="section-title">Administração</div>
@@ -1058,8 +1064,9 @@ function renderGerar() {
             <div class="field"><label>Valor da caução (R$)</label><input name="garantia.valor" type="number" step="0.01" /></div>
           </div>
           <div class="grid" id="garantiaFieldsSeguro" style="display:none">
-            <div class="field"><label>Seguradora</label><input name="garantia.seguradora" /></div>
+            <div class="field"><label>Seguradora</label><input name="garantia.seguradora" placeholder="Ex.: LOFT" /></div>
             <div class="field"><label>Nº da apólice</label><input name="garantia.apolice" /></div>
+            <div class="field"><label>Taxa mensal do seguro (R$)</label><input name="garantia.taxaMensal" type="number" step="0.01" /></div>
           </div>
           <div class="grid" id="garantiaFieldsTitulo" style="display:none">
             <div class="field"><label>Instituição emissora</label><input name="garantia.instituicao" /></div>
@@ -1279,6 +1286,7 @@ async function handleSubmit(e) {
     descricaoRegistro: getByPath(fd, "imovel.descricaoRegistro"),
     bairro: getByPath(fd, "imovel.bairro"),
     tipoUso: getByPath(fd, "imovel.tipoUso") || "residencial",
+    concessionarias: getByPath(fd, "imovel.concessionarias"),
   };
   dados.entregaChaves = { modo: getByPath(fd, "entregaChaves.modo"), data: getByPath(fd, "entregaChaves.data") };
   dados.clausulaEspecial = getByPath(fd, "clausulaEspecial");
@@ -1292,14 +1300,14 @@ async function handleSubmit(e) {
     dados.locatarios = compradores;
     if (state.tipo === "locacao_fiador") dados.fiadores = collectPessoas("fiadores");
     dados.vigencia = { meses: getByPath(fd, "vigencia.meses"), inicio: getByPath(fd, "vigencia.inicio"), fim: getByPath(fd, "vigencia.fim") };
-    dados.aluguel = { valor: parseFloat(getByPath(fd, "aluguel.valor") || 0), diaVencimento: getByPath(fd, "aluguel.diaVencimento"), indice: getByPath(fd, "aluguel.indice") };
+    dados.aluguel = { valor: parseFloat(getByPath(fd, "aluguel.valor") || 0), diaVencimento: getByPath(fd, "aluguel.diaVencimento"), indice: getByPath(fd, "aluguel.indice"), primeiroVencimento: getByPath(fd, "aluguel.primeiroVencimento") };
 
     dados.administracao = { ativa: fd.get("administracao.ativa") === "on", taxaPercentual: parseFloat(getByPath(fd, "administracao.taxaPercentual") || 0) };
     dados.seguroIncendio = { incluir: fd.get("seguroIncendio.incluir") === "on", responsavel: getByPath(fd, "seguroIncendio.responsavel") || "locatario" };
 
     const garantiaTipo = state.tipo === "locacao_fiador" ? "fiador" : (getByPath(fd, "garantiaTipo") || "caucao");
     dados.garantiaTipo = garantiaTipo;
-    if (garantiaTipo === "seguro_fianca") dados.garantia = { seguradora: getByPath(fd, "garantia.seguradora"), apolice: getByPath(fd, "garantia.apolice") };
+    if (garantiaTipo === "seguro_fianca") dados.garantia = { seguradora: getByPath(fd, "garantia.seguradora"), apolice: getByPath(fd, "garantia.apolice"), taxaMensal: parseFloat(getByPath(fd, "garantia.taxaMensal") || 0) };
     else if (garantiaTipo === "titulo_capitalizacao") dados.garantia = { instituicao: getByPath(fd, "garantia.instituicao"), numero: getByPath(fd, "garantia.numero"), valor: parseFloat(getByPath(fd, "garantia.valorTitulo") || 0) };
     else if (garantiaTipo === "personalizada") dados.garantia = { descricao: getByPath(fd, "garantia.descricao") };
     else if (garantiaTipo === "caucao") dados.garantia = { valor: parseFloat(getByPath(fd, "garantia.valor") || 0) };
