@@ -131,6 +131,16 @@
   .ciclo-toggle button.active { background: var(--paper); color: var(--ink); box-shadow: 0 1px 3px rgba(20,20,15,0.1); }
   .ciclo-badge { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--brand-dark); background: var(--brand-soft); padding: 2px 7px; border-radius: 999px; }
 
+  .doc-picker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 4px; }
+  .doc-pick { text-align: left; padding: 13px 15px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--paper); cursor: pointer; display: flex; flex-direction: column; gap: 3px; transition: all .15s; font-family: inherit; }
+  .doc-pick strong { font-size: 14px; color: var(--ink); }
+  .doc-pick span { font-size: 12px; color: var(--muted); line-height: 1.4; }
+  .doc-pick:hover { border-color: #c9c5b9; }
+  .doc-pick.active { border-color: var(--brand); background: var(--brand-soft); }
+  .doc-pick.active strong { color: var(--brand-dark); }
+  @media (max-width: 760px) { .doc-picker { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 480px) { .doc-picker { grid-template-columns: 1fr; } }
+
   .risk-badge { display: inline-flex; align-items: center; gap: 7px; padding: 6px 14px; border-radius: 999px; font-size: 12.5px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
   .risk-badge::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
   .risk-badge.risk-baixo { background: #eaf4ee; color: #1f6d4c; }
@@ -210,6 +220,7 @@ const state = {
   tenant: null,
   team: [],
   tipo: "compra_venda",
+  docTipo: "ficha_locacao",
   layout: "padrao",
   authMode: "login", // login | signup
   pendingPlano: null,
@@ -345,6 +356,7 @@ function renderApp() {
     <nav>
       <button data-view="dashboard" class="active">Dashboard</button>
       <button data-view="gerar">Gerar contrato</button>
+      <button data-view="documentos">Documentos</button>
       <button data-view="ia">Ajudante IA</button>
       <button data-view="config">Configurar imobiliária</button>
       <button data-view="equipe">Equipe</button>
@@ -352,24 +364,23 @@ function renderApp() {
     <main>
       <div id="view-dashboard"></div>
       <div id="view-gerar" style="display:none"></div>
+      <div id="view-documentos" style="display:none"></div>
       <div id="view-ia" style="display:none"></div>
       <div id="view-config" style="display:none"></div>
       <div id="view-equipe" style="display:none"></div>
     </main>
   `;
 
+  const VIEWS = ["dashboard", "gerar", "documentos", "ia", "config", "equipe"];
   document.querySelectorAll("nav button").forEach(btn => {
     btn.addEventListener("click", () => {
       document.querySelectorAll("nav button").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       const view = btn.dataset.view;
-      document.getElementById("view-dashboard").style.display = view === "dashboard" ? "" : "none";
-      document.getElementById("view-gerar").style.display = view === "gerar" ? "" : "none";
-      document.getElementById("view-ia").style.display = view === "ia" ? "" : "none";
-      document.getElementById("view-config").style.display = view === "config" ? "" : "none";
-      document.getElementById("view-equipe").style.display = view === "equipe" ? "" : "none";
+      VIEWS.forEach(v => { document.getElementById("view-" + v).style.display = view === v ? "" : "none"; });
       if (view === "dashboard") renderDashboard();
       if (view === "gerar") renderGerar();
+      if (view === "documentos") renderDocumentos();
       if (view === "ia") renderAjudanteIA();
       if (view === "config") renderConfig();
       if (view === "equipe") renderEquipe();
@@ -1347,7 +1358,19 @@ async function handleSubmit(e) {
 
   const formato = (e.submitter && e.submitter.dataset.formato) || "docx";
   const buttons = form.querySelectorAll('button[type="submit"]');
-  const btn = e.submitter;
+  await gerarEBaixar(dados, formato, e.submitter, buttons, {
+    sucesso: "Contrato gerado com sucesso!",
+    afterSuccess: async () => {
+      await loadTenant();
+      const bannerEl = document.getElementById("planoUsageBanner");
+      if (bannerEl) bannerEl.outerHTML = planoUsageBanner();
+    },
+  });
+}
+
+// Gera o documento no servidor e dispara o download. Reutilizado pelos
+// contratos e pelos documentos auxiliares.
+async function gerarEBaixar(dados, formato, btn, buttons, opts = {}) {
   const originalText = btn.textContent;
   buttons.forEach(b => b.disabled = true);
   btn.textContent = formato === "pdf" ? "Gerando PDF..." : "Gerando...";
@@ -1355,27 +1378,247 @@ async function handleSubmit(e) {
     const res = await api("/api/gerar", { method: "POST", body: JSON.stringify({ dados, formato }) });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || "Erro ao gerar contrato");
+      throw new Error(err.error || "Erro ao gerar documento");
     }
     const blob = await res.blob();
     const disposition = res.headers.get("Content-Disposition") || "";
     const match = /filename="(.+?)"/.exec(disposition);
-    const filename = match ? match[1] : `contrato.${formato}`;
+    const filename = match ? match[1] : `documento.${formato}`;
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url; a.download = filename;
     document.body.appendChild(a); a.click(); a.remove();
     URL.revokeObjectURL(url);
-    toast("Contrato gerado com sucesso!");
-    await loadTenant();
-    const bannerEl = document.getElementById("planoUsageBanner");
-    if (bannerEl) bannerEl.outerHTML = planoUsageBanner();
+    toast(opts.sucesso || "Documento gerado com sucesso!");
+    if (opts.afterSuccess) await opts.afterSuccess();
   } catch (err) {
     toast(err.message, true);
   } finally {
     buttons.forEach(b => b.disabled = false);
     btn.textContent = originalText;
   }
+}
+
+// ================= DOCUMENTOS AUXILIARES =================
+const EC_OPTS = ["Solteiro(a)", "Casado(a)", "Divorciado(a)", "Viúvo(a)", "União estável"];
+
+// Blocos reutilizáveis de campos (pessoa qualificada e imóvel).
+function camposPessoa(prefixo) {
+  return [
+    { name: `${prefixo}.nome`, label: "Nome completo", req: true },
+    { name: `${prefixo}.genero`, label: "Gênero", tipo: "select", opts: ["Masculino", "Feminino"], vals: ["m", "f"] },
+    { name: `${prefixo}.cpf`, label: "CPF", ph: "000.000.000-00" },
+    { name: `${prefixo}.rg`, label: "RG / órgão emissor", ph: "1.234.567 SSP/RN" },
+    { name: `${prefixo}.estadoCivil`, label: "Estado civil", tipo: "select", opts: EC_OPTS },
+    { name: `${prefixo}.profissao`, label: "Profissão" },
+    { name: `${prefixo}.nacionalidade`, label: "Nacionalidade", valor: "Brasileiro(a)" },
+    { name: `${prefixo}.endereco`, label: "Endereço residencial", full: true },
+  ];
+}
+
+const DOC_SCHEMAS = {
+  ficha_locacao: {
+    nome: "Ficha de Locação", desc: "Cadastro do pretendente a locatário",
+    secoes: [
+      { titulo: "Imóvel pretendido", campos: [
+        { name: "imovel.endereco", label: "Endereço", req: true, full: true },
+        { name: "imovel.tipo", label: "Tipo do imóvel", ph: "Apartamento, casa, sala..." },
+        { name: "imovel.valorAluguel", label: "Aluguel pretendido (R$)", tipo: "number" },
+      ]},
+      { titulo: "Dados do pretendente", campos: [
+        { name: "pretendente.nome", label: "Nome completo", req: true },
+        { name: "pretendente.cpf", label: "CPF", ph: "000.000.000-00" },
+        { name: "pretendente.rg", label: "RG / órgão emissor" },
+        { name: "pretendente.nascimento", label: "Data de nascimento", tipo: "date" },
+        { name: "pretendente.estadoCivil", label: "Estado civil", tipo: "select", opts: EC_OPTS },
+        { name: "pretendente.profissao", label: "Profissão" },
+        { name: "pretendente.telefone", label: "Telefone", tipo: "tel" },
+        { name: "pretendente.email", label: "E-mail", tipo: "email" },
+        { name: "pretendente.endereco", label: "Endereço atual", full: true },
+      ]},
+      { titulo: "Dados profissionais / renda", campos: [
+        { name: "profissional.empresa", label: "Empresa / fonte de renda" },
+        { name: "profissional.cargo", label: "Cargo / ocupação" },
+        { name: "profissional.tempoEmpresa", label: "Tempo de empresa", ph: "Ex.: 3 anos" },
+        { name: "profissional.rendaMensal", label: "Renda mensal (R$)", tipo: "number" },
+      ]},
+      { titulo: "Outras informações", campos: [
+        { name: "info.ocupantes", label: "Nº de ocupantes" },
+        { name: "info.garantiaPretendida", label: "Garantia pretendida", ph: "Caução, fiador, seguro fiança..." },
+        { name: "referencias", label: "Referências (pessoais / comerciais)", tipo: "textarea", full: true },
+      ]},
+    ],
+  },
+  proposta_compra: {
+    nome: "Proposta de Compra", desc: "Proposta de compra de imóvel",
+    secoes: [
+      { titulo: "Proponente comprador", campos: camposPessoa("proponente") },
+      { titulo: "Imóvel", campos: [
+        { name: "imovel.endereco", label: "Endereço", req: true, full: true },
+        { name: "imovel.matricula", label: "Matrícula" },
+        { name: "proposta.proprietario", label: "Proprietário / vendedor" },
+      ]},
+      { titulo: "Condições da proposta", campos: [
+        { name: "proposta.valor", label: "Valor oferecido (R$)", tipo: "number", req: true },
+        { name: "proposta.valorExtenso", label: "Valor por extenso" },
+        { name: "proposta.formaPagamento", label: "Forma de pagamento", tipo: "textarea", full: true, ph: "Ex.: Entrada de R$ 80.000 + financiamento bancário" },
+        { name: "proposta.validadeDias", label: "Validade da proposta (dias)", tipo: "number" },
+        { name: "proposta.observacoes", label: "Observações", tipo: "textarea", full: true },
+      ]},
+    ],
+  },
+  proposta_aluguel: {
+    nome: "Proposta de Aluguel", desc: "Proposta de locação de imóvel",
+    secoes: [
+      { titulo: "Proponente locatário", campos: camposPessoa("proponente") },
+      { titulo: "Imóvel", campos: [
+        { name: "imovel.endereco", label: "Endereço", req: true, full: true },
+        { name: "proposta.proprietario", label: "Proprietário / locador" },
+      ]},
+      { titulo: "Condições da proposta", campos: [
+        { name: "proposta.valorAluguel", label: "Aluguel oferecido (R$)", tipo: "number", req: true },
+        { name: "proposta.prazoMeses", label: "Prazo pretendido (meses)", tipo: "number" },
+        { name: "proposta.garantia", label: "Garantia oferecida", ph: "Caução, fiador, seguro fiança..." },
+        { name: "proposta.dataInicio", label: "Início pretendido", tipo: "date" },
+        { name: "proposta.validadeDias", label: "Validade da proposta (dias)", tipo: "number" },
+        { name: "proposta.observacoes", label: "Observações", tipo: "textarea", full: true },
+      ]},
+    ],
+  },
+  ficha_visita: {
+    nome: "Ficha de Visita", desc: "Registro de visita e intermediação",
+    secoes: [
+      { titulo: "Dados da visita", campos: [
+        { name: "imovel.endereco", label: "Imóvel visitado", req: true, full: true },
+        { name: "visita.data", label: "Data da visita", tipo: "date" },
+        { name: "visita.hora", label: "Horário", ph: "Ex.: 15h30" },
+        { name: "visita.corretorNome", label: "Corretor(a) responsável", ph: "Deixe em branco para usar o nome da conta" },
+      ]},
+      { titulo: "Dados do cliente", campos: [
+        { name: "cliente.nome", label: "Nome completo", req: true },
+        { name: "cliente.cpf", label: "CPF", ph: "000.000.000-00" },
+        { name: "cliente.telefone", label: "Telefone", tipo: "tel" },
+        { name: "cliente.email", label: "E-mail", tipo: "email" },
+      ]},
+      { titulo: "Observações", campos: [
+        { name: "visita.observacoes", label: "Observações", tipo: "textarea", full: true },
+      ]},
+    ],
+  },
+  autorizacao_venda: {
+    nome: "Autorização de Venda", desc: "Ficha + breve contrato de autorização",
+    secoes: [
+      { titulo: "Proprietário", campos: camposPessoa("proprietario") },
+      { titulo: "Imóvel", campos: [
+        { name: "imovel.endereco", label: "Endereço", req: true, full: true },
+        { name: "imovel.matricula", label: "Matrícula" },
+        { name: "imovel.caracteristicas", label: "Características", ph: "3 quartos, 2 vagas..." },
+      ]},
+      { titulo: "Condições da autorização", campos: [
+        { name: "autorizacao.valorVenda", label: "Valor de venda pretendido (R$)", tipo: "number", req: true },
+        { name: "autorizacao.comissaoPercentual", label: "Comissão (%)", tipo: "number", valor: "6" },
+        { name: "autorizacao.prazoDias", label: "Prazo da autorização (dias)", tipo: "number", valor: "90" },
+        { name: "autorizacao.observacoes", label: "Condições especiais", tipo: "textarea", full: true },
+      ]},
+    ],
+  },
+  contrato_exclusividade: {
+    nome: "Contrato de Exclusividade", desc: "Ficha + breve contrato de exclusividade",
+    secoes: [
+      { titulo: "Proprietário", campos: camposPessoa("proprietario") },
+      { titulo: "Imóvel", campos: [
+        { name: "imovel.endereco", label: "Endereço", req: true, full: true },
+        { name: "imovel.matricula", label: "Matrícula" },
+      ]},
+      { titulo: "Condições da exclusividade", campos: [
+        { name: "exclusividade.valorVenda", label: "Valor de venda pretendido (R$)", tipo: "number", req: true },
+        { name: "exclusividade.comissaoPercentual", label: "Comissão (%)", tipo: "number", valor: "6" },
+        { name: "exclusividade.prazoDias", label: "Prazo da exclusividade (dias)", tipo: "number", valor: "90" },
+        { name: "exclusividade.observacoes", label: "Condições especiais", tipo: "textarea", full: true },
+      ]},
+    ],
+  },
+};
+
+function docCampoHTML(f) {
+  const req = f.req ? "required" : "";
+  const ph = f.ph ? `placeholder="${f.ph}"` : "";
+  const val = f.valor ? `value="${f.valor}"` : "";
+  let inner;
+  if (f.tipo === "textarea") {
+    inner = `<textarea data-f="${f.name}" rows="${f.rows || 3}" ${ph}></textarea>`;
+  } else if (f.tipo === "select") {
+    const opts = f.opts.map((o, i) => `<option value="${(f.vals ? f.vals[i] : o)}">${o}</option>`).join("");
+    inner = `<select data-f="${f.name}">${opts}</select>`;
+  } else {
+    const type = ({ number: "number", date: "date", tel: "tel", email: "email" })[f.tipo] || "text";
+    const step = f.tipo === "number" ? 'step="0.01"' : "";
+    inner = `<input data-f="${f.name}" type="${type}" ${step} ${ph} ${val} ${req} />`;
+  }
+  return `<div class="field" style="${f.full ? "grid-column:1/-1" : ""}"><label>${f.label}${f.req ? " *" : ""}</label>${inner}</div>`;
+}
+
+function renderDocumentos() {
+  const el = document.getElementById("view-documentos");
+  const schema = DOC_SCHEMAS[state.docTipo];
+  const picker = Object.entries(DOC_SCHEMAS).map(([id, s]) =>
+    `<button type="button" class="doc-pick ${id === state.docTipo ? "active" : ""}" data-doc="${id}">
+       <strong>${s.nome}</strong><span>${s.desc}</span>
+     </button>`).join("");
+
+  const secoes = schema.secoes.map(sec =>
+    `<div class="section-title">${sec.titulo}</div>
+     <div class="grid">${sec.campos.map(docCampoHTML).join("")}</div>`).join("");
+
+  el.innerHTML = `
+    <div class="card">
+      <h2>Documentos do dia a dia</h2>
+      <p class="hint">Fichas, propostas e autorizações com a identidade visual da sua ${state.tenant?.tipoConta === "corretor" ? "conta" : "imobiliária"}. Não consomem sua cota mensal de contratos.</p>
+      <div class="doc-picker">${picker}</div>
+    </div>
+    <div class="card">
+      <h2>${schema.nome}</h2>
+      <p class="hint">${schema.desc}</p>
+      <form id="docForm">
+        ${secoes}
+        <div class="section-title">Data do documento</div>
+        <div class="grid"><div class="field"><label>Data</label><input data-f="data" type="date" /></div></div>
+        <div class="footer-actions" style="margin-top:20px">
+          <button type="submit" class="secondary" data-formato="docx">Gerar .docx (editável)</button>
+          <button type="submit" class="primary" data-formato="pdf">Gerar .pdf (pronto p/ assinatura)</button>
+        </div>
+      </form>
+    </div>
+  `;
+
+  el.querySelectorAll("[data-doc]").forEach(b => b.addEventListener("click", () => {
+    state.docTipo = b.dataset.doc;
+    renderDocumentos();
+  }));
+
+  el.querySelector("#docForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const dados = { tipo: state.docTipo, layout: "padrao" };
+    form.querySelectorAll("[data-f]").forEach(inp => {
+      let v = inp.value;
+      if (inp.type === "number") v = v === "" ? "" : parseFloat(v);
+      setPath(dados, inp.dataset.f, v);
+    });
+    const formato = (e.submitter && e.submitter.dataset.formato) || "docx";
+    const buttons = form.querySelectorAll('button[type="submit"]');
+    await gerarEBaixar(dados, formato, e.submitter, buttons, { sucesso: `${schema.nome} gerado(a) com sucesso!` });
+  });
+}
+
+function setPath(obj, path, value) {
+  const parts = path.split(".");
+  let cur = obj;
+  for (let i = 0; i < parts.length - 1; i++) {
+    if (typeof cur[parts[i]] !== "object" || cur[parts[i]] === null) cur[parts[i]] = {};
+    cur = cur[parts[i]];
+  }
+  cur[parts[parts.length - 1]] = value;
 }
 
 (async function init() {

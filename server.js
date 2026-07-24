@@ -408,12 +408,27 @@ app.post("/api/gerar", requireAuth, async (req, res) => {
     const tenant = await store.getTenant(req.user.tenantId);
     if (!tenant) return res.status(404).json({ error: "Imobiliária não encontrada" });
 
+    // Documentos auxiliares (fichas, propostas, autorizações) são mais leves,
+    // liberados em todos os planos: não consomem a cota mensal de contratos
+    // nem entram no dashboard de contratos.
+    const DOCS_AUXILIARES = {
+      ficha_locacao: "Ficha-de-Locacao",
+      proposta_compra: "Proposta-de-Compra",
+      proposta_aluguel: "Proposta-de-Locacao",
+      ficha_visita: "Ficha-de-Visita",
+      autorizacao_venda: "Autorizacao-de-Venda",
+      contrato_exclusividade: "Contrato-de-Exclusividade",
+    };
+    const ehAuxiliar = !!DOCS_AUXILIARES[dados.tipo];
+
     const limites = limitesDoPlano(tenant.plano);
-    const usados = contratosUsadosNoMes(tenant);
-    if (usados >= limites.contratosPorMes) {
-      return res.status(402).json({
-        error: `Seu plano (${limites.nome}) permite ${limites.contratosPorMes} contrato(s) por mês e você já usou todos. Faça upgrade para continuar gerando.`,
-      });
+    if (!ehAuxiliar) {
+      const usados = contratosUsadosNoMes(tenant);
+      if (usados >= limites.contratosPorMes) {
+        return res.status(402).json({
+          error: `Seu plano (${limites.nome}) permite ${limites.contratosPorMes} contrato(s) por mês e você já usou todos. Faça upgrade para continuar gerando.`,
+        });
+      }
     }
 
     const LAYOUTS_PAGOS = new Set(["profissional", "elegante"]);
@@ -430,7 +445,8 @@ app.post("/api/gerar", requireAuth, async (req, res) => {
     }
 
     let buffer = await gerarContrato(dados, branding);
-    const nomeBase = `Contrato_${(dados.tipo || "contrato").replace(/_/g, "-")}_${(dados.imovel && dados.imovel.endereco || "").slice(0, 20).replace(/[^a-zA-Z0-9]+/g, "")}` || "contrato";
+    const prefixo = DOCS_AUXILIARES[dados.tipo] || `Contrato_${(dados.tipo || "contrato").replace(/_/g, "-")}`;
+    const nomeBase = `${prefixo}_${(dados.imovel && dados.imovel.endereco || "").slice(0, 20).replace(/[^a-zA-Z0-9]+/g, "")}` || "documento";
 
     if (querPdf) {
       try {
@@ -446,12 +462,15 @@ app.post("/api/gerar", requireAuth, async (req, res) => {
       res.setHeader("Content-Disposition", `attachment; filename="${nomeBase}.docx"`);
     }
 
-    // Só conta a cota e salva o histórico depois que o documento final está pronto pra entrega.
-    const mes = mesAtual();
-    const usoMensal = { ...(tenant.usoMensal || {}) };
-    usoMensal[mes] = (usoMensal[mes] || 0) + 1;
-    store.setTenant(req.user.tenantId, { ...tenant, usoMensal }).catch(err => console.error("Falha ao registrar uso do contrato:", err));
-    store.addContract(nanoid(12), req.user.tenantId, resumoContrato(dados)).catch(err => console.error("Falha ao salvar histórico do contrato:", err));
+    // Só conta a cota e salva o histórico depois que o documento final está
+    // pronto pra entrega. Documentos auxiliares não contam cota nem histórico.
+    if (!ehAuxiliar) {
+      const mes = mesAtual();
+      const usoMensal = { ...(tenant.usoMensal || {}) };
+      usoMensal[mes] = (usoMensal[mes] || 0) + 1;
+      store.setTenant(req.user.tenantId, { ...tenant, usoMensal }).catch(err => console.error("Falha ao registrar uso do contrato:", err));
+      store.addContract(nanoid(12), req.user.tenantId, resumoContrato(dados)).catch(err => console.error("Falha ao salvar histórico do contrato:", err));
+    }
 
     res.send(buffer);
   } catch (err) {
