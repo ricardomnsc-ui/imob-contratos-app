@@ -46,11 +46,26 @@ são para Railway; se preferir outra, me avisa e adapto.
      por padrão, não precisa criar um segundo.
 
 6. **Variáveis de ambiente** (aba "Variables"):
+
+   Básicas (obrigatórias):
    - `NODE_ENV=production`
    - `SESSION_SECRET=<uma string aleatória longa>` — gere uma com
      `openssl rand -hex 32` no terminal. Sem isso o app gera uma sozinha, mas
      é melhor fixar para não invalidar sessões a cada redeploy sem volume.
    - `DATA_DIR=/app/data`
+
+   Ajudante de IA — extração de CNH/RG e assistente de cláusulas (opcional;
+   sem ela essas funções ficam indisponíveis, o resto do app funciona normal):
+   - `ANTHROPIC_API_KEY=<sua chave da Anthropic>` — crie em
+     https://console.anthropic.com → API Keys (precisa de créditos/billing ativo).
+   - `ANTHROPIC_MODEL=claude-sonnet-5` (opcional; esse já é o padrão).
+
+   Pagamentos — Stripe (opcional; sem elas os planos pagos/checkout ficam
+   indisponíveis):
+   - `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
+   - `STRIPE_PRICE_AUTONOMO`, `STRIPE_PRICE_IMOBILIARIA` (preços mensais)
+   - `STRIPE_PRICE_AUTONOMO_ANUAL`, `STRIPE_PRICE_IMOBILIARIA_ANUAL` (preços
+     anuais; sem elas o botão "Anual" cai para o preço mensal).
 
 7. Railway expõe uma porta pública automaticamente. Em "Settings → Networking"
    gere um domínio (`algo.up.railway.app`) — já vem com HTTPS.
