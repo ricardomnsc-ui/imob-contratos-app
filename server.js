@@ -13,7 +13,7 @@ const { nanoid } = require("nanoid");
 const { gerarContrato } = require("./lib/generator");
 const { convertDocxToPdf } = require("./lib/pdf");
 const store = require("./lib/store");
-const { PLANOS, limitesDoPlano, precoDoPlano, mesAtual, contratosUsadosNoMes } = require("./lib/planos");
+const { PLANOS, limitesDoPlano, precoDoPlano, mesAtual, contratosUsadosNoMes, LIMITE_IA_MENSAL, iaUsadaNoMes } = require("./lib/planos");
 const stripe = require("./lib/stripe");
 const ai = require("./lib/ai");
 
@@ -172,7 +172,7 @@ app.post("/api/auth/signup", authLimiter, async (req, res) => {
       nome: imobiliariaNome,
       creci: "", cnpj: "", email: emailNorm, endereco: "",
       cidade: "Natal", foroPadrao: "Natal/RN", corPrimaria: "00A859", logoPath: null,
-      plano: "gratis", usoMensal: {},
+      plano: "gratis", usoMensal: {}, usoIaMensal: {},
     });
 
     const userId = nanoid(10);
@@ -290,6 +290,8 @@ app.get("/api/tenant", requireAuth, async (req, res) => {
     plano: tenant.plano || "gratis",
     usoContratosNoMes: contratosUsadosNoMes(tenant),
     limiteContratosPorMes: limites.contratosPorMes === Infinity ? null : limites.contratosPorMes,
+    usoIaNoMes: iaUsadaNoMes(tenant),
+    limiteIaPorMes: LIMITE_IA_MENSAL,
     limiteUsuarios: limites.maxUsuarios === Infinity ? null : limites.maxUsuarios,
     temAssinaturaAtiva: !!tenant.stripeCustomerId,
   });
@@ -310,6 +312,7 @@ app.post("/api/tenant", requireAuth, upload.single("logo"), async (req, res) => 
     tipoConta: req.body.tipoConta || existing.tipoConta || "imobiliaria",
     plano: existing.plano || "gratis",
     usoMensal: existing.usoMensal || {},
+    usoIaMensal: existing.usoIaMensal || {},
     stripeCustomerId: existing.stripeCustomerId || null,
     stripeSubscriptionId: existing.stripeSubscriptionId || null,
   };
@@ -481,14 +484,30 @@ app.post("/api/gerar", requireAuth, async (req, res) => {
 });
 
 // ================= AJUDANTE IA DE CLÁUSULAS =================
+// Mensagem única quando a conta atinge o teto mensal de IA.
+const ERRO_LIMITE_IA = `Você atingiu o limite de ${LIMITE_IA_MENSAL} usos de IA neste mês (extração de CNH/RG + Ajudante de cláusulas, somados). O contador zera no início do próximo mês.`;
+
+// Registra +1 no contador mensal de IA da conta. Só é chamado DEPOIS que a
+// chamada à IA teve sucesso, para não descontar cota em falhas de rede/parsing.
+async function registrarUsoIa(tenantId, tenant) {
+  const mes = mesAtual();
+  const usoIaMensal = { ...(tenant.usoIaMensal || {}) };
+  usoIaMensal[mes] = (usoIaMensal[mes] || 0) + 1;
+  await store.setTenant(tenantId, { ...tenant, usoIaMensal });
+}
+
 app.post("/api/ia/clausula", requireAuth, async (req, res) => {
   try {
     const tenant = await store.getTenant(req.user.tenantId);
     if (!tenant || (tenant.plano || "gratis") === "gratis") {
       return res.status(402).json({ error: "O Assistente de IA de cláusulas é exclusivo dos planos pagos. Faça upgrade para usar essa ferramenta." });
     }
+    if (iaUsadaNoMes(tenant) >= LIMITE_IA_MENSAL) {
+      return res.status(429).json({ error: ERRO_LIMITE_IA });
+    }
     const { tipoContrato, clausulaAtual, pedido } = req.body || {};
     const resultado = await ai.avaliarClausula({ tipoContrato, clausulaAtual, pedido });
+    await registrarUsoIa(req.user.tenantId, tenant);
     res.json(resultado);
   } catch (err) {
     const indisponivel = /indispon[íi]vel/i.test(err.message || "");
@@ -502,8 +521,12 @@ app.post("/api/ia/extrair-documento", requireAuth, uploadDocumento.single("docum
     if (!tenant || (tenant.plano || "gratis") === "gratis") {
       return res.status(402).json({ error: "O preenchimento automático por CNH/RG é exclusivo dos planos pagos. Faça upgrade para usar essa ferramenta." });
     }
+    if (iaUsadaNoMes(tenant) >= LIMITE_IA_MENSAL) {
+      return res.status(429).json({ error: ERRO_LIMITE_IA });
+    }
     if (!req.file) return res.status(400).json({ error: "Envie um arquivo (PDF, JPG ou PNG)." });
     const resultado = await ai.extrairDadosDocumento(req.file.buffer, req.file.mimetype);
+    await registrarUsoIa(req.user.tenantId, tenant);
     res.json(resultado);
   } catch (err) {
     const indisponivel = /indispon[íi]vel/i.test(err.message || "");

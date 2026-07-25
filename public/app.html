@@ -1197,6 +1197,8 @@ function renderAjudanteIA() {
     `;
     return;
   }
+  const usoIa = state.tenant?.usoIaNoMes || 0;
+  const limiteIa = state.tenant?.limiteIaPorMes || 50;
   el.innerHTML = `
     <div class="card">
       <h2>Ajudante IA de cláusulas</h2>
@@ -1204,6 +1206,7 @@ function renderAjudanteIA() {
         Descreva o pedido de alteração que uma das partes fez sobre o contrato. A IA avalia o risco
         e já redige um texto pronto pra colar no campo "Cláusula especial" na hora de gerar o documento.
       </p>
+      <p class="hint" style="margin-top:8px">Uso de IA neste mês: <strong>${usoIa}/${limiteIa}</strong> — inclui também a leitura automática de CNH/RG. O contador zera todo dia 1º.</p>
 
       <form id="iaForm" style="margin-top:20px">
         <div class="field">
