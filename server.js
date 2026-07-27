@@ -171,7 +171,7 @@ app.post("/api/auth/signup", authLimiter, async (req, res) => {
     await store.setTenant(tenantId, {
       nome: imobiliariaNome,
       creci: "", cnpj: "", email: emailNorm, endereco: "",
-      cidade: "Natal", foroPadrao: "Natal/RN", corPrimaria: "00A859", logoPath: null,
+      cidade: "Natal", foroPadrao: "Natal/RN", corPrimaria: "0D1B2A", logoPath: null,
       plano: "gratis", usoMensal: {}, usoIaMensal: {},
     });
 
@@ -307,7 +307,7 @@ app.post("/api/tenant", requireAuth, upload.single("logo"), async (req, res) => 
     endereco: req.body.endereco || existing.endereco || "",
     cidade: req.body.cidade || existing.cidade || "Natal",
     foroPadrao: req.body.foroPadrao || existing.foroPadrao || "Natal/RN",
-    corPrimaria: req.body.corPrimaria || existing.corPrimaria || "00A859",
+    corPrimaria: req.body.corPrimaria || existing.corPrimaria || "0D1B2A",
     logoPath: req.file ? `/uploads/${req.file.filename}` : existing.logoPath || null,
     tipoConta: req.body.tipoConta || existing.tipoConta || "imobiliaria",
     plano: existing.plano || "gratis",
