@@ -421,6 +421,7 @@ app.post("/api/gerar", requireAuth, async (req, res) => {
       ficha_visita: "Ficha-de-Visita",
       autorizacao_venda: "Autorizacao-de-Venda",
       contrato_exclusividade: "Contrato-de-Exclusividade",
+      termo_entrega_chaves: "Termo-de-Entrega-de-Chaves",
     };
     const ehAuxiliar = !!DOCS_AUXILIARES[dados.tipo];
 

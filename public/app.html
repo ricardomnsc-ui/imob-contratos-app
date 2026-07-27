@@ -1541,6 +1541,59 @@ const DOC_SCHEMAS = {
       ]},
     ],
   },
+  termo_entrega_chaves: {
+    nome: "Termo de Entrega de Chaves", desc: "Entrega de chaves, acessos e situação de energia/água/gás",
+    secoes: [
+      { titulo: "Tipo de entrega", campos: [
+        { name: "negocio", label: "Negócio", tipo: "select", opts: ["Locação", "Compra e venda"], vals: ["locacao", "compra_venda"] },
+        { name: "entreguePorImobiliaria", label: "Entrega feita pela imobiliária?", tipo: "select", opts: ["Não", "Sim"], vals: ["nao", "sim"] },
+      ]},
+      { titulo: "Imóvel", campos: [
+        { name: "imovel.endereco", label: "Endereço", req: true, full: true },
+        { name: "imovel.tipo", label: "Tipo do imóvel", ph: "Apartamento, casa, sala..." },
+        { name: "imovel.complemento", label: "Complemento / unidade", ph: "Bloco B, apto 302" },
+      ]},
+      { titulo: "Quem entrega (locador / vendedor)", campos: [
+        { name: "entregador.nome", label: "Nome completo", req: true },
+        { name: "entregador.cpf", label: "CPF", ph: "000.000.000-00" },
+        { name: "entregador.telefone", label: "Telefone", tipo: "tel" },
+      ]},
+      { titulo: "Quem recebe (locatário / comprador)", campos: [
+        { name: "recebedor.nome", label: "Nome completo", req: true },
+        { name: "recebedor.cpf", label: "CPF", ph: "000.000.000-00" },
+        { name: "recebedor.telefone", label: "Telefone", tipo: "tel" },
+      ]},
+      { titulo: "Chaves e acessos entregues (quantidade)", campos: [
+        { name: "chaves.portaPrincipal", label: "Chaves da porta principal", tipo: "number", ph: "Qtd" },
+        { name: "chaves.portaServico", label: "Chaves da porta de serviço", tipo: "number", ph: "Qtd" },
+        { name: "chaves.portao", label: "Chaves de portão / portaria", tipo: "number", ph: "Qtd" },
+        { name: "chaves.controle", label: "Controles de portão / garagem", tipo: "number", ph: "Qtd" },
+        { name: "chaves.correio", label: "Chaves da caixa de correio", tipo: "number", ph: "Qtd" },
+        { name: "chaves.outras", label: "Outras chaves / acessos", full: true, ph: "Ex.: cartão de acesso (2), chave do salão de festas (1)" },
+      ]},
+      { titulo: "Energia elétrica", campos: [
+        { name: "utilidades.energia.situacao", label: "Situação", tipo: "select", opts: ["—", "Ligada", "Desligada", "Não se aplica"], vals: ["", "ligada", "desligada", "na"] },
+        { name: "utilidades.energia.titularidade", label: "Titularidade", tipo: "select", opts: ["—", "Permanece no nome atual", "Transferir para quem recebe", "Não se aplica"], vals: ["", "manter", "transferir", "na"] },
+        { name: "utilidades.energia.instalacao", label: "Nº instalação / medidor" },
+        { name: "utilidades.energia.leitura", label: "Leitura na entrega" },
+      ]},
+      { titulo: "Água / saneamento", campos: [
+        { name: "utilidades.agua.situacao", label: "Situação", tipo: "select", opts: ["—", "Ligada", "Desligada", "Não se aplica"], vals: ["", "ligada", "desligada", "na"] },
+        { name: "utilidades.agua.titularidade", label: "Titularidade", tipo: "select", opts: ["—", "Permanece no nome atual", "Transferir para quem recebe", "Não se aplica"], vals: ["", "manter", "transferir", "na"] },
+        { name: "utilidades.agua.instalacao", label: "Nº instalação / hidrômetro" },
+        { name: "utilidades.agua.leitura", label: "Leitura na entrega" },
+      ]},
+      { titulo: "Gás", campos: [
+        { name: "utilidades.gas.situacao", label: "Situação", tipo: "select", opts: ["—", "Ligado", "Desligado", "Não se aplica"], vals: ["", "ligada", "desligada", "na"] },
+        { name: "utilidades.gas.titularidade", label: "Titularidade", tipo: "select", opts: ["—", "Permanece no nome atual", "Transferir para quem recebe", "Não se aplica"], vals: ["", "manter", "transferir", "na"] },
+        { name: "utilidades.gas.instalacao", label: "Nº instalação / medidor" },
+        { name: "utilidades.gas.leitura", label: "Leitura na entrega" },
+      ]},
+      { titulo: "Observações", campos: [
+        { name: "observacoes", label: "Observações", tipo: "textarea", full: true },
+      ]},
+    ],
+  },
 };
 
 function docCampoHTML(f) {
