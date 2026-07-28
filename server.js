@@ -526,7 +526,10 @@ app.post("/api/ia/extrair-documento", requireAuth, uploadDocumento.single("docum
       return res.status(429).json({ error: ERRO_LIMITE_IA });
     }
     if (!req.file) return res.status(400).json({ error: "Envie um arquivo (PDF, JPG ou PNG)." });
-    const resultado = await ai.extrairDadosDocumento(req.file.buffer, req.file.mimetype);
+    // "cnpj" lê o Cartão CNPJ (empresa); qualquer outro valor lê CNH/RG (pessoa física).
+    const resultado = String(req.body.tipoDocumento || "") === "cnpj"
+      ? await ai.extrairDadosCnpj(req.file.buffer, req.file.mimetype)
+      : await ai.extrairDadosDocumento(req.file.buffer, req.file.mimetype);
     await registrarUsoIa(req.user.tenantId, tenant);
     res.json(resultado);
   } catch (err) {

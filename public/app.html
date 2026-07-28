@@ -766,11 +766,19 @@ function pessoaFields(prefix, idx, tipoLabel) {
         <span class="cnh-status"></span>
       </div>
       <div class="grid">
-        <div class="field"><label>Nome completo *</label><input data-f="nome" required /></div>
-        <div class="field"><label>Gênero</label><select data-f="genero"><option value="m">Masculino</option><option value="f">Feminino</option></select></div>
-        <div class="field"><label>CPF *</label><input data-f="cpf" placeholder="000.000.000-00" required /></div>
-        <div class="field"><label>RG (opcional)</label><input data-f="rg" placeholder="1.234.567 SSP/RN" /></div>
-        <div class="field"><label>Estado civil</label>
+        <div class="field" style="grid-column:1/-1">
+          <label>Tipo de parte</label>
+          <select data-f="tipoPessoa" data-tipo-pessoa>
+            <option value="fisica">Pessoa física</option>
+            <option value="juridica">Pessoa jurídica (empresa)</option>
+          </select>
+        </div>
+        <div class="field"><label data-label-nome>Nome completo *</label><input data-f="nome" required /></div>
+        <!-- Campos exclusivos de pessoa física -->
+        <div class="field" data-pf><label>Gênero</label><select data-f="genero"><option value="m">Masculino</option><option value="f">Feminino</option></select></div>
+        <div class="field" data-pf><label>CPF *</label><input data-f="cpf" placeholder="000.000.000-00" required /></div>
+        <div class="field" data-pf><label>RG (opcional)</label><input data-f="rg" placeholder="1.234.567 SSP/RN" /></div>
+        <div class="field" data-pf><label>Estado civil</label>
           <select data-f="estadoCivil">
             <option value="solteiro(a)">Solteiro(a)</option>
             <option value="casado(a)">Casado(a)</option>
@@ -779,10 +787,15 @@ function pessoaFields(prefix, idx, tipoLabel) {
             <option value="união estável">União estável</option>
           </select>
         </div>
-        <div class="field"><label>Profissão</label><input data-f="profissao" /></div>
-        <div class="field"><label>Nacionalidade</label><input data-f="nacionalidade" value="Brasileiro(a)" /></div>
+        <div class="field" data-pf><label>Profissão</label><input data-f="profissao" /></div>
+        <div class="field" data-pf><label>Nacionalidade</label><input data-f="nacionalidade" value="Brasileiro(a)" /></div>
+        <!-- Campos exclusivos de pessoa jurídica (empresa não tem gênero) -->
+        <div class="field" data-pj style="display:none"><label>CNPJ *</label><input data-f="cnpj" placeholder="00.000.000/0000-00" /></div>
+        <div class="field" data-pj style="display:none"><label>Representante legal</label><input data-f="repNome" placeholder="Quem assina pela empresa" /></div>
+        <div class="field" data-pj style="display:none"><label>CPF do representante</label><input data-f="repCpf" placeholder="000.000.000-00" /></div>
+        <div class="field" data-pj style="display:none"><label>Cargo do representante</label><input data-f="repCargo" placeholder="Sócio-administrador, procurador..." /></div>
       </div>
-      <div class="field"><label>Endereço residencial completo</label><input data-f="endereco" placeholder="Rua, nº, bairro, cidade/UF, CEP" /></div>
+      <div class="field"><label data-label-endereco>Endereço residencial completo</label><input data-f="endereco" placeholder="Rua, nº, bairro, cidade/UF, CEP" /></div>
       ${tipoLabel === "Fiador" ? `
       <div class="field">
         <label style="display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer">
@@ -809,6 +822,39 @@ function addPersonRow(containerId, prefix, tipoLabel) {
   wireRemoveButtons(container);
   wireCnhUploads(container);
   wireConjugeToggle(container);
+  wireTipoPessoa(container);
+}
+
+/**
+ * Alterna o card entre pessoa física e empresa. Além de mostrar/esconder os
+ * campos, precisa mover o "required" entre CPF e CNPJ: um campo obrigatório
+ * escondido trava o envio do formulário sem mostrar erro ao usuário.
+ */
+function wireTipoPessoa(container) {
+  container.querySelectorAll("[data-tipo-pessoa]").forEach(sel => {
+    if (sel.dataset.wired) return;
+    sel.dataset.wired = "1";
+    const card = sel.closest(".person-card");
+    const aplicar = () => {
+      const pj = sel.value === "juridica";
+      card.querySelectorAll("[data-pf]").forEach(el => el.style.display = pj ? "none" : "");
+      card.querySelectorAll("[data-pj]").forEach(el => el.style.display = pj ? "" : "none");
+      const cpf = card.querySelector('[data-f="cpf"]');
+      const cnpj = card.querySelector('[data-f="cnpj"]');
+      if (cpf) cpf.required = !pj;
+      if (cnpj) cnpj.required = pj;
+      const lblNome = card.querySelector("[data-label-nome]");
+      if (lblNome) lblNome.textContent = pj ? "Razão social *" : "Nome completo *";
+      const lblEnd = card.querySelector("[data-label-endereco]");
+      if (lblEnd) lblEnd.textContent = pj ? "Endereço da sede" : "Endereço residencial completo";
+      const btn = card.querySelector(".cnh-upload-btn");
+      if (btn && !btn.classList.contains("locked")) {
+        btn.childNodes.forEach(n => { if (n.nodeType === 3 && n.textContent.trim()) n.textContent = pj ? " Preencher com Cartão CNPJ " : " Preencher com CNH/RG "; });
+      }
+    };
+    sel.addEventListener("change", aplicar);
+    aplicar();
+  });
 }
 function wireConjugeToggle(container) {
   container.querySelectorAll("[data-conjuge-toggle]").forEach(chk => {
@@ -844,24 +890,39 @@ async function handleCnhUpload(input) {
   const card = input.closest(".person-card");
   const btn = input.closest(".cnh-upload-btn");
   const status = card.querySelector(".cnh-status");
+  const ehPJ = (card.querySelector("[data-tipo-pessoa]") || {}).value === "juridica";
   btn.classList.add("loading");
   status.className = "cnh-status";
-  status.textContent = "Lendo documento...";
+  status.textContent = ehPJ ? "Lendo Cartão CNPJ..." : "Lendo documento...";
 
   try {
     const fd = new FormData();
     fd.append("documento", file);
+    fd.append("tipoDocumento", ehPJ ? "cnpj" : "cnh");
     const res = await api("/api/ia/extrair-documento", { method: "POST", body: fd });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || "Não foi possível ler o documento.");
 
-    if (data.nome) card.querySelector('[data-f="nome"]').value = data.nome;
-    if (data.cpf) card.querySelector('[data-f="cpf"]').value = data.cpf;
-    if (data.rg) card.querySelector('[data-f="rg"]').value = data.rg;
-    if (data.nacionalidade) card.querySelector('[data-f="nacionalidade"]').value = data.nacionalidade;
+    const set = (campo, valor) => {
+      if (!valor) return;
+      const el = card.querySelector(`[data-f="${campo}"]`);
+      if (el) el.value = valor;
+    };
+    if (ehPJ) {
+      set("nome", data.razaoSocial);
+      set("cnpj", data.cnpj);
+      set("endereco", data.endereco);
+    } else {
+      set("nome", data.nome);
+      set("cpf", data.cpf);
+      set("rg", data.rg);
+      set("nacionalidade", data.nacionalidade);
+    }
 
     status.className = "cnh-status success";
-    status.textContent = "Dados preenchidos — confira antes de gerar o contrato.";
+    status.textContent = ehPJ && data.situacao && data.situacao.toUpperCase() !== "ATIVA"
+      ? `Dados preenchidos. Atenção: situação cadastral "${data.situacao}" — confira na Receita.`
+      : "Dados preenchidos — confira antes de gerar o contrato.";
   } catch (err) {
     status.className = "cnh-status error";
     status.textContent = err.message;
