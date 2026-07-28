@@ -1481,16 +1481,25 @@ async function gerarEBaixar(dados, formato, btn, buttons, opts = {}) {
 const EC_OPTS = ["Solteiro(a)", "Casado(a)", "Divorciado(a)", "Viúvo(a)", "União estável"];
 
 // Blocos reutilizáveis de campos (pessoa qualificada e imóvel).
+// Aceita pessoa física ou jurídica: os campos de PF e PJ são mutuamente
+// exclusivos e a empresa não tem gênero (concorda sempre no feminino,
+// com "pessoa jurídica").
 function camposPessoa(prefixo) {
   return [
-    { name: `${prefixo}.nome`, label: "Nome completo", req: true },
-    { name: `${prefixo}.genero`, label: "Gênero", tipo: "select", opts: ["Masculino", "Feminino"], vals: ["m", "f"] },
-    { name: `${prefixo}.cpf`, label: "CPF", ph: "000.000.000-00" },
-    { name: `${prefixo}.rg`, label: "RG / órgão emissor", ph: "1.234.567 SSP/RN" },
-    { name: `${prefixo}.estadoCivil`, label: "Estado civil", tipo: "select", opts: EC_OPTS },
-    { name: `${prefixo}.profissao`, label: "Profissão" },
-    { name: `${prefixo}.nacionalidade`, label: "Nacionalidade", valor: "Brasileiro(a)" },
-    { name: `${prefixo}.endereco`, label: "Endereço residencial", full: true },
+    { name: `${prefixo}.tipoPessoa`, label: "Tipo de parte", tipo: "select",
+      opts: ["Pessoa física", "Pessoa jurídica (empresa)"], vals: ["fisica", "juridica"], full: true, tipoPessoa: true },
+    { name: `${prefixo}.nome`, label: "Nome completo", labelPJ: "Razão social", req: true },
+    { name: `${prefixo}.genero`, label: "Gênero", tipo: "select", opts: ["Masculino", "Feminino"], vals: ["m", "f"], grupo: "pf" },
+    { name: `${prefixo}.cpf`, label: "CPF", ph: "000.000.000-00", grupo: "pf" },
+    { name: `${prefixo}.rg`, label: "RG / órgão emissor", ph: "1.234.567 SSP/RN", grupo: "pf" },
+    { name: `${prefixo}.estadoCivil`, label: "Estado civil", tipo: "select", opts: EC_OPTS, grupo: "pf" },
+    { name: `${prefixo}.profissao`, label: "Profissão", grupo: "pf" },
+    { name: `${prefixo}.nacionalidade`, label: "Nacionalidade", valor: "Brasileiro(a)", grupo: "pf" },
+    { name: `${prefixo}.cnpj`, label: "CNPJ", ph: "00.000.000/0000-00", grupo: "pj" },
+    { name: `${prefixo}.repNome`, label: "Representante legal", ph: "Quem assina pela empresa", grupo: "pj" },
+    { name: `${prefixo}.repCpf`, label: "CPF do representante", ph: "000.000.000-00", grupo: "pj" },
+    { name: `${prefixo}.repCargo`, label: "Cargo do representante", ph: "Sócio-administrador, procurador...", grupo: "pj" },
+    { name: `${prefixo}.endereco`, label: "Endereço residencial", labelPJ: "Endereço da sede", full: true },
   ];
 }
 
@@ -1504,8 +1513,8 @@ const DOC_SCHEMAS = {
         { name: "imovel.valorAluguel", label: "Aluguel pretendido (R$)", tipo: "number" },
       ]},
       { titulo: "Dados do pretendente", campos: [
-        { name: "pretendente.nome", label: "Nome completo", req: true },
-        { name: "pretendente.cpf", label: "CPF", ph: "000.000.000-00" },
+        { name: "pretendente.nome", label: "Nome completo / Razão social", req: true },
+        { name: "pretendente.cpf", label: "CPF / CNPJ", ph: "000.000.000-00 ou 00.000.000/0000-00" },
         { name: "pretendente.rg", label: "RG / órgão emissor" },
         { name: "pretendente.nascimento", label: "Data de nascimento", tipo: "date" },
         { name: "pretendente.estadoCivil", label: "Estado civil", tipo: "select", opts: EC_OPTS },
@@ -1573,8 +1582,8 @@ const DOC_SCHEMAS = {
         { name: "visita.corretorNome", label: "Corretor(a) responsável", ph: "Deixe em branco para usar o nome da conta" },
       ]},
       { titulo: "Dados do cliente", campos: [
-        { name: "cliente.nome", label: "Nome completo", req: true },
-        { name: "cliente.cpf", label: "CPF", ph: "000.000.000-00" },
+        { name: "cliente.nome", label: "Nome completo / Razão social", req: true },
+        { name: "cliente.cpf", label: "CPF / CNPJ", ph: "000.000.000-00 ou 00.000.000/0000-00" },
         { name: "cliente.telefone", label: "Telefone", tipo: "tel" },
         { name: "cliente.email", label: "E-mail", tipo: "email" },
       ]},
@@ -1629,13 +1638,13 @@ const DOC_SCHEMAS = {
         { name: "imovel.complemento", label: "Complemento / unidade", ph: "Bloco B, apto 302" },
       ]},
       { titulo: "Quem entrega (locador / vendedor)", campos: [
-        { name: "entregador.nome", label: "Nome completo", req: true },
-        { name: "entregador.cpf", label: "CPF", ph: "000.000.000-00" },
+        { name: "entregador.nome", label: "Nome completo / Razão social", req: true },
+        { name: "entregador.cpf", label: "CPF / CNPJ", ph: "000.000.000-00 ou 00.000.000/0000-00" },
         { name: "entregador.telefone", label: "Telefone", tipo: "tel" },
       ]},
       { titulo: "Quem recebe (locatário / comprador)", campos: [
-        { name: "recebedor.nome", label: "Nome completo", req: true },
-        { name: "recebedor.cpf", label: "CPF", ph: "000.000.000-00" },
+        { name: "recebedor.nome", label: "Nome completo / Razão social", req: true },
+        { name: "recebedor.cpf", label: "CPF / CNPJ", ph: "000.000.000-00 ou 00.000.000/0000-00" },
         { name: "recebedor.telefone", label: "Telefone", tipo: "tel" },
       ]},
       { titulo: "Chaves e acessos entregues (quantidade)", campos: [
@@ -1680,13 +1689,41 @@ function docCampoHTML(f) {
     inner = `<textarea data-f="${f.name}" rows="${f.rows || 3}" ${ph}></textarea>`;
   } else if (f.tipo === "select") {
     const opts = f.opts.map((o, i) => `<option value="${(f.vals ? f.vals[i] : o)}">${o}</option>`).join("");
-    inner = `<select data-f="${f.name}">${opts}</select>`;
+    inner = `<select data-f="${f.name}"${f.tipoPessoa ? " data-tipo-pessoa" : ""}>${opts}</select>`;
   } else {
     const type = ({ number: "number", date: "date", tel: "tel", email: "email" })[f.tipo] || "text";
     const step = f.tipo === "number" ? 'step="0.01"' : "";
     inner = `<input data-f="${f.name}" type="${type}" ${step} ${ph} ${val} ${req} />`;
   }
-  return `<div class="field" style="${f.full ? "grid-column:1/-1" : ""}"><label>${f.label}${f.req ? " *" : ""}</label>${inner}</div>`;
+  // Campos exclusivos de PF/PJ: marcados para o alternador; os de empresa
+  // começam escondidos porque o padrão do formulário é pessoa física.
+  const marca = f.grupo === "pf" ? " data-pf" : f.grupo === "pj" ? " data-pj" : "";
+  const estilo = [f.full ? "grid-column:1/-1" : "", f.grupo === "pj" ? "display:none" : ""].filter(Boolean).join(";");
+  const lbl = f.labelPJ ? ` data-label-pf="${f.label}" data-label-pj="${f.labelPJ}"` : "";
+  return `<div class="field"${marca} style="${estilo}"><label${lbl}>${f.label}${f.req ? " *" : ""}</label>${inner}</div>`;
+}
+
+/**
+ * Alterna os campos de PF/PJ nos formulários de documentos auxiliares.
+ * Cada seção de pessoa vive numa .grid própria, então o escopo é essa grid.
+ */
+function wireTipoPessoaDoc(root) {
+  root.querySelectorAll("[data-tipo-pessoa]").forEach(sel => {
+    if (sel.dataset.wired) return;
+    sel.dataset.wired = "1";
+    const grid = sel.closest(".grid") || root;
+    const aplicar = () => {
+      const pj = sel.value === "juridica";
+      grid.querySelectorAll("[data-pf]").forEach(el => el.style.display = pj ? "none" : "");
+      grid.querySelectorAll("[data-pj]").forEach(el => el.style.display = pj ? "" : "none");
+      grid.querySelectorAll("[data-label-pf]").forEach(l => {
+        const base = pj ? l.dataset.labelPj : l.dataset.labelPf;
+        l.textContent = base + (l.parentElement.querySelector("[required]") ? " *" : "");
+      });
+    };
+    sel.addEventListener("change", aplicar);
+    aplicar();
+  });
 }
 
 function renderDocumentos() {
@@ -1721,6 +1758,8 @@ function renderDocumentos() {
       </form>
     </div>
   `;
+
+  wireTipoPessoaDoc(el);
 
   el.querySelectorAll("[data-doc]").forEach(b => b.addEventListener("click", () => {
     state.docTipo = b.dataset.doc;
