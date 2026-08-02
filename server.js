@@ -377,6 +377,35 @@ app.post("/api/billing/portal", requireAuth, async (req, res) => {
 
 // Extrai um resumo do contrato (pro histórico/dashboard) a partir do JSON
 // que já foi usado pra montar o documento — não depende do arquivo gerado.
+// Nome legível de cada documento — usado na página pública de revisão, onde
+// quem lê é o cliente e não conhece os identificadores internos.
+const TITULOS_DOC = {
+  compra_venda: "Contrato de Compra e Venda",
+  locacao_caucao: "Contrato de Locação",
+  locacao_fiador: "Contrato de Locação",
+  ficha_locacao: "Ficha de Locação",
+  proposta_compra: "Proposta de Compra",
+  proposta_aluguel: "Proposta de Locação",
+  ficha_visita: "Ficha de Visita",
+  autorizacao_venda: "Autorização de Venda",
+  contrato_exclusividade: "Contrato de Exclusividade",
+  termo_entrega_chaves: "Termo de Entrega de Chaves",
+};
+
+// Validade do link de revisão. Passado esse prazo o link para de funcionar e o
+// PDF é apagado — o documento definitivo é o que as partes assinam, não o link.
+const SHARE_VALIDADE_DIAS = 60;
+
+// Endereço canônico usado nos links que saem do sistema (revisão do cliente).
+// Não dá pra confiar só no host da requisição: hoje o domínio sem "www"
+// redireciona apenas a raiz, então um link montado sobre "minutei.app.br"
+// chegaria no cliente como 404. Com PUBLIC_BASE_URL definido, todo link
+// compartilhado nasce no domínio que funciona.
+const PUBLIC_BASE_URL = (process.env.PUBLIC_BASE_URL || "").replace(/\/+$/, "");
+function baseUrl(req) {
+  return PUBLIC_BASE_URL || `${req.protocol}://${req.get("host")}`;
+}
+
 function resumoContrato(dados) {
   const isLocacao = dados.tipo === "locacao_caucao" || dados.tipo === "locacao_fiador";
   let valor = 0;
@@ -405,9 +434,13 @@ function resumoContrato(dados) {
 // ================= GERAÇÃO DE CONTRATO =================
 app.post("/api/gerar", requireAuth, async (req, res) => {
   try {
-    const { dados, formato } = req.body;
+    const { dados, formato, destinatario } = req.body;
     if (!dados) return res.status(400).json({ error: "dados são obrigatórios" });
-    const querPdf = formato === "pdf";
+    // "link" gera o mesmo documento, mas em vez de devolver o arquivo guarda o
+    // PDF e devolve uma URL pública de revisão. Consome a cota igual às outras
+    // saídas — é o mesmo contrato, só entregue de outro jeito.
+    const querLink = formato === "link";
+    const querPdf = formato === "pdf" || querLink;
     const tenant = await store.getTenant(req.user.tenantId);
     if (!tenant) return res.status(404).json({ error: "Imobiliária não encontrada" });
 
@@ -457,10 +490,16 @@ app.post("/api/gerar", requireAuth, async (req, res) => {
         buffer = await convertDocxToPdf(buffer);
       } catch (err) {
         console.error("Falha ao converter para PDF:", err);
-        return res.status(502).json({ error: "Não foi possível gerar o PDF agora. Tente novamente ou baixe em .docx." });
+        return res.status(502).json({
+          error: querLink
+            ? "Não foi possível preparar o link de revisão agora. Tente novamente ou baixe em .docx."
+            : "Não foi possível gerar o PDF agora. Tente novamente ou baixe em .docx.",
+        });
       }
-      res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", `attachment; filename="${nomeBase}.pdf"`);
+      if (!querLink) {
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", `attachment; filename="${nomeBase}.pdf"`);
+      }
     } else {
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
       res.setHeader("Content-Disposition", `attachment; filename="${nomeBase}.docx"`);
@@ -468,12 +507,33 @@ app.post("/api/gerar", requireAuth, async (req, res) => {
 
     // Só conta a cota e salva o histórico depois que o documento final está
     // pronto pra entrega. Documentos auxiliares não contam cota nem histórico.
+    const contratoId = nanoid(12);
     if (!ehAuxiliar) {
       const mes = mesAtual();
       const usoMensal = { ...(tenant.usoMensal || {}) };
       usoMensal[mes] = (usoMensal[mes] || 0) + 1;
       store.setTenant(req.user.tenantId, { ...tenant, usoMensal }).catch(err => console.error("Falha ao registrar uso do contrato:", err));
-      store.addContract(nanoid(12), req.user.tenantId, resumoContrato(dados)).catch(err => console.error("Falha ao salvar histórico do contrato:", err));
+      store.addContract(contratoId, req.user.tenantId, resumoContrato(dados)).catch(err => console.error("Falha ao salvar histórico do contrato:", err));
+    }
+
+    if (querLink) {
+      const token = nanoid(24);
+      const expiraEm = new Date(Date.now() + SHARE_VALIDADE_DIAS * 24 * 60 * 60 * 1000);
+      await store.addShare(token, req.user.tenantId, {
+        titulo: TITULOS_DOC[dados.tipo] || "Documento",
+        endereco: (dados.imovel && dados.imovel.endereco) || "",
+        imobiliaria: tenant.nome || "",
+        destinatario: String(destinatario || "").trim().slice(0, 120),
+        contratoId: ehAuxiliar ? null : contratoId,
+        status: "pendente",
+        comentario: "",
+        respondidoEm: null,
+      }, buffer, expiraEm);
+      return res.json({
+        token,
+        url: `${baseUrl(req)}/r/${token}`,
+        expiraEm: expiraEm.toISOString(),
+      });
     }
 
     res.send(buffer);
@@ -607,12 +667,117 @@ app.delete("/api/dashboard/contratos/:id", requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
+// ================= REVISÃO POR LINK PÚBLICO =================
+// O corretor gera o documento com formato "link" e manda a URL pro cliente
+// (normalmente por WhatsApp). O cliente abre no navegador, lê o PDF e responde
+// aprovando ou pedindo ajuste. Não há login do lado do cliente: o segredo é o
+// próprio token, por isso ele é longo e o link expira.
+
+// Quem responde é o cliente, sem conta e sem sessão — limita por IP pra que o
+// endereço do link não vire alvo de força bruta ou de flood de respostas.
+const revisaoLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Muitas requisições. Aguarde alguns minutos e tente novamente." },
+});
+
+app.get("/r/:token", revisaoLimiter, (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "revisao.html"));
+});
+
+// Dados que a página de revisão mostra. Devolve só o que o cliente precisa ver
+// — nada da conta do corretor além do nome que assina o documento.
+app.get("/api/revisao/:token", revisaoLimiter, async (req, res) => {
+  const share = await store.getShare(req.params.token);
+  if (!share) return res.status(404).json({ error: "Este link não existe mais ou expirou." });
+  res.json({
+    titulo: share.titulo,
+    endereco: share.endereco,
+    imobiliaria: share.imobiliaria,
+    destinatario: share.destinatario,
+    status: share.status,
+    comentario: share.comentario,
+    respondidoEm: share.respondidoEm,
+    criadoEm: share.criadoEm,
+    expiraEm: share.expiraEm,
+  });
+});
+
+app.get("/api/revisao/:token/documento.pdf", revisaoLimiter, async (req, res) => {
+  const share = await store.getShare(req.params.token);
+  if (!share) return res.status(404).send("Este link não existe mais ou expirou.");
+  const pdf = await store.getSharePdf(req.params.token);
+  if (!pdf) return res.status(404).send("Documento indisponível.");
+  res.setHeader("Content-Type", "application/pdf");
+  // inline: o cliente lê na própria aba; o navegador ainda oferece baixar.
+  res.setHeader("Content-Disposition", `inline; filename="${share.titulo.replace(/[^\w]+/g, "-")}.pdf"`);
+  res.send(pdf);
+});
+
+app.post("/api/revisao/:token/resposta", revisaoLimiter, async (req, res) => {
+  const share = await store.getShare(req.params.token);
+  if (!share) return res.status(404).json({ error: "Este link não existe mais ou expirou." });
+  if (share.status !== "pendente") {
+    return res.status(409).json({ error: "Este documento já foi respondido." });
+  }
+  const acao = String(req.body.acao || "");
+  if (acao !== "aprovar" && acao !== "ajuste") {
+    return res.status(400).json({ error: "Ação inválida." });
+  }
+  const comentario = String(req.body.comentario || "").trim().slice(0, 2000);
+  if (acao === "ajuste" && !comentario) {
+    return res.status(400).json({ error: "Descreva o que precisa ser ajustado." });
+  }
+  const patch = {
+    status: acao === "aprovar" ? "aprovado" : "ajuste",
+    comentario,
+    respondidoEm: new Date().toISOString(),
+  };
+  await store.updateShareMeta(req.params.token, patch);
+  res.json({ ok: true, ...patch });
+});
+
+// ---- lado do corretor: acompanhar o que foi enviado ----
+app.get("/api/compartilhamentos", requireAuth, async (req, res) => {
+  const shares = await store.getSharesByTenant(req.user.tenantId);
+  const base = baseUrl(req);
+  res.json(shares.map(s => ({
+    token: s.id,
+    url: `${base}/r/${s.id}`,
+    titulo: s.titulo,
+    endereco: s.endereco,
+    destinatario: s.destinatario,
+    status: s.status,
+    comentario: s.comentario,
+    respondidoEm: s.respondidoEm,
+    criadoEm: s.criadoEm,
+    expiraEm: s.expiraEm,
+  })));
+});
+
+app.delete("/api/compartilhamentos/:token", requireAuth, async (req, res) => {
+  await store.deleteShare(req.params.token, req.user.tenantId);
+  res.json({ ok: true });
+});
+
 app.use((err, req, res, next) => {
   if (err) return res.status(400).json({ error: err.message || "Erro na requisição" });
   next();
 });
 
+// Links de revisão vencidos carregam o PDF inteiro; limpa na subida e uma vez
+// por dia pra que o banco não cresça com documento que ninguém mais acessa.
+function limparSharesVencidos() {
+  store.purgeExpiredShares()
+    .then(n => { if (n) console.log(`Links de revisão expirados removidos: ${n}`); })
+    .catch(err => console.error("Falha ao limpar links de revisão:", err));
+}
+
 store.init(DATA_DIR).then(() => {
+  limparSharesVencidos();
+  setInterval(limparSharesVencidos, 24 * 60 * 60 * 1000).unref();
   app.listen(PORT, () => {
     console.log(`Minutei rodando em http://localhost:${PORT} (armazenamento: ${store.usingPostgres ? "Postgres" : "arquivos JSON locais"})`);
   });

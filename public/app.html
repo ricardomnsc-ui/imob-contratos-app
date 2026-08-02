@@ -188,6 +188,47 @@
   .team-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; background: var(--paper); }
   .empty { color: var(--muted); font-size: 14px; padding: 24px; text-align: center; }
 
+  /* ---- Revisão por link ---- */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(13,27,42,.55); z-index: 60;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal {
+    background: var(--paper); border-radius: 16px; padding: 30px; width: 100%; max-width: 560px;
+    box-shadow: 0 24px 60px rgba(0,0,0,.28);
+  }
+  .modal h2 { margin: 0 0 8px; font-size: 20px; }
+  .modal .hint { margin-top: 0; }
+  .link-box { display: flex; gap: 8px; margin-top: 18px; }
+  .link-box input {
+    flex: 1; min-width: 0; font-size: 14px; padding: 11px 13px; border: 1px solid var(--border);
+    border-radius: 9px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink);
+    background: #fafbfc;
+  }
+
+  .revisao-row {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    padding: 15px 16px; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 9px;
+    background: var(--paper);
+  }
+  .revisao-info { display: flex; flex-direction: column; gap: 3px; min-width: 210px; flex: 1; }
+  .revisao-info strong { font-size: 15px; }
+  .revisao-end { font-size: 13.5px; color: var(--muted); }
+  .revisao-data { font-size: 12.5px; color: var(--muted); }
+  .revisao-comentario {
+    margin: 9px 0 0; padding: 10px 13px; background: #fdf6f6; border-left: 3px solid #d99; border-radius: 0 7px 7px 0;
+    font-size: 13.5px; white-space: pre-wrap; color: var(--ink);
+  }
+  .revisao-acoes { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .revisao-acoes button { padding: 7px 13px; font-size: 13px; }
+  .revisao-status {
+    font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+    padding: 5px 10px; border-radius: 6px; white-space: nowrap;
+  }
+  .revisao-status.pendente { background: var(--brand-soft); color: var(--brand-text); }
+  .revisao-status.aprovado { background: #e7f4ee; color: #0f7a52; }
+  .revisao-status.ajuste { background: #fdeeee; color: #a3282a; }
+
   .toast {
     position: fixed; bottom: 24px; right: 24px; background: var(--ink); color: #fff; padding: 13px 20px;
     border-radius: 10px; font-size: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.22); opacity: 0;
@@ -246,6 +287,14 @@ const LAYOUTS_CONTRATO = [
   { id: "profissional", label: "Profissional", desc: "Tom jurídico clássico, tipografia serifada e tons de tinta." },
   { id: "elegante", label: "Elegante", desc: "Serifado refinado, paleta neutra quente e mais espaçamento." },
 ];
+
+// O comentário de ajuste é escrito pelo cliente na página pública de revisão e
+// volta pro painel do corretor: precisa ser escapado antes de virar HTML.
+function escapeHtml(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
+  ));
+}
 
 function toast(msg, isError) {
   const el = document.getElementById("toast");
@@ -371,6 +420,7 @@ function renderApp() {
       <button data-view="dashboard" class="active">Dashboard</button>
       <button data-view="gerar">Gerar contrato</button>
       <button data-view="documentos">Documentos</button>
+      <button data-view="revisoes">Revisões</button>
       <button data-view="ia">Ajudante IA</button>
       <button data-view="config">Configurar imobiliária</button>
       <button data-view="equipe">Equipe</button>
@@ -379,13 +429,14 @@ function renderApp() {
       <div id="view-dashboard"></div>
       <div id="view-gerar" style="display:none"></div>
       <div id="view-documentos" style="display:none"></div>
+      <div id="view-revisoes" style="display:none"></div>
       <div id="view-ia" style="display:none"></div>
       <div id="view-config" style="display:none"></div>
       <div id="view-equipe" style="display:none"></div>
     </main>
   `;
 
-  const VIEWS = ["dashboard", "gerar", "documentos", "ia", "config", "equipe"];
+  const VIEWS = ["dashboard", "gerar", "documentos", "revisoes", "ia", "config", "equipe"];
   document.querySelectorAll("nav button").forEach(btn => {
     btn.addEventListener("click", () => {
       document.querySelectorAll("nav button").forEach(b => b.classList.remove("active"));
@@ -395,6 +446,7 @@ function renderApp() {
       if (view === "dashboard") renderDashboard();
       if (view === "gerar") renderGerar();
       if (view === "documentos") renderDocumentos();
+      if (view === "revisoes") renderRevisoes();
       if (view === "ia") renderAjudanteIA();
       if (view === "config") renderConfig();
       if (view === "equipe") renderEquipe();
@@ -1199,6 +1251,7 @@ function renderGerar() {
 
         <div class="footer-actions" style="margin-top:20px">
           <button type="submit" class="secondary" data-formato="docx">Gerar .docx (editável)</button>
+          <button type="submit" class="secondary" data-formato="link">Enviar p/ revisão do cliente</button>
           <button type="submit" class="primary" data-formato="pdf">Gerar .pdf (pronto p/ assinatura)</button>
         </div>
       </form>
@@ -1458,12 +1511,21 @@ async function handleSubmit(e) {
 async function gerarEBaixar(dados, formato, btn, buttons, opts = {}) {
   const originalText = btn.textContent;
   buttons.forEach(b => b.disabled = true);
-  btn.textContent = formato === "pdf" ? "Gerando PDF..." : "Gerando...";
+  btn.textContent = formato === "pdf" ? "Gerando PDF..."
+    : formato === "link" ? "Preparando link..."
+    : "Gerando...";
   try {
     const res = await api("/api/gerar", { method: "POST", body: JSON.stringify({ dados, formato }) });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || "Erro ao gerar documento");
+    }
+    // O formato "link" não devolve arquivo: devolve a URL pública de revisão.
+    if (formato === "link") {
+      const info = await res.json();
+      abrirModalLink(info);
+      if (opts.afterSuccess) await opts.afterSuccess();
+      return;
     }
     const blob = await res.blob();
     const disposition = res.headers.get("Content-Disposition") || "";
@@ -1482,6 +1544,108 @@ async function gerarEBaixar(dados, formato, btn, buttons, opts = {}) {
     buttons.forEach(b => b.disabled = false);
     btn.textContent = originalText;
   }
+}
+
+// ================= REVISÃO POR LINK =================
+// Depois de criar o link, o caminho natural é mandar por WhatsApp — é onde o
+// corretor já fala com o cliente. O modal existe pra isso: copiar ou enviar.
+function abrirModalLink(info) {
+  const antigo = document.getElementById("modalLink");
+  if (antigo) antigo.remove();
+
+  const texto = `Olá! Segue o documento para você conferir antes da assinatura:\n${info.url}\n\nÉ só abrir, ler e responder ali mesmo se está tudo certo ou se precisa de algum ajuste.`;
+  const wa = `https://wa.me/?text=${encodeURIComponent(texto)}`;
+
+  const el = document.createElement("div");
+  el.id = "modalLink";
+  el.className = "modal-overlay";
+  el.innerHTML = `
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalLinkTitulo">
+      <h2 id="modalLinkTitulo">Link de revisão criado</h2>
+      <p class="hint">Mande para o cliente. Ele abre no navegador, lê o documento e responde ali mesmo se está tudo certo ou se precisa de ajuste — sem instalar nada e sem criar conta.</p>
+      <div class="link-box">
+        <input type="text" id="modalLinkUrl" value="${info.url}" readonly />
+        <button type="button" class="secondary" id="btnCopiarLink">Copiar</button>
+      </div>
+      <div class="footer-actions" style="justify-content:space-between; margin-top:18px">
+        <span class="hint" style="margin:0">O link expira em ${new Date(info.expiraEm).toLocaleDateString("pt-BR")}.</span>
+        <span style="display:flex; gap:10px">
+          <button type="button" class="secondary" id="btnFecharModal">Fechar</button>
+          <a href="${wa}" target="_blank" rel="noopener"><button type="button" class="primary">Enviar no WhatsApp</button></a>
+        </span>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(el);
+
+  const fechar = () => el.remove();
+  el.addEventListener("click", (ev) => { if (ev.target === el) fechar(); });
+  document.getElementById("btnFecharModal").addEventListener("click", fechar);
+  document.addEventListener("keydown", function esc(ev) {
+    if (ev.key === "Escape") { fechar(); document.removeEventListener("keydown", esc); }
+  });
+  document.getElementById("btnCopiarLink").addEventListener("click", async () => {
+    const input = document.getElementById("modalLinkUrl");
+    try {
+      await navigator.clipboard.writeText(info.url);
+    } catch {
+      input.select(); document.execCommand("copy");
+    }
+    toast("Link copiado!");
+  });
+  document.getElementById("modalLinkUrl").focus();
+  document.getElementById("modalLinkUrl").select();
+}
+
+async function renderRevisoes() {
+  const el = document.getElementById("view-revisoes");
+  el.innerHTML = `<div class="card"><div class="empty">Carregando...</div></div>`;
+  const res = await api("/api/compartilhamentos");
+  if (!res.ok) { el.innerHTML = `<div class="card"><div class="empty">Não foi possível carregar as revisões.</div></div>`; return; }
+  const lista = await res.json();
+
+  const cabecalho = `
+    <h2>Revisões enviadas</h2>
+    <p class="hint">Documentos que você mandou pro cliente conferir antes de assinar. A resposta dele aparece aqui.</p>
+  `;
+
+  if (!lista.length) {
+    el.innerHTML = `<div class="card">${cabecalho}
+      <div class="empty">Nada enviado ainda. Ao gerar um contrato, use "Enviar p/ revisão do cliente".</div>
+    </div>`;
+    return;
+  }
+
+  const rotulo = { pendente: "Aguardando", aprovado: "Aprovado", ajuste: "Ajuste pedido" };
+  const linhas = lista.map(s => `
+    <div class="revisao-row">
+      <div class="revisao-info">
+        <strong>${escapeHtml(s.titulo)}</strong>
+        ${s.endereco ? `<span class="revisao-end">${escapeHtml(s.endereco)}</span>` : ""}
+        <span class="revisao-data">enviado em ${new Date(s.criadoEm).toLocaleDateString("pt-BR")}</span>
+        ${s.status === "ajuste" && s.comentario
+          ? `<blockquote class="revisao-comentario">${escapeHtml(s.comentario)}</blockquote>` : ""}
+      </div>
+      <div class="revisao-acoes">
+        <span class="revisao-status ${s.status}">${rotulo[s.status]}</span>
+        <button type="button" class="secondary btn-copiar" data-url="${s.url}">Copiar link</button>
+        <button type="button" class="secondary btn-excluir" data-token="${s.token}">Excluir</button>
+      </div>
+    </div>
+  `).join("");
+
+  el.innerHTML = `<div class="card">${cabecalho}${linhas}</div>`;
+
+  el.querySelectorAll(".btn-copiar").forEach(b => b.addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(b.dataset.url); toast("Link copiado!"); }
+    catch { toast("Não foi possível copiar", true); }
+  }));
+  el.querySelectorAll(".btn-excluir").forEach(b => b.addEventListener("click", async () => {
+    if (!confirm("Excluir este link? Quem já tiver o endereço deixa de conseguir abrir o documento.")) return;
+    const r = await api(`/api/compartilhamentos/${b.dataset.token}`, { method: "DELETE" });
+    if (r.ok) { toast("Link excluído."); renderRevisoes(); }
+    else toast("Não foi possível excluir.", true);
+  }));
 }
 
 // ================= DOCUMENTOS AUXILIARES =================
@@ -1760,6 +1924,7 @@ function renderDocumentos() {
         <div class="grid"><div class="field"><label>Data</label><input data-f="data" type="date" /></div></div>
         <div class="footer-actions" style="margin-top:20px">
           <button type="submit" class="secondary" data-formato="docx">Gerar .docx (editável)</button>
+          <button type="submit" class="secondary" data-formato="link">Enviar p/ revisão do cliente</button>
           <button type="submit" class="primary" data-formato="pdf">Gerar .pdf (pronto p/ assinatura)</button>
         </div>
       </form>

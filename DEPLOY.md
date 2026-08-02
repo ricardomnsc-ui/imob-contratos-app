@@ -53,6 +53,11 @@ são para Railway; se preferir outra, me avisa e adapto.
      `openssl rand -hex 32` no terminal. Sem isso o app gera uma sozinha, mas
      é melhor fixar para não invalidar sessões a cada redeploy sem volume.
    - `DATA_DIR=/app/data`
+   - `PUBLIC_BASE_URL=https://www.minutei.app.br` — endereço canônico usado nos
+     links de revisão enviados ao cliente. **Importante:** hoje o domínio sem
+     `www` só redireciona a raiz (`minutei.app.br/qualquer-caminho` devolve 404),
+     então sem essa variável um link compartilhado pode chegar quebrado no
+     cliente. Sem ela o app usa o host da requisição.
 
    Ajudante de IA — extração de CNH/RG e assistente de cláusulas (opcional;
    sem ela essas funções ficam indisponíveis, o resto do app funciona normal):

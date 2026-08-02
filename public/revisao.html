@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Revisão de documento — Minutei</title>
+<!-- Página de leitura privada: não deve ser indexada nem aparecer em busca. -->
+<meta name="robots" content="noindex, nofollow" />
+<link rel="icon" type="image/png" sizes="32x32" href="/brand/favicon-32.png" />
+<link rel="apple-touch-icon" href="/brand/apple-touch-icon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #0d1b2a;
+    --brand: #ff6b00;
+    --brand-dark: #e05c00;
+    --brand-soft: #fff2e8;
+    --brand-text: #a84300;
+    --ink: #0d1b2a;
+    --muted: #5b6b7f;
+    --border: #e4e9f0;
+    --bg: #f5f5f5;
+    --paper: #ffffff;
+    --ok: #0f7a52;
+    --ok-soft: #e7f4ee;
+    --warn: #a03f00;
+    --warn-soft: #fff2e8;
+    --shadow-sm: 0 1px 2px rgba(13, 27, 42, 0.06);
+    --shadow-md: 0 6px 20px rgba(13, 27, 42, 0.08);
+    --sans: "Manrope", -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: var(--sans); margin: 0; background: var(--bg); color: var(--ink);
+    -webkit-font-smoothing: antialiased; line-height: 1.5; }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 0 20px; }
+
+  header.top { background: var(--navy); padding: 14px 0; }
+  header.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .brand-logo { height: 30px; width: auto; display: block; }
+  .por { color: #93a4b8; font-size: 13px; text-align: right; }
+  .por b { color: #fff; font-weight: 600; display: block; font-size: 14px; }
+
+  main { padding: 28px 0 64px; }
+
+  .doc-head { margin-bottom: 20px; }
+  .eyebrow { font-size: 12px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--brand-text); font-weight: 700; margin-bottom: 8px; }
+  h1 { font-size: clamp(22px, 4vw, 30px); line-height: 1.15; margin: 0 0 8px; font-weight: 800;
+    letter-spacing: -.02em; }
+  .end { color: var(--muted); font-size: 15px; margin: 0; }
+
+  .status { display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px;
+    border-radius: 999px; font-size: 13.5px; font-weight: 600; margin-top: 14px; }
+  .status.pendente { background: var(--brand-soft); color: var(--warn); }
+  .status.aprovado { background: var(--ok-soft); color: var(--ok); }
+  .status.ajuste { background: #fdeeee; color: #a3282a; }
+  .status .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+
+  .viewer { background: var(--paper); border: 1px solid var(--border); border-radius: 12px;
+    overflow: hidden; box-shadow: var(--shadow-md); margin: 20px 0; }
+  .viewer object, .viewer iframe { display: block; width: 100%; height: 70vh; min-height: 420px; border: 0; }
+  .viewer-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 11px 16px; border-top: 1px solid var(--border); background: #fafbfc; flex-wrap: wrap; }
+  .viewer-bar span { font-size: 13px; color: var(--muted); }
+
+  .card { background: var(--paper); border: 1px solid var(--border); border-radius: 12px;
+    padding: 22px; box-shadow: var(--shadow-sm); }
+  .card h2 { font-size: 18px; margin: 0 0 6px; font-weight: 700; letter-spacing: -.01em; }
+  .card p.sub { color: var(--muted); font-size: 14.5px; margin: 0 0 18px; }
+
+  .acoes { display: flex; gap: 10px; flex-wrap: wrap; }
+  button { font-family: inherit; font-size: 15px; font-weight: 700; border-radius: 9px;
+    padding: 12px 22px; cursor: pointer; border: 1px solid transparent; transition: .15s; }
+  button:disabled { opacity: .55; cursor: not-allowed; }
+  .btn-ok { background: var(--brand); color: #fff; }
+  .btn-ok:hover:not(:disabled) { background: var(--brand-dark); }
+  .btn-alt { background: var(--paper); color: var(--ink); border-color: var(--border); }
+  .btn-alt:hover:not(:disabled) { border-color: var(--muted); }
+  button:focus-visible, a:focus-visible, textarea:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+  .ajuste-box { margin-top: 18px; display: none; }
+  .ajuste-box.aberto { display: block; }
+  label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 7px; }
+  textarea { width: 100%; font-family: inherit; font-size: 15px; line-height: 1.5; padding: 12px 14px;
+    border: 1px solid var(--border); border-radius: 9px; resize: vertical; min-height: 110px;
+    color: var(--ink); background: var(--paper); }
+  textarea:focus { border-color: var(--brand); }
+  .hint { font-size: 13px; color: var(--muted); margin-top: 7px; }
+
+  .resposta { border-radius: 12px; padding: 20px 22px; }
+  .resposta.aprovado { background: var(--ok-soft); border: 1px solid #bfe3d2; }
+  .resposta.ajuste { background: #fdeeee; border: 1px solid #f2cdcd; }
+  .resposta h2 { margin: 0 0 6px; font-size: 18px; font-weight: 700; }
+  .resposta p { margin: 0; font-size: 15px; }
+  .resposta blockquote { margin: 12px 0 0; padding: 12px 16px; background: rgba(255,255,255,.75);
+    border-radius: 8px; font-size: 15px; white-space: pre-wrap; }
+
+  .erro { background: #fdeeee; border: 1px solid #f2cdcd; color: #a3282a; border-radius: 10px;
+    padding: 14px 18px; font-size: 15px; margin-top: 14px; }
+
+  .vazio { text-align: center; padding: 70px 20px; }
+  .vazio h1 { margin-bottom: 10px; }
+  .vazio p { color: var(--muted); max-width: 46ch; margin: 0 auto; }
+
+  footer { text-align: center; padding: 26px 0 40px; color: var(--muted); font-size: 13px; }
+  footer a { color: var(--brand-text); font-weight: 600; }
+
+  .carregando { text-align: center; padding: 70px 20px; color: var(--muted); }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <img class="brand-logo" src="/brand/minutei-logo-light.png" alt="Minutei" />
+    <div class="por" id="por"></div>
+  </div>
+</header>
+
+<main class="wrap" id="main">
+  <div class="carregando">Carregando documento…</div>
+</main>
+
+<footer>
+  Documento gerado com <a href="https://minutei.app.br" target="_blank" rel="noopener">Minutei</a>
+</footer>
+
+<script>
+  var token = location.pathname.split("/").filter(Boolean).pop();
+  var main = document.getElementById("main");
+  var info = null;
+
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function dataBR(iso) {
+    if (!iso) return "";
+    var d = new Date(iso);
+    return d.toLocaleDateString("pt-BR") + " às " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function carregar() {
+    fetch("/api/revisao/" + encodeURIComponent(token))
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        if (!res.ok) return semDocumento(res.j.error);
+        info = res.j;
+        render();
+      })
+      .catch(function () { semDocumento("Não foi possível carregar o documento agora."); });
+  }
+
+  function semDocumento(msg) {
+    document.getElementById("por").textContent = "";
+    main.innerHTML =
+      '<div class="vazio"><h1>Link indisponível</h1><p>' + esc(msg || "Este link não existe mais ou expirou.") +
+      " Peça um link novo para quem enviou o documento.</p></div>";
+  }
+
+  function render() {
+    document.getElementById("por").innerHTML = info.imobiliaria
+      ? "enviado por<b>" + esc(info.imobiliaria) + "</b>"
+      : "";
+
+    var rotulo = { pendente: "Aguardando sua revisão", aprovado: "Aprovado por você", ajuste: "Ajuste solicitado" };
+    var pdfUrl = "/api/revisao/" + encodeURIComponent(token) + "/documento.pdf";
+
+    var html = "";
+    html += '<div class="doc-head">';
+    html += '<div class="eyebrow">Documento para revisão</div>';
+    html += "<h1>" + esc(info.titulo) + "</h1>";
+    if (info.endereco) html += '<p class="end">' + esc(info.endereco) + "</p>";
+    html += '<div class="status ' + esc(info.status) + '"><span class="dot"></span>' + esc(rotulo[info.status]) + "</div>";
+    html += "</div>";
+
+    html += '<div class="viewer">';
+    html += '<object data="' + pdfUrl + '" type="application/pdf">';
+    html += '<iframe src="' + pdfUrl + '" title="Documento"></iframe>';
+    html += "</object>";
+    html += '<div class="viewer-bar"><span>Não consegue ver o documento acima?</span>';
+    html += '<a href="' + pdfUrl + '" target="_blank" rel="noopener"><button class="btn-alt" type="button">Abrir o PDF numa aba</button></a></div>';
+    html += "</div>";
+
+    if (info.status === "pendente") {
+      html += '<div class="card" id="acao">';
+      html += "<h2>Está tudo certo no documento?</h2>";
+      html += '<p class="sub">Leia com atenção antes de responder. Sua resposta vai direto para quem te enviou.</p>';
+      html += '<div class="acoes">';
+      html += '<button class="btn-ok" type="button" id="btn-aprovar">Está tudo certo</button>';
+      html += '<button class="btn-alt" type="button" id="btn-ajuste">Preciso de um ajuste</button>';
+      html += "</div>";
+      html += '<div class="ajuste-box" id="ajuste-box">';
+      html += '<label for="comentario">O que precisa ser ajustado?</label>';
+      html += '<textarea id="comentario" placeholder="Ex.: meu nome está escrito errado, o correto é… / o valor do condomínio não é esse…"></textarea>';
+      html += '<p class="hint">Seja específico: quanto mais claro, mais rápido sai a correção.</p>';
+      html += '<div class="acoes" style="margin-top:14px"><button class="btn-ok" type="button" id="btn-enviar-ajuste">Enviar pedido de ajuste</button></div>';
+      html += "</div>";
+      html += '<div id="erro"></div>';
+      html += "</div>";
+    } else {
+      html += '<div class="resposta ' + esc(info.status) + '">';
+      if (info.status === "aprovado") {
+        html += "<h2>Você aprovou este documento</h2>";
+        html += "<p>Resposta registrada em " + esc(dataBR(info.respondidoEm)) + ". Quem te enviou já foi avisado.</p>";
+      } else {
+        html += "<h2>Você pediu um ajuste</h2>";
+        html += "<p>Enviado em " + esc(dataBR(info.respondidoEm)) + ":</p>";
+        html += "<blockquote>" + esc(info.comentario) + "</blockquote>";
+      }
+      html += "</div>";
+    }
+
+    main.innerHTML = html;
+    if (info.status === "pendente") ligarAcoes();
+  }
+
+  function ligarAcoes() {
+    var box = document.getElementById("ajuste-box");
+    document.getElementById("btn-ajuste").addEventListener("click", function () {
+      box.classList.add("aberto");
+      document.getElementById("comentario").focus();
+    });
+    document.getElementById("btn-aprovar").addEventListener("click", function () {
+      if (!confirm("Confirmar que está tudo certo com o documento?")) return;
+      responder("aprovar", "");
+    });
+    document.getElementById("btn-enviar-ajuste").addEventListener("click", function () {
+      var texto = document.getElementById("comentario").value.trim();
+      if (!texto) {
+        mostrarErro("Escreva o que precisa ser ajustado.");
+        document.getElementById("comentario").focus();
+        return;
+      }
+      responder("ajuste", texto);
+    });
+  }
+
+  function mostrarErro(msg) {
+    var el = document.getElementById("erro");
+    if (el) el.innerHTML = '<div class="erro">' + esc(msg) + "</div>";
+  }
+
+  function responder(acao, comentario) {
+    var botoes = document.querySelectorAll("#acao button");
+    for (var i = 0; i < botoes.length; i++) botoes[i].disabled = true;
+    mostrarErro("");
+
+    fetch("/api/revisao/" + encodeURIComponent(token) + "/resposta", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ acao: acao, comentario: comentario }),
+    })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        if (!res.ok) {
+          for (var i = 0; i < botoes.length; i++) botoes[i].disabled = false;
+          return mostrarErro(res.j.error || "Não foi possível enviar sua resposta.");
+        }
+        info.status = res.j.status;
+        info.comentario = res.j.comentario;
+        info.respondidoEm = res.j.respondidoEm;
+        render();
+        window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+      })
+      .catch(function () {
+        for (var i = 0; i < botoes.length; i++) botoes[i].disabled = false;
+        mostrarErro("Falha de conexão. Tente novamente.");
+      });
+  }
+
+  carregar();
+</script>
+</body>
+</html>
