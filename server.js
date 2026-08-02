@@ -406,6 +406,14 @@ function baseUrl(req) {
   return PUBLIC_BASE_URL || `${req.protocol}://${req.get("host")}`;
 }
 
+// Um contrato é "o mesmo" quando os dados que o originaram são idênticos.
+// Serve pra reconhecer regeração (mesmo documento, outro formato) e não cobrar
+// cota de novo por isso.
+const JANELA_REGERACAO_MS = 24 * 60 * 60 * 1000;
+function hashDados(dados) {
+  return crypto.createHash("sha256").update(JSON.stringify(dados)).digest("hex").slice(0, 32);
+}
+
 function resumoContrato(dados) {
   const isLocacao = dados.tipo === "locacao_caucao" || dados.tipo === "locacao_fiador";
   let valor = 0;
@@ -428,6 +436,7 @@ function resumoContrato(dados) {
     tipoUso: (dados.imovel && dados.imovel.tipoUso) || dados.uso || "residencial",
     valor,
     comissaoValor,
+    hash: hashDados(dados),
   };
 }
 
@@ -458,8 +467,21 @@ app.post("/api/gerar", requireAuth, async (req, res) => {
     };
     const ehAuxiliar = !!DOCS_AUXILIARES[dados.tipo];
 
+    // Regeração do MESMO documento (outro formato, ou link de revisão depois do
+    // download) não é contrato novo: não passa pela cota nem duplica o
+    // histórico. Sem isso, quem baixa o PDF e depois manda pro cliente revisar
+    // pagaria dois contratos pelo mesmo negócio — e no plano Grátis, que
+    // permite um por mês, o segundo clique simplesmente não funcionaria.
+    const jaGerado = ehAuxiliar
+      ? null
+      : await store.findRecentContractByHash(
+          req.user.tenantId,
+          hashDados(dados),
+          new Date(Date.now() - JANELA_REGERACAO_MS)
+        ).catch(() => null);
+
     const limites = limitesDoPlano(tenant.plano);
-    if (!ehAuxiliar) {
+    if (!ehAuxiliar && !jaGerado) {
       const usados = contratosUsadosNoMes(tenant);
       if (usados >= limites.contratosPorMes) {
         return res.status(402).json({
@@ -507,8 +529,8 @@ app.post("/api/gerar", requireAuth, async (req, res) => {
 
     // Só conta a cota e salva o histórico depois que o documento final está
     // pronto pra entrega. Documentos auxiliares não contam cota nem histórico.
-    const contratoId = nanoid(12);
-    if (!ehAuxiliar) {
+    const contratoId = jaGerado || nanoid(12);
+    if (!ehAuxiliar && !jaGerado) {
       const mes = mesAtual();
       const usoMensal = { ...(tenant.usoMensal || {}) };
       usoMensal[mes] = (usoMensal[mes] || 0) + 1;
