@@ -69,16 +69,6 @@
   nav button:hover { color: var(--ink); }
   nav button.active { background: var(--brand-soft); color: var(--brand-text); font-weight: 600; }
 
-  @media (max-width: 640px) {
-    header { padding: 14px 16px; }
-    header .tenant-badge { font-size: 12px; max-width: 100%; }
-    nav { padding: 8px 16px; }
-    main { margin: 20px auto; padding: 0 14px 50px; }
-    .card { padding: 20px; border-radius: 12px; }
-    .grid, .grid.cols3 { grid-template-columns: 1fr; }
-    .auth-card { width: 100%; padding: 28px 24px; }
-  }
-
   main { max-width: 880px; margin: 32px auto; padding: 0 20px 70px; }
   .card { background: var(--paper); border: 1px solid var(--border); border-radius: 14px; padding: 28px; margin-bottom: 22px; box-shadow: var(--shadow-sm); }
   /* Microinteração: cards de métrica do dashboard reagem ao passar o mouse. */
@@ -236,7 +226,7 @@
   }
   .toast.show { opacity: 1; transform: translateY(0); }
   .toast.error { background: #942d2d; }
-  .footer-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
+  .footer-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-top: 6px; }
   .error-msg { color: #a13a3a; font-size: 13px; margin-top: 8px; min-height: 16px; }
 
   .auth-wrap {
@@ -253,6 +243,29 @@
   .auth-switch { text-align: center; font-size: 13.5px; color: var(--muted); margin-top: 18px; }
   .auth-switch button { background: none; border: none; color: var(--brand); font-weight: 600; cursor: pointer; font-size: 13.5px; }
   .badge-role { font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; background: var(--brand-soft); color: var(--brand-text); border-radius: 5px; padding: 3px 8px; font-weight: 600; }
+
+  /* ================= CELULAR =================
+     Precisa ficar no FIM da folha. Este bloco vivia lá em cima, antes das
+     regras de .grid, .card, main e .auth-card: como a especificidade é a
+     mesma, quem vinha depois vencia e quase nenhuma adaptação de celular
+     chegava a valer — o app abria no telefone com layout de desktop,
+     vazando pela lateral. */
+  @media (max-width: 640px) {
+    header { padding: 14px 16px; }
+    header .tenant-badge { font-size: 12px; max-width: 100%; }
+    /* A barra de abas não cabe numa linha só. Rolando na horizontal, as
+       últimas ficam fora da tela e o usuário não descobre que existem — foi
+       assim que a aba "Revisões" ficou invisível. Quebrando em linhas,
+       todas aparecem. */
+    nav { padding: 8px 16px; flex-wrap: wrap; overflow-x: visible; row-gap: 6px; }
+    main { margin: 20px auto; padding: 0 14px 50px; }
+    .card { padding: 20px; border-radius: 12px; }
+    .grid, .grid.cols3 { grid-template-columns: 1fr; }
+    .auth-card { width: 100%; padding: 28px 24px; }
+    /* Botões de ação empilhados: espremidos lado a lado, o primeiro saía da
+       tela e os rótulos ficavam ilegíveis. */
+    .footer-actions button { flex: 1 1 100%; }
+  }
 </style>
 </head>
 <body>
@@ -1251,7 +1264,7 @@ function renderGerar() {
 
         <div class="footer-actions" style="margin-top:20px">
           <button type="submit" class="secondary" data-formato="docx">Gerar .docx (editável)</button>
-          <button type="submit" class="secondary" data-formato="link">Enviar p/ revisão do cliente</button>
+          <button type="submit" class="secondary" data-formato="link">Enviar p/ revisão</button>
           <button type="submit" class="primary" data-formato="pdf">Gerar .pdf (pronto p/ assinatura)</button>
         </div>
       </form>
@@ -1924,7 +1937,7 @@ function renderDocumentos() {
         <div class="grid"><div class="field"><label>Data</label><input data-f="data" type="date" /></div></div>
         <div class="footer-actions" style="margin-top:20px">
           <button type="submit" class="secondary" data-formato="docx">Gerar .docx (editável)</button>
-          <button type="submit" class="secondary" data-formato="link">Enviar p/ revisão do cliente</button>
+          <button type="submit" class="secondary" data-formato="link">Enviar p/ revisão</button>
           <button type="submit" class="primary" data-formato="pdf">Gerar .pdf (pronto p/ assinatura)</button>
         </div>
       </form>
