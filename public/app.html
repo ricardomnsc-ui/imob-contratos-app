@@ -303,6 +303,14 @@ const LAYOUTS_CONTRATO = [
 
 // O comentário de ajuste é escrito pelo cliente na página pública de revisão e
 // volta pro painel do corretor: precisa ser escapado antes de virar HTML.
+// Nome legível de cada tipo de contrato, usado no histórico do dashboard.
+const TIPO_LABEL = {
+  compra_venda: "Compra e Venda",
+  locacao_caucao: "Locação (Caução)",
+  locacao_fiador: "Locação (Fiador)",
+  locacao_seguro_fianca: "Locação (Seguro Fiança)",
+};
+
 function escapeHtml(s) {
   return String(s == null ? "" : s).replace(/[&<>"']/g, c => (
     { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
@@ -572,7 +580,7 @@ async function renderDashboard() {
             <tbody>
               ${d.ultimosContratos.map(c => `
                 <tr style="border-bottom:1px solid var(--border)">
-                  <td style="padding:10px 10px 10px 0">${c.tipo === "compra_venda" ? "Compra e Venda" : c.tipo === "locacao_fiador" ? "Locação (Fiador)" : "Locação (Caução)"}</td>
+                  <td style="padding:10px 10px 10px 0">${TIPO_LABEL[c.tipo] || "Locação (Caução)"}</td>
                   <td style="padding:10px">${c.endereco || "—"}</td>
                   <td style="padding:10px">${c.bairro || "—"}</td>
                   <td style="padding:10px 0 10px 10px;text-align:right;font-weight:600">${fmtBRL(c.valor)}</td>
@@ -1064,6 +1072,7 @@ function renderGerar() {
         <button data-tipo="compra_venda" class="${state.tipo === "compra_venda" ? "active" : ""}">Compra e Venda</button>
         <button data-tipo="locacao_caucao" class="${state.tipo === "locacao_caucao" ? "active" : ""}">Locação (Caução)</button>
         <button data-tipo="locacao_fiador" class="${state.tipo === "locacao_fiador" ? "active" : ""}">Locação (Fiador)</button>
+        <button data-tipo="locacao_seguro_fianca" class="${state.tipo === "locacao_seguro_fianca" ? "active" : ""}">Locação (Seguro Fiança)</button>
       </div>
 
       <h2>Layout do documento</h2>
@@ -1205,9 +1214,11 @@ function renderGerar() {
           <div class="grid" id="garantiaTipoField">
             <div class="field">
               <label>Garantia</label>
+              <!-- Seguro fiança saiu daqui: virou tipo de contrato próprio, lá
+                   em cima. Deixar nos dois lugares criava duas portas pra mesma
+                   coisa. -->
               <select name="garantiaTipo" id="selGarantiaTipo">
                 <option value="caucao">Caução</option>
-                <option value="seguro_fianca">Seguro Fiança</option>
                 <option value="titulo_capitalizacao">Título de Capitalização</option>
                 <option value="personalizada">Outra (cláusula específica da imobiliária)</option>
               </select>
@@ -1288,21 +1299,10 @@ function renderGerar() {
   el.querySelector("#fiadorSection").style.display = state.tipo === "locacao_fiador" ? "" : "none";
   el.querySelector("#labelVendedores").textContent = isLocacao ? "Locador(es)" : "Vendedor(es)";
   el.querySelector("#labelCompradores").textContent = isLocacao ? "Locatário(s)" : "Comprador(es)";
-  if (state.tipo === "locacao_fiador") {
-    el.querySelector("#garantiaTitle").textContent = "Garantia (fiador — ver seção acima)";
-    el.querySelector("#garantiaTipoField").style.display = "none";
-    el.querySelector("#garantiaFieldsCaucao").style.display = "none";
-  } else if (isLocacao) {
-    const selGarantia = el.querySelector("#selGarantiaTipo");
-    const garantiaBlocos = {
-      caucao: el.querySelector("#garantiaFieldsCaucao"),
-      seguro_fianca: el.querySelector("#garantiaFieldsSeguro"),
-      titulo_capitalizacao: el.querySelector("#garantiaFieldsTitulo"),
-      personalizada: el.querySelector("#garantiaFieldsPersonalizada"),
-    };
-    selGarantia.addEventListener("change", () => {
-      Object.entries(garantiaBlocos).forEach(([tipo, bloco]) => { bloco.style.display = tipo === selGarantia.value ? "" : "none"; });
-    });
+  if (isLocacao) {
+    // Administração e seguro incêndio independem da garantia. Ficavam ligados
+    // só no ramo da caução, então esses dois campos não abriam no contrato
+    // com fiador.
     const chkAdmin = el.querySelector("#chkAdministracao");
     chkAdmin.addEventListener("change", () => {
       el.querySelector("#administracaoFields").style.display = chkAdmin.checked ? "" : "none";
@@ -1311,6 +1311,33 @@ function renderGerar() {
     chkSeguro.addEventListener("change", () => {
       el.querySelector("#seguroIncendioFields").style.display = chkSeguro.checked ? "" : "none";
     });
+
+    const garantiaBlocos = {
+      caucao: el.querySelector("#garantiaFieldsCaucao"),
+      seguro_fianca: el.querySelector("#garantiaFieldsSeguro"),
+      titulo_capitalizacao: el.querySelector("#garantiaFieldsTitulo"),
+      personalizada: el.querySelector("#garantiaFieldsPersonalizada"),
+    };
+    const mostrarSoBloco = (chave) => {
+      Object.entries(garantiaBlocos).forEach(([t, bloco]) => { bloco.style.display = t === chave ? "" : "none"; });
+    };
+
+    // Fiador e seguro fiança são tipos próprios de contrato: a garantia já está
+    // decidida pela escolha lá em cima, então o seletor some em vez de oferecer
+    // uma segunda porta pra mesma coisa.
+    if (state.tipo === "locacao_fiador") {
+      el.querySelector("#garantiaTitle").textContent = "Garantia (fiador — ver seção acima)";
+      el.querySelector("#garantiaTipoField").style.display = "none";
+      mostrarSoBloco(null);
+    } else if (state.tipo === "locacao_seguro_fianca") {
+      el.querySelector("#garantiaTitle").textContent = "Garantia (seguro fiança)";
+      el.querySelector("#garantiaTipoField").style.display = "none";
+      mostrarSoBloco("seguro_fianca");
+    } else {
+      const selGarantia = el.querySelector("#selGarantiaTipo");
+      selGarantia.addEventListener("change", () => mostrarSoBloco(selGarantia.value));
+      mostrarSoBloco(selGarantia.value);
+    }
   }
 
   addPersonRow("vendedores", "vend", isLocacao ? "Locador" : "Vendedor");
@@ -1467,7 +1494,9 @@ async function handleSubmit(e) {
     dados.administracao = { ativa: fd.get("administracao.ativa") === "on", taxaPercentual: parseFloat(getByPath(fd, "administracao.taxaPercentual") || 0) };
     dados.seguroIncendio = { incluir: fd.get("seguroIncendio.incluir") === "on", responsavel: getByPath(fd, "seguroIncendio.responsavel") || "locatario" };
 
-    const garantiaTipo = state.tipo === "locacao_fiador" ? "fiador" : (getByPath(fd, "garantiaTipo") || "caucao");
+    const garantiaTipo = state.tipo === "locacao_fiador" ? "fiador"
+      : state.tipo === "locacao_seguro_fianca" ? "seguro_fianca"
+      : (getByPath(fd, "garantiaTipo") || "caucao");
     dados.garantiaTipo = garantiaTipo;
     if (garantiaTipo === "seguro_fianca") dados.garantia = { seguradora: getByPath(fd, "garantia.seguradora"), apolice: getByPath(fd, "garantia.apolice"), taxaMensal: parseFloat(getByPath(fd, "garantia.taxaMensal") || 0), clausula: getByPath(fd, "garantia.clausula") };
     else if (garantiaTipo === "titulo_capitalizacao") dados.garantia = { instituicao: getByPath(fd, "garantia.instituicao"), numero: getByPath(fd, "garantia.numero"), valor: parseFloat(getByPath(fd, "garantia.valorTitulo") || 0) };

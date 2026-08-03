@@ -383,6 +383,7 @@ const TITULOS_DOC = {
   compra_venda: "Contrato de Compra e Venda",
   locacao_caucao: "Contrato de Locação",
   locacao_fiador: "Contrato de Locação",
+  locacao_seguro_fianca: "Contrato de Locação",
   ficha_locacao: "Ficha de Locação",
   proposta_compra: "Proposta de Compra",
   proposta_aluguel: "Proposta de Locação",
@@ -415,7 +416,7 @@ function hashDados(dados) {
 }
 
 function resumoContrato(dados) {
-  const isLocacao = dados.tipo === "locacao_caucao" || dados.tipo === "locacao_fiador";
+  const isLocacao = dados.tipo === "locacao_caucao" || dados.tipo === "locacao_fiador" || dados.tipo === "locacao_seguro_fianca";
   let valor = 0;
   let comissaoValor = 0;
   if (isLocacao) {
@@ -654,6 +655,7 @@ app.get("/api/dashboard", requireAuth, async (req, res) => {
     porTipo: {
       compra_venda: contratos.filter(c => c.tipo === "compra_venda").length,
       locacao_caucao: contratos.filter(c => c.tipo === "locacao_caucao").length,
+      locacao_seguro_fianca: contratos.filter(c => c.tipo === "locacao_seguro_fianca").length,
       locacao_fiador: contratos.filter(c => c.tipo === "locacao_fiador").length,
     },
     valorMedioVenda: media(vendas, "valor"),
