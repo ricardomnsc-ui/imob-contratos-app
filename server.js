@@ -415,6 +415,60 @@ function hashDados(dados) {
   return crypto.createHash("sha256").update(JSON.stringify(dados)).digest("hex").slice(0, 32);
 }
 
+// ---- Identificação de quem abre o link de revisão ----
+const soDigitos = (s) => String(s || "").replace(/\D/g, "");
+
+// Valida os dígitos verificadores. Serve pra barrar erro de digitação e
+// preenchimento aleatório — não prova identidade, só que o número é bem formado.
+function cpfValido(cpf) {
+  if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+  const dv = (base, pesoInicial) => {
+    let soma = 0;
+    for (let i = 0; i < base.length; i++) soma += Number(base[i]) * (pesoInicial - i);
+    const r = (soma * 10) % 11;
+    return r === 10 ? 0 : r;
+  };
+  return dv(cpf.slice(0, 9), 10) === Number(cpf[9]) && dv(cpf.slice(0, 10), 11) === Number(cpf[10]);
+}
+
+function cnpjValido(cnpj) {
+  if (cnpj.length !== 14 || /^(\d)\1{13}$/.test(cnpj)) return false;
+  const dv = (base) => {
+    let peso = base.length - 7, soma = 0;
+    for (let i = 0; i < base.length; i++) {
+      soma += Number(base[i]) * peso--;
+      if (peso < 2) peso = 9;
+    }
+    const r = soma % 11;
+    return r < 2 ? 0 : 11 - r;
+  };
+  return dv(cnpj.slice(0, 12)) === Number(cnpj[12]) && dv(cnpj.slice(0, 13)) === Number(cnpj[13]);
+}
+
+const documentoValido = (d) => (d.length === 14 ? cnpjValido(d) : cpfValido(d));
+
+// Guardamos só o hash do CPF/CNPJ das partes do contrato, nunca o número. Serve
+// pra dizer ao corretor se quem abriu o link é mesmo uma das partes, sem
+// persistir documento de ninguém.
+const hashDocumento = (d) => crypto.createHash("sha256").update(soDigitos(d)).digest("hex");
+
+// Monta a lista de partes (rótulo + hash do documento) a partir dos dados do
+// contrato, pra permitir a conferência na hora que alguém se identifica.
+function partesDoContrato(dados) {
+  const grupos = [
+    ["locadores", "Locador(a)"], ["locatarios", "Locatário(a)"], ["fiadores", "Fiador(a)"],
+    ["vendedores", "Vendedor(a)"], ["compradores", "Comprador(a)"],
+  ];
+  const partes = [];
+  for (const [chave, rotulo] of grupos) {
+    for (const p of (dados[chave] || [])) {
+      const doc = soDigitos(p.cpf || p.cnpj);
+      if (doc) partes.push({ rotulo, nome: p.nome || "", hash: hashDocumento(doc) });
+    }
+  }
+  return partes;
+}
+
 function resumoContrato(dados) {
   const isLocacao = dados.tipo === "locacao_caucao" || dados.tipo === "locacao_fiador" || dados.tipo === "locacao_seguro_fianca";
   let valor = 0;
@@ -548,9 +602,12 @@ app.post("/api/gerar", requireAuth, async (req, res) => {
         imobiliaria: tenant.nome || "",
         destinatario: String(destinatario || "").trim().slice(0, 120),
         contratoId: ehAuxiliar ? null : contratoId,
+        partes: partesDoContrato(dados),
+        acessos: [],
         status: "pendente",
         comentario: "",
         respondidoEm: null,
+        respondidoPor: null,
       }, buffer, expiraEm);
       return res.json({
         token,
@@ -716,22 +773,76 @@ app.get("/r/:token", revisaoLimiter, (req, res) => {
 app.get("/api/revisao/:token", revisaoLimiter, async (req, res) => {
   const share = await store.getShare(req.params.token);
   if (!share) return res.status(404).json({ error: "Este link não existe mais ou expirou." });
+  const acesso = acessoValido(share, req.query.acesso);
   res.json({
     titulo: share.titulo,
-    endereco: share.endereco,
     imobiliaria: share.imobiliaria,
-    destinatario: share.destinatario,
     status: share.status,
-    comentario: share.comentario,
-    respondidoEm: share.respondidoEm,
     criadoEm: share.criadoEm,
     expiraEm: share.expiraEm,
+    identificado: !!acesso,
+    identificadoComo: acesso ? { nome: acesso.nome, confere: acesso.confere, parte: acesso.parteRotulo } : null,
+    // Endereço do imóvel, comentário e autoria da resposta só depois da
+    // identificação — antes disso a página mostra apenas o necessário pra
+    // pessoa entender o que está sendo pedido.
+    endereco: acesso ? share.endereco : null,
+    destinatario: acesso ? share.destinatario : null,
+    comentario: acesso ? share.comentario : null,
+    respondidoEm: acesso ? share.respondidoEm : null,
+    respondidoPor: acesso ? share.respondidoPor : null,
   });
 });
+
+// Quem abre o link se identifica antes de ver o documento. Isso não restringe
+// o acesso — quem tem o endereço pode digitar qualquer nome —, mas registra
+// quem leu e quem aprovou, e confere o documento informado contra as partes do
+// contrato pra que o corretor saiba se foi mesmo o locatário que respondeu.
+app.post("/api/revisao/:token/identificar", revisaoLimiter, async (req, res) => {
+  const share = await store.getShare(req.params.token);
+  if (!share) return res.status(404).json({ error: "Este link não existe mais ou expirou." });
+
+  const nome = String(req.body.nome || "").trim().replace(/\s+/g, " ").slice(0, 120);
+  if (nome.length < 3 || !nome.includes(" ")) {
+    return res.status(400).json({ error: "Informe seu nome completo." });
+  }
+  const doc = soDigitos(req.body.documento);
+  if (!documentoValido(doc)) {
+    return res.status(400).json({ error: "CPF ou CNPJ inválido. Confira os números." });
+  }
+
+  const hash = hashDocumento(doc);
+  const parte = (share.partes || []).find(p => p.hash === hash) || null;
+
+  const acesso = {
+    id: nanoid(10),
+    nome,
+    // Guarda só os últimos dígitos pra identificar sem manter o documento
+    // inteiro; a conferência de verdade é pelo hash, acima.
+    documentoFinal: doc.slice(-4),
+    ehCpf: doc.length === 11,
+    parteRotulo: parte ? parte.rotulo : null,
+    parteNome: parte ? parte.nome : null,
+    confere: !!parte,
+    em: new Date().toISOString(),
+  };
+  const acessos = [...(share.acessos || []), acesso].slice(-30);
+  await store.updateShareMeta(req.params.token, { acessos });
+
+  res.json({ acesso: acesso.id, nome: acesso.nome, confere: acesso.confere, parte: acesso.parteRotulo });
+});
+
+// Confere se o portador do link já se identificou nesta sessão.
+function acessoValido(share, id) {
+  if (!id) return null;
+  return (share.acessos || []).find(a => a.id === id) || null;
+}
 
 app.get("/api/revisao/:token/documento.pdf", revisaoLimiter, async (req, res) => {
   const share = await store.getShare(req.params.token);
   if (!share) return res.status(404).send("Este link não existe mais ou expirou.");
+  if (!acessoValido(share, req.query.acesso)) {
+    return res.status(403).send("Identifique-se para abrir o documento.");
+  }
   const pdf = await store.getSharePdf(req.params.token);
   if (!pdf) return res.status(404).send("Documento indisponível.");
   res.setHeader("Content-Type", "application/pdf");
@@ -743,6 +854,8 @@ app.get("/api/revisao/:token/documento.pdf", revisaoLimiter, async (req, res) =>
 app.post("/api/revisao/:token/resposta", revisaoLimiter, async (req, res) => {
   const share = await store.getShare(req.params.token);
   if (!share) return res.status(404).json({ error: "Este link não existe mais ou expirou." });
+  const acesso = acessoValido(share, req.body.acesso);
+  if (!acesso) return res.status(403).json({ error: "Identifique-se para responder." });
   if (share.status !== "pendente") {
     return res.status(409).json({ error: "Este documento já foi respondido." });
   }
@@ -758,6 +871,13 @@ app.post("/api/revisao/:token/resposta", revisaoLimiter, async (req, res) => {
     status: acao === "aprovar" ? "aprovado" : "ajuste",
     comentario,
     respondidoEm: new Date().toISOString(),
+    respondidoPor: {
+      nome: acesso.nome,
+      documentoFinal: acesso.documentoFinal,
+      ehCpf: acesso.ehCpf,
+      confere: acesso.confere,
+      parteRotulo: acesso.parteRotulo,
+    },
   };
   await store.updateShareMeta(req.params.token, patch);
   res.json({ ok: true, ...patch });
@@ -776,6 +896,8 @@ app.get("/api/compartilhamentos", requireAuth, async (req, res) => {
     status: s.status,
     comentario: s.comentario,
     respondidoEm: s.respondidoEm,
+    respondidoPor: s.respondidoPor || null,
+    acessos: s.acessos || [],
     criadoEm: s.criadoEm,
     expiraEm: s.expiraEm,
   })));

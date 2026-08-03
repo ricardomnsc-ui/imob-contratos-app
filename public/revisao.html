@@ -108,6 +108,25 @@
   footer a { color: var(--brand-text); font-weight: 600; }
 
   .carregando { text-align: center; padding: 70px 20px; color: var(--muted); }
+
+  /* ---- Identificação ---- */
+  .ident { max-width: 520px; margin: 26px auto 0; }
+  .ident .card { padding: 28px; }
+  .ident .doc-nome { font-size: 15px; color: var(--muted); margin: 0 0 22px; }
+  .ident .doc-nome strong { color: var(--ink); font-weight: 700; display: block;
+    font-size: 19px; margin-bottom: 3px; }
+  .ident .campo { margin-bottom: 16px; }
+  .ident input { width: 100%; font-family: inherit; font-size: 16px; padding: 12px 14px;
+    border: 1px solid var(--border); border-radius: 9px; color: var(--ink); background: var(--paper); }
+  .ident input:focus { border-color: var(--brand); outline: none; box-shadow: 0 0 0 3px rgba(255,107,0,.12); }
+  .ident button { width: 100%; margin-top: 6px; }
+  .lgpd { font-size: 12.5px; color: var(--muted); line-height: 1.5; margin: 18px 0 0;
+    padding-top: 16px; border-top: 1px solid var(--border); }
+  .quem { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13.5px;
+    color: var(--muted); margin-top: 10px; }
+  .quem .selo { font-weight: 600; padding: 3px 9px; border-radius: 999px; font-size: 12px; }
+  .quem .selo.ok { background: var(--ok-soft); color: var(--ok); }
+  .quem .selo.na { background: #f1f3f5; color: var(--muted); }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
@@ -132,6 +151,15 @@
   var token = location.pathname.split("/").filter(Boolean).pop();
   var main = document.getElementById("main");
   var info = null;
+  // Guardado só na aba: recarregar a página não obriga a se identificar de
+  // novo, mas fechar o navegador sim.
+  var CHAVE_ACESSO = "minutei_rev_" + token;
+  var acesso = null;
+  try { acesso = sessionStorage.getItem(CHAVE_ACESSO); } catch (e) { acesso = null; }
+
+  function comAcesso(url) {
+    return acesso ? url + (url.indexOf("?") === -1 ? "?" : "&") + "acesso=" + encodeURIComponent(acesso) : url;
+  }
 
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
@@ -146,7 +174,7 @@
   }
 
   function carregar() {
-    fetch("/api/revisao/" + encodeURIComponent(token))
+    fetch(comAcesso("/api/revisao/" + encodeURIComponent(token)))
       .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
       .then(function (res) {
         if (!res.ok) return semDocumento(res.j.error);
@@ -168,8 +196,11 @@
       ? "enviado por<b>" + esc(info.imobiliaria) + "</b>"
       : "";
 
+    // Sem identificação, o documento nem chega ao navegador.
+    if (!info.identificado) return renderIdentificacao();
+
     var rotulo = { pendente: "Aguardando sua revisão", aprovado: "Aprovado por você", ajuste: "Ajuste solicitado" };
-    var pdfUrl = "/api/revisao/" + encodeURIComponent(token) + "/documento.pdf";
+    var pdfUrl = comAcesso("/api/revisao/" + encodeURIComponent(token) + "/documento.pdf");
 
     var html = "";
     html += '<div class="doc-head">';
@@ -177,6 +208,13 @@
     html += "<h1>" + esc(info.titulo) + "</h1>";
     if (info.endereco) html += '<p class="end">' + esc(info.endereco) + "</p>";
     html += '<div class="status ' + esc(info.status) + '"><span class="dot"></span>' + esc(rotulo[info.status]) + "</div>";
+    if (info.identificadoComo) {
+      html += '<div class="quem">Você está identificado como <b>' + esc(info.identificadoComo.nome) + "</b>";
+      html += info.identificadoComo.confere
+        ? '<span class="selo ok">confere com o ' + esc(info.identificadoComo.parte) + " do contrato</span>"
+        : '<span class="selo na">não consta como parte do contrato</span>';
+      html += "</div>";
+    }
     html += "</div>";
 
     html += '<div class="viewer">';
@@ -205,12 +243,20 @@
       html += "</div>";
     } else {
       html += '<div class="resposta ' + esc(info.status) + '">';
+      // Como mais de uma pessoa pode abrir o link, quem respondeu vai nomeado
+      // — pode não ser quem está lendo agora.
+      var autor = info.respondidoPor ? info.respondidoPor.nome : null;
+      var quando = esc(dataBR(info.respondidoEm));
       if (info.status === "aprovado") {
-        html += "<h2>Você aprovou este documento</h2>";
-        html += "<p>Resposta registrada em " + esc(dataBR(info.respondidoEm)) + ". Quem te enviou já foi avisado.</p>";
+        html += "<h2>Documento aprovado</h2>";
+        html += autor
+          ? "<p>Aprovado por <b>" + esc(autor) + "</b> em " + quando + ". Quem enviou já foi avisado.</p>"
+          : "<p>Resposta registrada em " + quando + ". Quem enviou já foi avisado.</p>";
       } else {
-        html += "<h2>Você pediu um ajuste</h2>";
-        html += "<p>Enviado em " + esc(dataBR(info.respondidoEm)) + ":</p>";
+        html += "<h2>Ajuste solicitado</h2>";
+        html += autor
+          ? "<p>Pedido por <b>" + esc(autor) + "</b> em " + quando + ":</p>"
+          : "<p>Enviado em " + quando + ":</p>";
         html += "<blockquote>" + esc(info.comentario) + "</blockquote>";
       }
       html += "</div>";
@@ -218,6 +264,70 @@
 
     main.innerHTML = html;
     if (info.status === "pendente") ligarAcoes();
+  }
+
+  function renderIdentificacao() {
+    main.innerHTML =
+      '<div class="ident"><div class="card">' +
+      '<div class="eyebrow">Antes de abrir</div>' +
+      "<h2>Identifique-se para ver o documento</h2>" +
+      '<p class="doc-nome"><strong>' + esc(info.titulo) + "</strong>" +
+      (info.imobiliaria ? "enviado por " + esc(info.imobiliaria) : "") + "</p>" +
+      '<div class="campo"><label for="idNome">Nome completo</label>' +
+      '<input id="idNome" type="text" autocomplete="name" placeholder="Como está no documento" /></div>' +
+      '<div class="campo"><label for="idDoc">CPF ou CNPJ</label>' +
+      '<input id="idDoc" type="text" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00" /></div>' +
+      '<button class="btn-ok" type="button" id="btnIdent">Ver o documento</button>' +
+      '<div id="erro"></div>' +
+      '<p class="lgpd">Pedimos esses dados para registrar quem leu e quem aprovou este documento. ' +
+      "Ficam guardados junto com o contrato e são apagados quando o link expira, em " +
+      esc(new Date(info.expiraEm).toLocaleDateString("pt-BR")) + ".</p>" +
+      "</div></div>";
+
+    var doc = document.getElementById("idDoc");
+    // Máscara conforme digita: CPF até 11 dígitos, CNPJ acima disso.
+    doc.addEventListener("input", function () {
+      var v = doc.value.replace(/\D/g, "").slice(0, 14);
+      doc.value = v.length <= 11
+        ? v.replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2")
+        : v.replace(/^(\d{2})(\d)/, "$1.$2").replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+             .replace(/\.(\d{3})(\d)/, ".$1/$2").replace(/(\d{4})(\d)/, "$1-$2");
+    });
+    document.getElementById("btnIdent").addEventListener("click", identificar);
+    doc.addEventListener("keydown", function (e) { if (e.key === "Enter") identificar(); });
+    document.getElementById("idNome").addEventListener("keydown", function (e) {
+      if (e.key === "Enter") doc.focus();
+    });
+    document.getElementById("idNome").focus();
+  }
+
+  function identificar() {
+    var nome = document.getElementById("idNome").value.trim();
+    var documento = document.getElementById("idDoc").value;
+    var btn = document.getElementById("btnIdent");
+    mostrarErro("");
+    btn.disabled = true;
+    btn.textContent = "Verificando...";
+
+    fetch("/api/revisao/" + encodeURIComponent(token) + "/identificar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nome: nome, documento: documento }),
+    })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        btn.disabled = false;
+        btn.textContent = "Ver o documento";
+        if (!res.ok) return mostrarErro(res.j.error || "Não foi possível continuar.");
+        acesso = res.j.acesso;
+        try { sessionStorage.setItem(CHAVE_ACESSO, acesso); } catch (e) {}
+        carregar();
+      })
+      .catch(function () {
+        btn.disabled = false;
+        btn.textContent = "Ver o documento";
+        mostrarErro("Falha de conexão. Tente novamente.");
+      });
   }
 
   function ligarAcoes() {
@@ -243,7 +353,9 @@
 
   function mostrarErro(msg) {
     var el = document.getElementById("erro");
-    if (el) el.innerHTML = '<div class="erro">' + esc(msg) + "</div>";
+    if (!el) return;
+    // Sem mensagem, limpa de verdade — senão sobra uma caixa vermelha vazia.
+    el.innerHTML = msg ? '<div class="erro">' + esc(msg) + "</div>" : "";
   }
 
   function responder(acao, comentario) {
@@ -254,7 +366,7 @@
     fetch("/api/revisao/" + encodeURIComponent(token) + "/resposta", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ acao: acao, comentario: comentario }),
+      body: JSON.stringify({ acao: acao, comentario: comentario, acesso: acesso }),
     })
       .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
       .then(function (res) {
@@ -265,6 +377,7 @@
         info.status = res.j.status;
         info.comentario = res.j.comentario;
         info.respondidoEm = res.j.respondidoEm;
+        info.respondidoPor = res.j.respondidoPor;
         render();
         window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
       })
