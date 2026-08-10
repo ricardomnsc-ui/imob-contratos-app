@@ -377,6 +377,16 @@ app.post("/api/billing/portal", requireAuth, async (req, res) => {
 
 // Extrai um resumo do contrato (pro histórico/dashboard) a partir do JSON
 // que já foi usado pra montar o documento — não depende do arquivo gerado.
+// Monta o branding que o gerador usa (dados da imobiliária + logo em buffer).
+function brandingDoTenant(tenant) {
+  const branding = { ...tenant };
+  if (tenant.logoPath) {
+    const logoFile = path.join(UPLOAD_DIR, path.basename(tenant.logoPath));
+    if (fs.existsSync(logoFile)) branding.logoBuffer = fs.readFileSync(logoFile);
+  }
+  return branding;
+}
+
 // Nome legível de cada documento — usado na página pública de revisão, onde
 // quem lê é o cliente e não conhece os identificadores internos.
 const TITULOS_DOC = {
@@ -492,6 +502,11 @@ function resumoContrato(dados) {
     valor,
     comissaoValor,
     hash: hashDados(dados),
+    // Payload completo que originou o contrato. Guardar isso é o que permite
+    // reabrir e reeditar o documento depois — inclui dados pessoais das partes
+    // (CPF/RG), então nunca vai em listagem: só sai pelas rotas que pedem um
+    // contrato específico, e some quando o contrato é excluído no painel.
+    dados,
   };
 }
 
@@ -552,11 +567,7 @@ app.post("/api/gerar", requireAuth, async (req, res) => {
       });
     }
 
-    const branding = { ...tenant };
-    if (tenant.logoPath) {
-      const logoFile = path.join(UPLOAD_DIR, path.basename(tenant.logoPath));
-      if (fs.existsSync(logoFile)) branding.logoBuffer = fs.readFileSync(logoFile);
-    }
+    const branding = brandingDoTenant(tenant);
 
     let buffer = await gerarContrato(dados, branding);
     const prefixo = DOCS_AUXILIARES[dados.tipo] || `Contrato_${(dados.tipo || "contrato").replace(/_/g, "-")}`;
@@ -724,8 +735,57 @@ app.get("/api/dashboard", requireAuth, async (req, res) => {
     contratosMesPassado: contarNoMes(mesPassadoStr),
     ultimosContratos: contratos.slice(0, 10).map(c => ({
       id: c.id, tipo: c.tipo, endereco: c.endereco, bairro: c.bairro, valor: c.valor, data: c.data, criadoEm: c.criadoEm,
+      // Só os gerados depois da mudança guardam os dados e podem ser reabertos.
+      // Nunca mandamos o payload em si aqui — ele tem CPF/RG das partes.
+      temDados: !!c.dados,
     })),
   });
+});
+
+// Reabre um contrato do histórico. Em vez de guardar o arquivo, guardamos os
+// dados que o originaram e regeramos aqui: ocupa menos, sai sempre no template
+// atual e é o mesmo dado que a edição usa. Não consome cota — o contrato já foi
+// contado quando foi criado.
+app.get("/api/dashboard/contratos/:id/documento", requireAuth, async (req, res) => {
+  try {
+    const contrato = await store.getContract(req.params.id, req.user.tenantId);
+    if (!contrato) return res.status(404).json({ error: "Contrato não encontrado" });
+    if (!contrato.dados) {
+      return res.status(409).json({
+        error: "Este contrato foi gerado antes de o sistema passar a guardar os dados, então não dá para reabrir. Contratos gerados de agora em diante ficam disponíveis aqui.",
+      });
+    }
+
+    const tenant = await store.getTenant(req.user.tenantId);
+    if (!tenant) return res.status(404).json({ error: "Imobiliária não encontrada" });
+
+    let buffer = await gerarContrato(contrato.dados, brandingDoTenant(tenant));
+    const querPdf = req.query.formato === "pdf";
+    // Content-Disposition não aceita acento: "Contrato de Locação" viraria
+    // "Contrato de Loca??o" no nome do arquivo baixado.
+    const semAcento = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "");
+    const titulo = semAcento(TITULOS_DOC[contrato.tipo] || "Documento").replace(/[^a-zA-Z0-9]+/g, "-");
+    const endereco = semAcento(contrato.endereco).slice(0, 20).replace(/[^a-zA-Z0-9]+/g, "");
+    const nomeBase = endereco ? `${titulo}_${endereco}` : titulo;
+
+    if (querPdf) {
+      try {
+        buffer = await convertDocxToPdf(buffer);
+      } catch (err) {
+        console.error("Falha ao converter para PDF:", err);
+        return res.status(502).json({ error: "Não foi possível gerar o PDF agora. Tente baixar em .docx." });
+      }
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="${nomeBase}.pdf"`);
+    } else {
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+      res.setHeader("Content-Disposition", `attachment; filename="${nomeBase}.docx"`);
+    }
+    res.send(buffer);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: IS_PROD ? "Não foi possível reabrir o contrato agora." : err.message });
+  }
 });
 
 app.delete("/api/dashboard/contratos/:id", requireAuth, async (req, res) => {
