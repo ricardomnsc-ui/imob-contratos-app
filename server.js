@@ -878,6 +878,20 @@ app.get("/api/dashboard", requireAuth, async (req, res) => {
   });
 });
 
+// Devolve o payload original pra reabrir o formulário preenchido e editar.
+// Esta é a única rota que expõe dados pessoais das partes (CPF/RG), então é
+// sempre pelo id do contrato e com o dono conferido pelo store.
+app.get("/api/dashboard/contratos/:id/dados", requireAuth, async (req, res) => {
+  const contrato = await store.getContract(req.params.id, req.user.tenantId);
+  if (!contrato) return res.status(404).json({ error: "Contrato não encontrado" });
+  if (!contrato.dados) {
+    return res.status(409).json({
+      error: "Este contrato foi gerado antes de o sistema passar a guardar os dados, então não dá para editar. Gere um novo.",
+    });
+  }
+  res.json({ id: contrato.id, criadoEm: contrato.criadoEm, dados: contrato.dados });
+});
+
 // Reabre um contrato do histórico. Em vez de guardar o arquivo, guardamos os
 // dados que o originaram e regeramos aqui: ocupa menos, sai sempre no template
 // atual e é o mesmo dado que a edição usa. Não consome cota — o contrato já foi
@@ -1090,6 +1104,9 @@ app.get("/api/compartilhamentos", requireAuth, async (req, res) => {
     endereco: s.endereco,
     destinatario: s.destinatario,
     status: s.status,
+    // Liga a revisão ao contrato de origem, pra dar pra editar direto do
+    // pedido de ajuste. É só o id — os dados ficam atrás da rota própria.
+    contratoId: s.contratoId || null,
     comentario: s.comentario,
     respondidoEm: s.respondidoEm,
     respondidoPor: s.respondidoPor || null,

@@ -629,6 +629,7 @@ async function renderDashboard() {
                   <td style="padding:10px 0 10px 10px;text-align:right;font-weight:600">${fmtBRL(c.valor)}</td>
                   <td style="padding:10px 0 10px 10px;text-align:right;white-space:nowrap">
                     ${c.temDados ? `
+                      <button type="button" class="link acao" data-editar-contrato="${c.id}" title="Reabrir no formulário para editar">editar</button>
                       <button type="button" class="link acao" data-abrir-contrato="${c.id}" data-formato="docx" title="Baixar em .docx (editável)">.docx</button>
                       <button type="button" class="link acao" data-abrir-contrato="${c.id}" data-formato="pdf" title="Baixar em .pdf">.pdf</button>
                     ` : `<span class="hint-inline" title="Gerado antes de o sistema guardar os dados do contrato">indisponível</span>`}
@@ -642,6 +643,10 @@ async function renderDashboard() {
       ` : `<div class="empty">Nenhum contrato ainda.</div>`}
     </div>
   `;
+
+  el.querySelectorAll("[data-editar-contrato]").forEach(btn => {
+    btn.addEventListener("click", () => editarContrato(btn.dataset.editarContrato));
+  });
 
   // Reabrir um contrato do histórico: o servidor regera a partir dos dados
   // guardados e devolve o arquivo. Não consome cota.
@@ -1665,6 +1670,120 @@ async function gerarEBaixar(dados, formato, btn, buttons, opts = {}) {
   }
 }
 
+// ================= REABRIR CONTRATO PARA EDITAR =================
+// O inverso de handleSubmit: em vez de enumerar campo a campo, percorre os
+// [name] do formulário e resolve o caminho pontilhado no payload guardado.
+// Assim, campo novo no formulário já volta preenchido sem mexer aqui.
+function valorPorCaminho(obj, caminho) {
+  return caminho.split(".").reduce((o, k) => (o == null ? undefined : o[k]), obj);
+}
+
+// Atribuir direto num <select> some com o valor quando ele não bate com
+// nenhuma opção — e um "estado civil" que volta vazio muda a qualificação da
+// parte e a exigência de anuência do cônjuge, sem ninguém perceber. Aqui a
+// tentativa é tolerante e, quando falha mesmo, avisa em vez de silenciar.
+function definirValorCampo(campo, valor) {
+  const texto = String(valor);
+  if (campo.tagName !== "SELECT") { campo.value = texto; return true; }
+  const opcoes = [...campo.options];
+  const achou =
+    opcoes.find(o => o.value === texto) ||
+    opcoes.find(o => o.value.toLowerCase() === texto.toLowerCase()) ||
+    opcoes.find(o => o.textContent.trim().toLowerCase() === texto.toLowerCase());
+  if (!achou) return false;
+  campo.value = achou.value;
+  return true;
+}
+
+function preencherPessoas(containerId, lista, prefixo, rotulo, naoRestaurados) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = "";
+  const pessoas = (lista && lista.length) ? lista : [{}];
+  pessoas.forEach(() => addPersonRow(containerId, prefixo, rotulo));
+  [...container.querySelectorAll(".person-card")].forEach((card, i) => {
+    const p = pessoas[i] || {};
+    card.querySelectorAll("[data-f]").forEach(inp => {
+      const v = p[inp.dataset.f];
+      if (v === undefined || v === null || v === "") return;
+      if (!definirValorCampo(inp, v)) naoRestaurados.push(`${rotulo} ${i + 1}: ${inp.dataset.f}`);
+    });
+    // Dispara os alternadores depois de preencher: sem isso, uma parte que é
+    // empresa voltaria mostrando os campos de pessoa física.
+    card.querySelectorAll('[data-f="tipoPessoa"], [data-f="estadoCivil"]').forEach(sel => {
+      sel.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+  });
+}
+
+function preencherFormulario(d) {
+  const form = document.querySelector("#view-gerar form");
+  if (!form) return [];
+
+  const naoRestaurados = [];
+  const ehLocacao = d.tipo !== "compra_venda";
+  preencherPessoas("vendedores", ehLocacao ? d.locadores : d.vendedores, "vend", ehLocacao ? "Locador" : "Vendedor", naoRestaurados);
+  preencherPessoas("compradores", ehLocacao ? d.locatarios : d.compradores, "comp", ehLocacao ? "Locatário" : "Comprador", naoRestaurados);
+  if (d.tipo === "locacao_fiador") preencherPessoas("fiadores", d.fiadores, "fiad", "Fiador", naoRestaurados);
+
+  const parcelas = (d.pagamento && d.pagamento.parcelas) || [];
+  const contParcelas = document.getElementById("parcelasContainer");
+  if (contParcelas && !ehLocacao) {
+    contParcelas.innerHTML = "";
+    (parcelas.length ? parcelas : [{}]).forEach(() => addParcelaRow());
+    [...contParcelas.querySelectorAll(".parcela-card")].forEach((card, i) => {
+      const p = parcelas[i] || {};
+      card.querySelectorAll("[data-f]").forEach(inp => {
+        if (p[inp.dataset.f] !== undefined && p[inp.dataset.f] !== null) inp.value = p[inp.dataset.f];
+      });
+    });
+  }
+
+  form.querySelectorAll("[name]").forEach(campo => {
+    const v = valorPorCaminho(d, campo.name);
+    if (v === undefined || v === null || v === "" || typeof v === "object") return;
+    if (campo.type === "checkbox") campo.checked = !!v;
+    else if (!definirValorCampo(campo, v)) naoRestaurados.push(campo.name);
+    campo.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+
+  // Blocos que abrem por caixa de seleção precisam do estado reconstruído.
+  const marcar = (idCheck, temDado) => {
+    const c = document.getElementById(idCheck);
+    if (c && temDado) { c.checked = true; c.dispatchEvent(new Event("change", { bubbles: true })); }
+  };
+  marcar("chkAdministracao", d.administracao && d.administracao.ativa);
+  marcar("chkSeguroIncendio", d.seguroIncendio && d.seguroIncendio.ativo);
+  return naoRestaurados;
+}
+
+async function editarContrato(contratoId) {
+  const res = await api(`/api/dashboard/contratos/${contratoId}/dados`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    toast(err.error || "Não foi possível abrir o contrato para edição", true);
+    return;
+  }
+  const { dados } = await res.json();
+
+  state.tipo = dados.tipo || "compra_venda";
+  state.layout = dados.layout || state.layout;
+  document.querySelector('nav button[data-view="gerar"]').click();
+  // renderGerar reconstrói o formulário; preencher só depois disso.
+  setTimeout(() => {
+    const naoRestaurados = preencherFormulario(dados);
+    const topo = document.getElementById("view-gerar");
+    if (topo) topo.scrollIntoView({ block: "start" });
+    if (naoRestaurados.length) {
+      // Melhor avisar do que deixar o corretor gerar de novo sem perceber que
+      // um campo se perdeu no caminho.
+      toast(`Confira estes campos, não deu para restaurar: ${naoRestaurados.slice(0, 3).join(", ")}`, true);
+    } else {
+      toast("Contrato aberto para edição. Ajuste e gere de novo.");
+    }
+  }, 60);
+}
+
 // ================= MINHA CONTA =================
 const STATUS_ASSINATURA = {
   active: { texto: "Ativa", classe: "ok" },
@@ -1910,6 +2029,7 @@ async function renderRevisoes() {
       </div>
       <div class="revisao-acoes">
         <span class="revisao-status ${s.status}">${rotulo[s.status]}</span>
+        ${s.contratoId ? `<button type="button" class="${s.status === "ajuste" ? "primary" : "secondary"} btn-editar" data-contrato="${s.contratoId}">Editar contrato</button>` : ""}
         <button type="button" class="secondary btn-copiar" data-url="${s.url}">Copiar link</button>
         <button type="button" class="secondary btn-excluir" data-token="${s.token}">Excluir</button>
       </div>
@@ -1918,6 +2038,7 @@ async function renderRevisoes() {
 
   el.innerHTML = `<div class="card">${cabecalho}${linhas}</div>`;
 
+  el.querySelectorAll(".btn-editar").forEach(b => b.addEventListener("click", () => editarContrato(b.dataset.contrato)));
   el.querySelectorAll(".btn-copiar").forEach(b => b.addEventListener("click", async () => {
     try { await navigator.clipboard.writeText(b.dataset.url); toast("Link copiado!"); }
     catch { toast("Não foi possível copiar", true); }
