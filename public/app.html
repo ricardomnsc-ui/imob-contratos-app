@@ -64,7 +64,10 @@
   header .tenant-badge button { background: none; border: none; color: var(--muted); text-decoration: none; cursor: pointer; font-size: 13px; padding: 6px 12px; border-radius: 6px; transition: background .15s, color .15s; flex-shrink: 0; }
   header .tenant-badge button:hover { background: var(--bg); color: var(--ink); }
 
-  nav { display: flex; gap: 4px; padding: 10px 28px; background: var(--paper); border-bottom: 1px solid var(--border); overflow-x: auto; }
+  /* Quebra em linhas em vez de rolar na horizontal. Rolando, as abas do fim
+     ficavam fora da tela sem nenhum indício de que existiam — foi assim que
+     "Revisões" sumiu no celular e "Minha conta" sumia por volta de 900px. */
+  nav { display: flex; flex-wrap: wrap; row-gap: 6px; gap: 4px; padding: 10px 28px; background: var(--paper); border-bottom: 1px solid var(--border); }
   nav button { border: none; background: none; padding: 9px 16px; border-radius: 999px; cursor: pointer; font-size: 13.5px; font-weight: 500; color: var(--muted); transition: background .15s, color .15s; white-space: nowrap; flex-shrink: 0; }
   nav button:hover { color: var(--ink); }
   nav button.active { background: var(--brand-soft); color: var(--brand-text); font-weight: 600; }
@@ -182,6 +185,32 @@
   .logo-preview { width: 64px; height: 64px; object-fit: contain; border: 1px solid var(--border); border-radius: 10px; padding: 6px; background: #fafbfc; }
   .team-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; background: var(--paper); }
   .empty { color: var(--muted); font-size: 14px; padding: 24px; text-align: center; }
+
+  /* ---- Minha conta ---- */
+  .conta-atual { margin-top: 16px; }
+  .conta-plano { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  .conta-nome { font-family: var(--serif); font-size: 24px; font-weight: 800; letter-spacing: -.01em; }
+  .conta-status { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+    padding: 4px 10px; border-radius: 999px; }
+  .conta-status.ok { background: #e7f4ee; color: #0f7a52; }
+  .conta-status.alerta { background: #fdeeee; color: #a3282a; }
+  .conta-status.neutro { background: #f1f3f5; color: var(--muted); }
+  .conta-linha { display: flex; justify-content: space-between; gap: 16px; padding: 11px 0;
+    border-bottom: 1px solid var(--border); font-size: 14.5px; flex-wrap: wrap; }
+  .conta-linha:last-child { border-bottom: none; }
+  .conta-linha span { color: var(--muted); }
+  .conta-linha strong { font-weight: 650; text-align: right; }
+
+  .conta-plano-card { margin-bottom: 0; display: flex; flex-direction: column; }
+  .conta-plano-card.atual { border-color: var(--brand); background: var(--brand-soft); }
+  .conta-plano-card h3 { font-family: var(--serif); font-size: 17px; font-weight: 800; margin: 0 0 6px; }
+  .conta-preco { font-size: 21px; font-weight: 700; letter-spacing: -.01em; }
+  .conta-lista { list-style: none; padding: 0; margin: 14px 0 0; font-size: 13.5px; color: var(--muted); }
+  .conta-lista li { padding: 4px 0; }
+  .conta-lista li::before { content: "✓ "; color: var(--brand-text); font-weight: 700; }
+  .conta-acao { margin-top: auto; padding-top: 16px; }
+  .conta-acao button { width: 100%; }
+  .conta-tag-atual { font-size: 12.5px; font-weight: 600; color: var(--brand-text); }
 
   /* ---- Revisão por link ---- */
   .modal-overlay {
@@ -456,6 +485,7 @@ function renderApp() {
       <button data-view="ia">Ajudante IA</button>
       <button data-view="config">Configurar imobiliária</button>
       <button data-view="equipe">Equipe</button>
+      <button data-view="conta">Minha conta</button>
     </nav>
     <main>
       <div id="view-dashboard"></div>
@@ -465,10 +495,11 @@ function renderApp() {
       <div id="view-ia" style="display:none"></div>
       <div id="view-config" style="display:none"></div>
       <div id="view-equipe" style="display:none"></div>
+      <div id="view-conta" style="display:none"></div>
     </main>
   `;
 
-  const VIEWS = ["dashboard", "gerar", "documentos", "revisoes", "ia", "config", "equipe"];
+  const VIEWS = ["dashboard", "gerar", "documentos", "revisoes", "ia", "config", "equipe", "conta"];
   document.querySelectorAll("nav button").forEach(btn => {
     btn.addEventListener("click", () => {
       document.querySelectorAll("nav button").forEach(b => b.classList.remove("active"));
@@ -482,6 +513,7 @@ function renderApp() {
       if (view === "ia") renderAjudanteIA();
       if (view === "config") renderConfig();
       if (view === "equipe") renderEquipe();
+      if (view === "conta") renderConta();
     });
   });
 
@@ -1631,6 +1663,146 @@ async function gerarEBaixar(dados, formato, btn, buttons, opts = {}) {
     buttons.forEach(b => b.disabled = false);
     btn.textContent = originalText;
   }
+}
+
+// ================= MINHA CONTA =================
+const STATUS_ASSINATURA = {
+  active: { texto: "Ativa", classe: "ok" },
+  trialing: { texto: "Em teste", classe: "ok" },
+  past_due: { texto: "Pagamento em atraso", classe: "alerta" },
+  unpaid: { texto: "Não paga", classe: "alerta" },
+  canceled: { texto: "Cancelada", classe: "alerta" },
+  incomplete: { texto: "Pagamento incompleto", classe: "alerta" },
+};
+
+function fmtPreco(p) {
+  if (!p || p.centavos == null) return null;
+  const v = (p.centavos / 100).toLocaleString("pt-BR", { style: "currency", currency: (p.moeda || "brl").toUpperCase() });
+  return p.intervalo === "year" ? `${v}/ano` : `${v}/mês`;
+}
+
+async function renderConta() {
+  const el = document.getElementById("view-conta");
+  el.innerHTML = `<div class="card"><div class="empty">Carregando...</div></div>`;
+  const res = await api("/api/billing/assinatura");
+  if (!res.ok) { el.innerHTML = `<div class="card"><div class="empty">Não foi possível carregar sua conta.</div></div>`; return; }
+  const d = await res.json();
+
+  const a = d.assinatura;
+  const st = a ? (STATUS_ASSINATURA[a.status] || { texto: a.status, classe: "alerta" }) : null;
+  const usoTxt = d.limiteContratosPorMes === null
+    ? `${d.usoContratosNoMes} contrato(s) este mês · ilimitado`
+    : `${d.usoContratosNoMes} de ${d.limiteContratosPorMes} contrato(s) este mês`;
+
+  // Assinatura sempre mostra a data: renovação normal ou fim do acesso quando
+  // já foi pedido o cancelamento.
+  let linhaVenc = "";
+  if (a && a.proximoVencimento) {
+    const dt = new Date(a.proximoVencimento).toLocaleDateString("pt-BR");
+    linhaVenc = a.cancelaNoFim
+      ? `<div class="conta-linha"><span>Acesso até</span><strong>${dt}</strong></div>
+         <p class="hint" style="margin:6px 0 0">O cancelamento já foi pedido — depois dessa data a conta volta pro plano Grátis.</p>`
+      : `<div class="conta-linha"><span>Próxima cobrança</span><strong>${dt}</strong></div>`;
+  }
+
+  const cartaoAtual = `
+    <div class="card">
+      <h2>Meu plano</h2>
+      <p class="hint">O que está valendo agora na sua conta.</p>
+      <div class="conta-atual">
+        <div class="conta-plano">
+          <span class="conta-nome">${escapeHtml(d.planoNome)}</span>
+          ${st ? `<span class="conta-status ${st.classe}">${st.texto}</span>` : `<span class="conta-status neutro">Sem assinatura</span>`}
+        </div>
+        <div class="conta-linha"><span>Contratos</span><strong>${usoTxt}</strong></div>
+        <div class="conta-linha"><span>Uso de IA</span><strong>${d.usoIaNoMes} de ${d.limiteIaPorMes} neste mês</strong></div>
+        ${a && a.valor ? `<div class="conta-linha"><span>Valor</span><strong>${fmtPreco({ ...a.valor, intervalo: a.ciclo })}</strong></div>` : ""}
+        ${linhaVenc}
+      </div>
+      ${a ? `<div class="footer-actions" style="justify-content:flex-start;margin-top:18px">
+        <button type="button" class="secondary" id="btnPortal">Gerenciar assinatura, forma de pagamento e notas</button>
+      </div>` : ""}
+    </div>
+  `;
+
+  const cartoesPlanos = d.planos.map(p => {
+    const preco = fmtPreco(p.mensal) || (p.id === "gratis" ? "R$ 0/mês" : "—");
+    const anual = fmtPreco(p.anual);
+    const limite = p.contratosPorMes === null ? "Contratos ilimitados" : `${p.contratosPorMes} contrato(s) por mês`;
+    const usuarios = p.maxUsuarios === null ? "Usuários ilimitados" : `Até ${p.maxUsuarios} usuário(s)`;
+    let acao = "";
+    if (p.atual) {
+      acao = `<span class="conta-tag-atual">Seu plano atual</span>`;
+    } else if (!d.ehDono) {
+      acao = `<span class="hint">Só o dono da conta muda o plano</span>`;
+    } else if (!d.pagamentoDisponivel) {
+      acao = `<span class="hint">Pagamento indisponível</span>`;
+    } else if (p.id === "gratis") {
+      acao = a
+        ? `<button type="button" class="secondary" id="btnPortal2">Cancelar pelo portal</button>`
+        : "";
+    } else {
+      const rotulo = a ? "Mudar para este plano" : "Assinar";
+      acao = `<button type="button" class="primary" data-plano="${p.id}" data-ciclo="mensal">${rotulo}</button>`;
+    }
+    return `
+      <div class="card conta-plano-card ${p.atual ? "atual" : ""}">
+        <h3>${escapeHtml(p.nome)}</h3>
+        <div class="conta-preco">${preco}</div>
+        ${anual ? `<div class="hint" style="margin:2px 0 0">ou ${anual}</div>` : ""}
+        <ul class="conta-lista"><li>${limite}</li><li>${usuarios}</li></ul>
+        <div class="conta-acao">${acao}</div>
+      </div>
+    `;
+  }).join("");
+
+  el.innerHTML = cartaoAtual + `
+    <div class="card">
+      <h2>Planos</h2>
+      <p class="hint">${a ? "Ao trocar de plano, o Stripe calcula o proporcional do que você já pagou — não vira cobrança dupla." : "Escolha um plano para assinar."}</p>
+      <div class="grid cols3" style="margin-top:16px">${cartoesPlanos}</div>
+    </div>
+  `;
+
+  const abrirPortal = async (btn) => {
+    btn.disabled = true;
+    const r = await api("/api/billing/portal", { method: "POST" });
+    const j = await r.json().catch(() => ({}));
+    btn.disabled = false;
+    if (r.ok && j.url) window.location.href = j.url;
+    else toast(j.error || "Não foi possível abrir o portal.", true);
+  };
+  ["btnPortal", "btnPortal2"].forEach(id => {
+    const b = document.getElementById(id);
+    if (b) b.addEventListener("click", () => abrirPortal(b));
+  });
+
+  el.querySelectorAll("[data-plano]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const temAssinatura = !!a;
+      if (temAssinatura && !confirm("Trocar de plano agora? O Stripe ajusta a diferença proporcional na próxima fatura.")) return;
+      const original = btn.textContent;
+      btn.disabled = true; btn.textContent = "Processando...";
+      try {
+        // Quem já assina altera a assinatura existente; quem não assina vai
+        // pro checkout. Misturar os dois é o que geraria cobrança dupla.
+        const rota = temAssinatura ? "/api/billing/mudar-plano" : "/api/billing/checkout";
+        const r = await api(rota, {
+          method: "POST",
+          body: JSON.stringify({ plano: btn.dataset.plano, ciclo: btn.dataset.ciclo }),
+        });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(j.error || "Não foi possível mudar o plano");
+        if (j.url) { window.location.href = j.url; return; }
+        toast("Plano alterado!");
+        await loadTenant();
+        renderConta();
+      } catch (err) {
+        toast(err.message, true);
+        btn.disabled = false; btn.textContent = original;
+      }
+    });
+  });
 }
 
 // ================= REVISÃO POR LINK =================

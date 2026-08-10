@@ -321,6 +321,126 @@ app.post("/api/tenant", requireAuth, upload.single("logo"), async (req, res) => 
 });
 
 // ================= BILLING (Stripe) =================
+// Preços vêm do Stripe, não de constante no código — é lá que eles mudam.
+// Cache curto porque a tela de conta consulta a cada abertura e preço de plano
+// quase nunca muda.
+const cachePrecos = new Map();
+async function precoStripe(priceId) {
+  if (!priceId || !stripe) return null;
+  const cacheado = cachePrecos.get(priceId);
+  if (cacheado && Date.now() - cacheado.em < 10 * 60 * 1000) return cacheado.valor;
+  try {
+    const p = await stripe.prices.retrieve(priceId);
+    const valor = { centavos: p.unit_amount, moeda: p.currency, intervalo: p.recurring ? p.recurring.interval : null };
+    cachePrecos.set(priceId, { valor, em: Date.now() });
+    return valor;
+  } catch (err) {
+    console.error("Falha ao buscar preço no Stripe:", err.message);
+    return null;
+  }
+}
+
+// A data de renovação mudou de lugar entre versões da API do Stripe: era campo
+// da assinatura e passou a viver no item. Lê dos dois.
+function fimDoPeriodo(sub) {
+  if (sub.current_period_end) return sub.current_period_end;
+  const item = sub.items && sub.items.data && sub.items.data[0];
+  return item && item.current_period_end ? item.current_period_end : null;
+}
+
+app.get("/api/billing/assinatura", requireAuth, async (req, res) => {
+  const tenant = await store.getTenant(req.user.tenantId);
+  if (!tenant) return res.status(404).json({ error: "Imobiliária não encontrada" });
+
+  const planoAtual = tenant.plano || "gratis";
+  const limites = limitesDoPlano(planoAtual);
+
+  const planos = [];
+  for (const id of ["gratis", "autonomo", "imobiliaria"]) {
+    const p = PLANOS[id];
+    planos.push({
+      id,
+      nome: p.nome,
+      atual: id === planoAtual,
+      contratosPorMes: p.contratosPorMes === Infinity ? null : p.contratosPorMes,
+      maxUsuarios: p.maxUsuarios === Infinity ? null : p.maxUsuarios,
+      mensal: await precoStripe(p.stripePriceId),
+      anual: await precoStripe(p.stripePriceIdAnual),
+    });
+  }
+
+  let assinatura = null;
+  if (stripe && tenant.stripeSubscriptionId) {
+    try {
+      const sub = await stripe.subscriptions.retrieve(tenant.stripeSubscriptionId);
+      const item = sub.items && sub.items.data && sub.items.data[0];
+      const fim = fimDoPeriodo(sub);
+      assinatura = {
+        status: sub.status,
+        cancelaNoFim: !!sub.cancel_at_period_end,
+        proximoVencimento: fim ? new Date(fim * 1000).toISOString() : null,
+        ciclo: item && item.price && item.price.recurring ? item.price.recurring.interval : null,
+        valor: item && item.price ? { centavos: item.price.unit_amount, moeda: item.price.currency } : null,
+      };
+    } catch (err) {
+      // Assinatura pode ter sido apagada no Stripe; a tela segue mostrando o plano.
+      console.error("Falha ao consultar assinatura no Stripe:", err.message);
+    }
+  }
+
+  res.json({
+    planoAtual,
+    planoNome: limites.nome,
+    usoContratosNoMes: contratosUsadosNoMes(tenant),
+    limiteContratosPorMes: limites.contratosPorMes === Infinity ? null : limites.contratosPorMes,
+    usoIaNoMes: iaUsadaNoMes(tenant),
+    limiteIaPorMes: LIMITE_IA_MENSAL,
+    ehDono: req.user.role === "owner",
+    pagamentoDisponivel: !!stripe,
+    assinatura,
+    planos,
+  });
+});
+
+// Troca de plano de quem JÁ assina. Não pode passar pelo checkout: ele criaria
+// uma segunda assinatura e o cliente seria cobrado duas vezes. Aqui a
+// assinatura existente é alterada, com o Stripe calculando o proporcional.
+app.post("/api/billing/mudar-plano", requireAuth, async (req, res) => {
+  if (!stripe) return res.status(503).json({ error: "Pagamento indisponível no momento" });
+  if (req.user.role !== "owner") return res.status(403).json({ error: "Só o dono da conta pode alterar o plano" });
+
+  const tenant = await store.getTenant(req.user.tenantId);
+  if (!tenant) return res.status(404).json({ error: "Imobiliária não encontrada" });
+  if (!tenant.stripeSubscriptionId) {
+    return res.status(409).json({ error: "Você ainda não tem assinatura ativa. Use a opção de assinar." });
+  }
+
+  const cicloNorm = req.body.ciclo === "anual" ? "anual" : "mensal";
+  const priceId = precoDoPlano(req.body.plano, cicloNorm);
+  if (!priceId) return res.status(400).json({ error: "Plano inválido" });
+
+  try {
+    const sub = await stripe.subscriptions.retrieve(tenant.stripeSubscriptionId);
+    const item = sub.items.data[0];
+    if (item.price.id === priceId) {
+      return res.status(409).json({ error: "Você já está nesse plano e ciclo." });
+    }
+    await stripe.subscriptions.update(tenant.stripeSubscriptionId, {
+      items: [{ id: item.id, price: priceId }],
+      proration_behavior: "create_prorations",
+      cancel_at_period_end: false,
+      metadata: { tenantId: req.user.tenantId, plano: req.body.plano, ciclo: cicloNorm },
+    });
+    // O webhook também atualiza, mas gravar aqui evita a tela mostrar o plano
+    // antigo enquanto o evento não chega.
+    await store.setTenant(req.user.tenantId, { ...tenant, plano: req.body.plano });
+    res.json({ ok: true, plano: req.body.plano });
+  } catch (err) {
+    console.error("Erro ao mudar plano no Stripe:", err);
+    res.status(500).json({ error: "Não foi possível mudar o plano agora. Tente pelo botão de gerenciar assinatura." });
+  }
+});
+
 app.post("/api/billing/checkout", requireAuth, async (req, res) => {
   if (!stripe) return res.status(503).json({ error: "Pagamento indisponível no momento" });
   if (req.user.role !== "owner") return res.status(403).json({ error: "Só o dono da conta pode alterar o plano" });
@@ -334,6 +454,22 @@ app.post("/api/billing/checkout", requireAuth, async (req, res) => {
 
   const tenant = await store.getTenant(req.user.tenantId);
   if (!tenant) return res.status(404).json({ error: "Imobiliária não encontrada" });
+
+  // Quem já assina não pode passar por aqui: o checkout abriria uma segunda
+  // assinatura e a cobrança viria dobrada. Troca de plano vai por /mudar-plano.
+  if (tenant.stripeSubscriptionId) {
+    try {
+      const atual = await stripe.subscriptions.retrieve(tenant.stripeSubscriptionId);
+      if (["active", "trialing", "past_due", "unpaid"].includes(atual.status)) {
+        return res.status(409).json({
+          error: "Você já tem uma assinatura ativa. Use 'Minha conta' para trocar de plano — assim não vira cobrança dupla.",
+        });
+      }
+    } catch (err) {
+      // Assinatura não existe mais no Stripe: seguir com o checkout é o certo.
+      console.error("Assinatura anterior não encontrada, seguindo com checkout:", err.message);
+    }
+  }
 
   try {
     const session = await stripe.checkout.sessions.create({
