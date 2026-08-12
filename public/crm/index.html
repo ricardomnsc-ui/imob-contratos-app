@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Minutei CRM — o CRM imobiliário que cabe no seu bolso</title>
+<meta name="description" content="CRM completo para corretores e imobiliárias: vendas, locações, comissões, esteira de processo, metas e copiloto de IA. Pré-lançamento a partir de 21 de agosto, com preço de fundador travado a partir de R$ 39/mês.">
+<link rel="canonical" href="https://minutei.app.br/crm/">
+<link rel="icon" href="/brand/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://minutei.app.br/crm/">
+<meta property="og:title" content="Minutei CRM — o CRM imobiliário que cabe no seu bolso">
+<meta property="og:description" content="Vendas, locações, comissões, esteira e copiloto de IA em um sistema só. Preço de fundador a partir de R$ 39/mês, travado para sempre.">
+<meta property="og:image" content="https://minutei.app.br/brand/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Paleta e tipografia do guia oficial da marca (Manrope + DM Sans).
+   O azul é do sub-brand CRM; o laranja é o da marca-mãe, usado nos CTAs. */
+:root{
+  --navy:#0a1628; --navy-soft:#101f35; --navy-light:#17304f;
+  --blue:#3b9cff; --blue-deep:#1978dc;
+  --orange:#ff6b2b; --orange-deep:#e75216;
+  --ink:#10203a; --slate:#52637a; --cloud:#f7f9fc; --line:#0b1e3720; --white:#fff;
+  --max:1120px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:"DM Sans",system-ui,-apple-system,Segoe UI,Arial,sans-serif;color:var(--ink);background:var(--cloud);line-height:1.6;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:Manrope,system-ui,Arial,sans-serif;letter-spacing:-.02em;line-height:1.1}
+a{color:inherit}
+img{max-width:100%}
+.wrap{max-width:var(--max);margin:0 auto;padding:0 24px}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--blue)}
+
+/* ── NAV ── */
+.nav{position:sticky;top:0;z-index:50;background:rgba(10,22,40,.9);backdrop-filter:blur(10px);border-bottom:1px solid #ffffff14}
+.nav .wrap{display:flex;align-items:center;gap:24px;height:68px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none}
+.brand img{height:26px;display:block}
+.brand .sub{font-family:Manrope;font-weight:800;font-size:17px;color:var(--blue);letter-spacing:-.01em}
+.nav nav{margin-left:auto;display:flex;align-items:center;gap:24px}
+.nav nav a{color:#c9d6e8;text-decoration:none;font-size:14px}
+.nav nav a:hover{color:#fff}
+.btn{display:inline-block;border:none;border-radius:10px;padding:13px 22px;font:700 15px/1 "DM Sans",Arial,sans-serif;cursor:pointer;text-decoration:none;transition:transform .15s,background .15s}
+.btn:hover{transform:translateY(-1px)}
+.btn-primary{background:var(--orange);color:#fff}
+.btn-primary:hover{background:var(--orange-deep)}
+.btn-ghost{background:transparent;color:#fff;border:1px solid #ffffff33}
+.btn-ghost:hover{background:#ffffff12}
+.nav .btn{padding:11px 18px;font-size:14px}
+
+/* ── HERO ── */
+.hero{background:
+   radial-gradient(900px 480px at 78% 8%, #1b3f6e55 0%, transparent 62%),
+   radial-gradient(700px 420px at 8% 92%, #1978dc33 0%, transparent 60%),
+   var(--navy);
+  color:#fff;padding:88px 0 96px;overflow:hidden}
+.hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center}
+.badge{display:inline-flex;align-items:center;gap:9px;background:#3b9cff1f;border:1px solid #3b9cff45;color:#a9d2ff;
+  font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:8px 14px;border-radius:999px;margin-bottom:22px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--orange);box-shadow:0 0 0 4px #ff6b2b33}
+.hero h1{font-size:clamp(36px,5vw,56px);font-weight:800;margin-bottom:20px}
+.hero h1 em{font-style:normal;color:var(--blue)}
+.hero p.lead{font-size:18px;color:#b8c8dd;max-width:53ch}
+.hero .price-line{font-size:16px;color:#dbe6f4;margin:24px 0 28px;padding-left:15px;border-left:3px solid var(--orange)}
+.hero .price-line b{color:#fff;font-size:19px}
+.hero-cta{display:flex;gap:12px;flex-wrap:wrap}
+.hero small{display:block;margin-top:16px;color:#7f93ac;font-size:13px}
+
+.panel{background:linear-gradient(180deg,#16294590,#0d1c3090);border:1px solid #ffffff1a;border-radius:18px;padding:18px;box-shadow:0 30px 70px #0006}
+.panel-top{display:flex;align-items:center;gap:8px;padding-bottom:14px;border-bottom:1px solid #ffffff12;margin-bottom:16px}
+.panel-top .t{font-size:12.5px;color:#9fb3cc;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.panel-top .live{margin-left:auto;font-size:11.5px;color:#7ee2a8;display:flex;align-items:center;gap:6px}
+.panel-top .live::before{content:"";width:6px;height:6px;border-radius:50%;background:#7ee2a8}
+.stage{display:flex;gap:7px;margin-bottom:16px}
+.stage div{flex:1;height:5px;border-radius:3px;background:#ffffff1a}
+.stage div.on{background:var(--blue)}
+.row{display:flex;align-items:center;gap:12px;padding:12px 13px;border-radius:11px;background:#ffffff0a;margin-bottom:9px;border:1px solid #ffffff0d}
+.row .ic{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;font-size:15px;flex:0 0 auto}
+.row .tx{min-width:0}
+.row .tx b{display:block;font-size:13.5px;color:#eaf2fb;font-weight:700}
+.row .tx span{font-size:12px;color:#8fa5be}
+.row .tag{margin-left:auto;font-size:11px;font-weight:700;padding:4px 9px;border-radius:6px;white-space:nowrap}
+
+/* ── SEÇÕES ── */
+section{padding:88px 0}
+.sec-head{max-width:60ch;margin-bottom:44px}
+.sec-head h2{font-size:clamp(28px,3.4vw,38px);font-weight:800;margin:12px 0 14px}
+.sec-head p{color:var(--slate);font-size:17px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:24px}
+.card h3{font-size:17px;font-weight:700;margin-bottom:8px}
+.card p{color:var(--slate);font-size:14.5px}
+.card .ic{width:40px;height:40px;border-radius:11px;background:#3b9cff17;color:var(--blue);display:grid;place-items:center;font-size:19px;margin-bottom:14px}
+
+.esteira{background:var(--navy);color:#fff}
+.esteira .sec-head h2{color:#fff}
+.esteira .sec-head p{color:#a9bdd4}
+.steps{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+.step{background:#ffffff0a;border:1px solid #ffffff14;border-radius:14px;padding:18px 16px}
+.step .n{font-family:Manrope;font-size:12px;font-weight:800;color:var(--blue);letter-spacing:.1em;margin-bottom:9px}
+.step b{display:block;font-size:14.5px;margin-bottom:6px}
+.step p{font-size:12.5px;color:#93a9c2;line-height:1.5}
+
+/* ── PLANOS ── */
+.planos{background:#fff}
+.planos-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;align-items:start}
+.plano{border:1px solid var(--line);border-radius:18px;padding:28px;background:#fff;position:relative}
+.plano.dest{border:2px solid var(--blue);box-shadow:0 16px 44px #1978dc1f}
+.plano .flag{position:absolute;top:-12px;left:28px;background:var(--blue);color:#fff;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:5px 12px;border-radius:999px}
+.plano h3{font-size:19px;font-weight:800;margin-bottom:4px}
+.plano .who{color:var(--slate);font-size:13.5px;margin-bottom:20px;min-height:38px}
+.plano .val{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}
+.plano .val b{font-family:Manrope;font-size:40px;font-weight:800;letter-spacing:-.03em}
+.plano .val span{color:var(--slate);font-size:14px}
+.plano .antes{font-size:13.5px;color:var(--slate);margin-bottom:22px}
+.plano .antes s{color:#93a3b8}
+.plano .antes i{font-style:normal;color:var(--orange-deep);font-weight:700}
+.plano ul{list-style:none;margin:22px 0 26px;display:grid;gap:10px}
+.plano li{font-size:14px;display:flex;gap:9px;align-items:flex-start;color:#2b3d55}
+.plano li::before{content:"";flex:0 0 auto;width:17px;height:17px;margin-top:3px;border-radius:50%;background:#3b9cff1f url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%231978dc' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'/></svg>") center/11px no-repeat}
+.plano .btn{width:100%;text-align:center}
+.plano .btn-out{background:#fff;color:var(--ink);border:1.5px solid var(--line)}
+.nota{margin-top:26px;font-size:14px;color:var(--slate);background:var(--cloud);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.nota b{color:var(--ink)}
+
+.pro{background:linear-gradient(135deg,var(--navy) 0%,var(--navy-light) 100%);color:#fff;border-radius:20px;padding:36px 40px;margin-top:26px;
+  display:grid;grid-template-columns:1fr auto;gap:32px;align-items:center}
+.pro h3{font-size:24px;font-weight:800;margin-bottom:8px}
+.pro p{color:#b3c6dc;font-size:15px;max-width:58ch}
+.pro-tab{display:flex;gap:26px;margin-top:20px;flex-wrap:wrap}
+.pro-tab div{border-left:2px solid var(--blue);padding-left:13px}
+.pro-tab b{display:block;font-family:Manrope;font-size:23px;font-weight:800}
+.pro-tab span{font-size:12.5px;color:#9db3cb}
+
+/* ── ROADMAP ── */
+.rm{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.rm-col{border:1px solid var(--line);border-radius:16px;padding:26px;background:#fff}
+.rm-col.now{background:#f2f9f4;border-color:#1f9d5522}
+.rm-col h3{font-size:16px;font-weight:800;margin-bottom:4px}
+.rm-col .sub{font-size:13px;color:var(--slate);margin-bottom:18px}
+.rm-col ul{list-style:none;display:grid;gap:9px}
+.rm-col li{font-size:14.5px;display:flex;gap:10px;color:#2b3d55}
+.mark{flex:0 0 auto;width:19px;height:19px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;margin-top:2px}
+.mark.ok{background:#1f9d5522;color:#137a41}
+.mark.next{background:#ff6b2b22;color:var(--orange-deep)}
+.aviso{margin-top:22px;border-left:3px solid var(--orange);background:#fff6f1;border-radius:0 12px 12px 0;padding:18px 22px;font-size:14.5px;color:#5c3a29}
+.aviso b{color:#7a3d1c}
+
+details{border-bottom:1px solid var(--line);padding:18px 0}
+details summary{cursor:pointer;font-weight:700;font-size:16px;list-style:none;display:flex;align-items:center;gap:12px}
+details summary::-webkit-details-marker{display:none}
+details summary::after{content:"+";margin-left:auto;color:var(--blue);font-size:22px;font-weight:400}
+details[open] summary::after{content:"–"}
+details p{margin-top:12px;color:var(--slate);font-size:15px;max-width:78ch}
+
+.final{background:var(--navy);color:#fff;text-align:center}
+.final .tagline{font-family:Manrope;font-weight:800;font-size:clamp(22px,2.6vw,30px);letter-spacing:-.02em;color:#fff;margin-bottom:30px;opacity:.55}
+.final .tagline em{font-style:normal;color:var(--orange)}
+.final h2{font-size:clamp(28px,3.6vw,40px);font-weight:800;margin-bottom:14px;color:#fff}
+.final p{color:#a9bdd4;font-size:17px;max-width:56ch;margin:0 auto 30px}
+.final .btn{padding:16px 32px;font-size:16px}
+.final small{display:block;margin-top:18px;color:#7f93ac;font-size:13px}
+
+footer{background:#06101f;color:#6d8199;padding:34px 0;font-size:13.5px;border-top:1px solid #ffffff0f}
+footer .wrap{display:flex;gap:20px;flex-wrap:wrap;align-items:center}
+footer img{height:22px;opacity:.85}
+footer a{color:#9fb3cc;text-decoration:none}
+footer a:hover{color:#fff}
+footer .copy{margin-left:auto}
+
+@media(max-width:900px){
+  .hero-grid,.grid4,.planos-grid,.rm,.pro{grid-template-columns:1fr}
+  .steps{grid-template-columns:repeat(2,1fr)}
+  .nav nav a.navlink{display:none}
+  section{padding:64px 0}
+  .hero{padding:60px 0 68px}
+}
+@media(max-width:620px){
+  .nav .btn{display:none}
+  .hero h1{font-size:34px}
+  .pro{padding:28px 24px}
+  .plano{padding:24px}
+  footer .copy{margin-left:0}
+}
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="/crm/">
+      <img src="/brand/minutei-logo-light.png" alt="Minutei">
+      <span class="sub">CRM</span>
+    </a>
+    <nav>
+      <a class="navlink" href="#operacao">A operação</a>
+      <a class="navlink" href="#planos">Planos</a>
+      <a class="navlink" href="#roadmap">O que vem</a>
+      <a class="navlink" href="/">Minutei Contratos</a>
+      <a class="btn btn-primary" href="#lista">Garantir preço de fundador</a>
+    </nav>
+  </div>
+</header>
+
+<!-- ══ HERO ══ -->
+<div class="hero" id="topo">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="badge"><span class="dot"></span> Pré-lançamento · abre 21 de agosto</div>
+      <h1>O CRM imobiliário inteiro.<br>Por menos que <em>um anúncio</em> em portal.</h1>
+      <p class="lead">CRM imobiliário para quem move negócios. Vendas, locações, comissões, esteira de processo, metas, agenda, documentos e copiloto de IA — em um sistema só, com preço que corretor autônomo e imobiliária pequena conseguem pagar.</p>
+      <div class="price-line">Preço de fundador a partir de <b>R$ 39/mês</b> — travado enquanto sua assinatura ficar ativa.</div>
+      <div class="hero-cta">
+        <a class="btn btn-primary" href="#lista">Entrar na lista de fundadores</a>
+        <a class="btn btn-ghost" href="#planos">Ver planos</a>
+      </div>
+      <small>90 dias de pré-lançamento. Lançamento oficial em 19 de novembro de 2026.</small>
+    </div>
+
+    <div class="panel" aria-hidden="true">
+      <div class="panel-top">
+        <span class="t">Esteira · Apto 302 Boa Viagem</span>
+        <span class="live">ao vivo</span>
+      </div>
+      <div class="stage"><div class="on"></div><div class="on"></div><div class="on"></div><div></div><div></div><div></div></div>
+      <div class="row">
+        <div class="ic" style="background:#3b9cff1f;color:#9ccbff">◆</div>
+        <div class="tx"><b>Camila Andrade</b><span>Lead do Instagram · 12 dias no funil</span></div>
+        <span class="tag" style="background:#3b9cff22;color:#9ccbff">Proposta</span>
+      </div>
+      <div class="row">
+        <div class="ic" style="background:#ff6b2b1f;color:#ffb08a">★</div>
+        <div class="tx"><b>Copiloto sugeriu o próximo passo</b><span>"Envie a simulação da Caixa e proponha sexta 10h"</span></div>
+        <span class="tag" style="background:#ff6b2b22;color:#ffb08a">IA</span>
+      </div>
+      <div class="row">
+        <div class="ic" style="background:#1f9d551f;color:#8fe3b4">✓</div>
+        <div class="tx"><b>Elegível no MCMV — Faixa 3</b><span>Renda R$ 7.400 · parcela estimada R$ 2.180</span></div>
+        <span class="tag" style="background:#1f9d5522;color:#8fe3b4">Aprovado</span>
+      </div>
+      <div class="row" style="margin-bottom:0">
+        <div class="ic" style="background:#ffffff14;color:#c9d6e8">▤</div>
+        <div class="tx"><b>Comissão dividida entre 3 corretores</b><span>Agenciador, fechamento e captação — calculado sozinho</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ OPERAÇÃO ══ -->
+<section id="operacao">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">A operação inteira</div>
+      <h2>Não é um funil genérico com nome de imobiliária.</h2>
+      <p>Foi construído dentro de uma imobiliária em operação, com as contas que ninguém mais faz: divisão de comissão entre agenciador e fechador, adm. de aluguel, meta por volume de venda, simulação de financiamento.</p>
+    </div>
+    <div class="grid4">
+      <div class="card"><div class="ic">◈</div><h3>Vendas e locações</h3><p>Do lead ao fechamento, com comissão dividida entre quem agenciou e quem fechou — calculada automaticamente.</p></div>
+      <div class="card"><div class="ic">▤</div><h3>Adm. de aluguel</h3><p>Carteira de locação com adimplência, vencimentos, atrasos e cobrança por WhatsApp em um clique.</p></div>
+      <div class="card"><div class="ic">◎</div><h3>Financiamento</h3><p>Simulador SAC e Price por banco, com faixas do Minha Casa Minha Vida e checagem de elegibilidade.</p></div>
+      <div class="card"><div class="ic">★</div><h3>Copiloto de IA</h3><p>Lê a etapa do negócio, sugere a próxima ação e escreve a mensagem de WhatsApp pronta para enviar.</p></div>
+      <div class="card"><div class="ic">◐</div><h3>Metas de verdade</h3><p>Volume de venda em reais e quantidade de locações — não meta de comissão, que ninguém acompanha.</p></div>
+      <div class="card"><div class="ic">✎</div><h3>Documentos prontos</h3><p>Proposta, ficha de locação, autorização de venda, exclusividade — com a identidade da sua imobiliária.</p></div>
+      <div class="card"><div class="ic">◇</div><h3>Marketing</h3><p>Legenda de post, hashtags e arte gerada com a sua marca, e a origem do lead ligada ao resultado.</p></div>
+      <div class="card"><div class="ic">◉</div><h3>Acesso por perfil</h3><p>Corretor enxerga a carteira dele. Admin enxerga tudo. Validado no servidor, não escondido na tela.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ ESTEIRA ══ -->
+<section class="esteira" id="esteira">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Esteira</div>
+      <h2>A venda não acaba no "fechado".</h2>
+      <p>Depois do aceite vem engenharia, banco, cartório. É onde o negócio trava e ninguém sabe dizer por quê. A esteira acompanha essa parte — com documento, aprovação e responsável em cada etapa.</p>
+    </div>
+    <div class="steps">
+      <div class="step"><div class="n">01</div><b>Lead</b><p>Origem, perfil e interesse num registro só.</p></div>
+      <div class="step"><div class="n">02</div><b>Negociação</b><p>Visita, proposta e próximo passo definido.</p></div>
+      <div class="step"><div class="n">03</div><b>Contrato</b><p>Documentos e aprovações dentro da oportunidade.</p></div>
+      <div class="step"><div class="n">04</div><b>Engenharia</b><p>Laudo e vistoria acompanhados após o aceite.</p></div>
+      <div class="step"><div class="n">05</div><b>Banco e cartório</b><p>Assinatura e registro com status visível.</p></div>
+      <div class="step"><div class="n">06</div><b>Finalizado</b><p>Negócio concluído com histórico completo.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ PLANOS ══ -->
+<section class="planos" id="planos">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Preço de fundador</div>
+      <h2>Metade do preço, para sempre.</h2>
+      <p>Quem entrar nos 90 dias de pré-lançamento paga o valor de fundador enquanto mantiver a assinatura ativa — inclusive depois que os preços cheios entrarem, em 19 de novembro de 2026.</p>
+    </div>
+
+    <div class="planos-grid">
+      <div class="plano">
+        <h3>Corretor</h3>
+        <div class="who">Corretor autônomo tocando a própria carteira.</div>
+        <div class="val"><b>R$ 39</b><span>/mês</span></div>
+        <div class="antes"><s>R$ 89/mês</s> depois do lançamento · <i>economia de 56%</i></div>
+        <ul>
+          <li>1 usuário</li>
+          <li>Leads ilimitados</li>
+          <li>Vendas, locações e comissões</li>
+          <li>Agenda e documentos</li>
+          <li>50 usos de IA por mês</li>
+        </ul>
+        <a class="btn btn-out" href="#lista">Quero este</a>
+      </div>
+
+      <div class="plano dest">
+        <span class="flag">Mais escolhido</span>
+        <h3>Equipe</h3>
+        <div class="who">Imobiliária pequena, até 5 pessoas na operação.</div>
+        <div class="val"><b>R$ 119</b><span>/mês</span></div>
+        <div class="antes"><s>R$ 249/mês</s> depois do lançamento · <i>economia de 52%</i></div>
+        <ul>
+          <li>Até 5 usuários</li>
+          <li>Tudo do Corretor</li>
+          <li>Adm. de aluguel e esteira</li>
+          <li>Metas, canal interno e marketing</li>
+          <li>200 usos de IA por mês</li>
+        </ul>
+        <a class="btn btn-primary" href="#lista">Quero este</a>
+      </div>
+
+      <div class="plano">
+        <h3>Imobiliária</h3>
+        <div class="who">Equipe formada, com administração e corretores.</div>
+        <div class="val"><b>R$ 199</b><span>/mês</span></div>
+        <div class="antes"><s>R$ 449/mês</s> depois do lançamento · <i>economia de 56%</i></div>
+        <ul>
+          <li>Até 15 usuários</li>
+          <li>Tudo do Equipe</li>
+          <li>Importação de contratos por CSV</li>
+          <li>Relatórios consolidados</li>
+          <li>500 usos de IA por mês</li>
+        </ul>
+        <a class="btn btn-out" href="#lista">Quero este</a>
+      </div>
+    </div>
+
+    <div class="pro">
+      <div>
+        <h3>Minutei Pro — CRM + Contratos juntos</h3>
+        <p>O CRM cuida do negócio até o aceite. O <a href="/" style="color:#fff">Minutei Contratos</a> gera a minuta pronta, com a sua identidade, cláusulas variáveis e leitura de CNH por IA. Juntos, saem 20% mais barato que assinar separado.</p>
+        <div class="pro-tab">
+          <div><b>R$ 59<span style="font-size:14px;font-weight:400">/mês</span></b><span>Pro Corretor · depois R$ 109</span></div>
+          <div><b>R$ 159<span style="font-size:14px;font-weight:400">/mês</span></b><span>Pro Equipe · depois R$ 319</span></div>
+          <div><b>R$ 279<span style="font-size:14px;font-weight:400">/mês</span></b><span>Pro Imobiliária · depois R$ 479</span></div>
+        </div>
+      </div>
+      <a class="btn btn-primary" href="#lista">Quero o Pro</a>
+    </div>
+
+    <div class="nota">
+      <b>Como funciona o preço de fundador.</b> Vale para quem assinar entre 21 de agosto e 19 de novembro de 2026. O valor fica travado enquanto a assinatura seguir ativa — se cancelar e voltar depois, entra pela tabela cheia. Teste de 14 dias sem cartão. No plano anual, 12 meses pelo preço de 10. Usuário extra além do limite do plano: R$ 29/mês.
+    </div>
+  </div>
+</section>
+
+<!-- ══ ROADMAP ══ -->
+<section id="roadmap">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Transparência</div>
+      <h2>O que já funciona e o que ainda vem.</h2>
+      <p>Preferimos você assinar sabendo exatamente o que existe hoje. É por isso que o preço de pré-lançamento é esse.</p>
+    </div>
+    <div class="rm">
+      <div class="rm-col now">
+        <h3>Funciona hoje</h3>
+        <div class="sub">Pronto e em uso diário numa imobiliária real</div>
+        <ul>
+          <li><span class="mark ok">✓</span><span>Vendas, locações e <b>divisão de comissão</b> entre corretores</span></li>
+          <li><span class="mark ok">✓</span><span>Administração de aluguel com adimplência e cobrança</span></li>
+          <li><span class="mark ok">✓</span><span>Esteira de processo para venda e locação</span></li>
+          <li><span class="mark ok">✓</span><span>CRM de leads com kanban e recuperação automática</span></li>
+          <li><span class="mark ok">✓</span><span>Copiloto de IA por etapa do negócio</span></li>
+          <li><span class="mark ok">✓</span><span>Simulador de financiamento e MCMV</span></li>
+          <li><span class="mark ok">✓</span><span>Metas, agenda, orçamento, marketing e documentos</span></li>
+        </ul>
+      </div>
+      <div class="rm-col">
+        <h3>Chega até 31 de março de 2027</h3>
+        <div class="sub">Incluso no seu plano, sem custo adicional</div>
+        <ul>
+          <li><span class="mark next">→</span><span><b>Cadastro de imóveis com fotos</b> — a base das duas entregas abaixo</span></li>
+          <li><span class="mark next">→</span><span><b>Site próprio da imobiliária</b>, alimentado pelo seu cadastro</span></li>
+          <li><span class="mark next">→</span><span><b>Feed para portais</b> — Canal Pro/OLX (VRSync) e Chaves na Mão</span></li>
+          <li><span class="mark next">→</span><span>Recebimento automático dos leads que vêm dos portais</span></li>
+          <li><span class="mark next">→</span><span>Assinatura eletrônica ponta a ponta</span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="aviso">
+      <b>Sendo direto:</b> hoje o Minutei CRM ainda não publica seus imóveis nos portais nem gera o site da imobiliária — isso chega até março de 2027. Se a sua necessidade agora é só anunciar em portal, o Minutei ainda não substitui o seu sistema atual. Se é organizar a operação, comissão, carteira de aluguel e processo, ele já resolve. <b>E se essas entregas atrasarem, você ganha 3 meses grátis.</b>
+    </div>
+  </div>
+</section>
+
+<!-- ══ FAQ ══ -->
+<section style="background:#fff">
+  <div class="wrap" style="max-width:820px">
+    <div class="sec-head"><div class="eyebrow">Dúvidas</div><h2>Perguntas que todo mundo faz.</h2></div>
+    <details open><summary>O preço de fundador sobe depois?</summary><p>Não, enquanto a sua assinatura seguir ativa. Em 19 de novembro de 2026 os valores cheios passam a valer para quem entrar depois — você continua pagando o que contratou. Se cancelar e voltar mais tarde, aí sim entra pela tabela nova.</p></details>
+    <details><summary>Preciso de cartão para testar?</summary><p>Não. São 14 dias de teste sem cartão, com o sistema inteiro liberado. O cartão só entra se você decidir continuar.</p></details>
+    <details><summary>Meus dados ficam misturados com os de outra imobiliária?</summary><p>Não. Cada imobiliária tem sua própria área isolada, e o isolamento é validado no servidor a cada leitura e escrita — não é só uma tela escondida. Nem nós conseguimos cruzar dado de um cliente com o de outro pelo aplicativo.</p></details>
+    <details><summary>Dá para migrar meus contratos de aluguel do sistema atual?</summary><p>Sim. Exporte em CSV do sistema que você usa hoje e importe direto — imóvel, locatário, proprietário, valor, vencimento e situação.</p></details>
+    <details><summary>Qual a diferença para o Minutei Contratos?</summary><p>O <a href="/">Contratos</a> gera a minuta pronta para assinar. O CRM cuida de tudo que acontece antes e depois: lead, negociação, comissão, carteira de aluguel e processo. O plano Pro junta os dois com 20% de desconto.</p></details>
+    <details><summary>E se eu passar do limite de usuários do plano?</summary><p>Usuário extra custa R$ 29/mês, ou você sobe de plano — o que sair mais barato para o seu caso.</p></details>
+  </div>
+</section>
+
+<!-- ══ CTA FINAL ══ -->
+<section class="final" id="lista">
+  <div class="wrap">
+    <div class="tagline">Do lead ao contrato <em>assinado</em>.</div>
+    <h2>Entre agora e pague metade para sempre.</h2>
+    <p>A lista de fundadores abre em 21 de agosto de 2026 e fica aberta por 90 dias. Depois disso, tabela cheia.</p>
+    <a class="btn btn-primary" href="mailto:contato@minutei.app.br?subject=Lista%20de%20fundadores%20—%20Minutei%20CRM&amp;body=Quero%20entrar%20na%20lista%20de%20fundadores%20do%20Minutei%20CRM.%0A%0ANome%3A%0AImobiliária%2FCRECI%3A%0AWhatsApp%3A%0APlano%20de%20interesse%3A%20(Corretor%20%2F%20Equipe%20%2F%20Imobiliária%20%2F%20Pro)%0A">Entrar na lista de fundadores</a>
+    <small>Sem cartão. Sem fidelidade. Cancela quando quiser.</small>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <a href="/"><img src="/brand/minutei-logo-dark.png" alt="Minutei"></a>
+    <a href="/">Minutei Contratos</a>
+    <a href="/crm/">Minutei CRM</a>
+    <a href="/blog/">Blog</a>
+    <a href="/app.html">Entrar</a>
+    <span class="copy">© 2026 Minutei. Todos os direitos reservados.</span>
+  </div>
+</footer>
+
+</body>
+</html>
