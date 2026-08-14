@@ -109,6 +109,17 @@
 
   .carregando { text-align: center; padding: 70px 20px; color: var(--muted); }
 
+  /* ---- Assistente de dúvidas ---- */
+  .assistente { margin-top: 20px; }
+  .troca { margin-bottom: 16px; }
+  .p-cliente { font-size: 14.5px; color: var(--ink); margin-bottom: 7px; }
+  .p-cliente b { font-weight: 700; }
+  .p-robo { background: #f5f7f9; border-left: 3px solid var(--brand); border-radius: 0 9px 9px 0;
+    padding: 12px 15px; font-size: 15px; line-height: 1.55; white-space: pre-wrap; }
+  .pergunta-box { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .pergunta-box textarea { min-height: 62px; }
+  .hint { font-size: 13px; color: var(--muted); margin: 10px 0 0; }
+
   /* ---- Identificação ---- */
   .ident { max-width: 520px; margin: 26px auto 0; }
   .ident .card { padding: 28px; }
@@ -262,8 +273,74 @@
       html += "</div>";
     }
 
+    if (info.assistente) html += blocoAssistente();
+
     main.innerHTML = html;
     if (info.status === "pendente") ligarAcoes();
+    if (info.assistente) ligarAssistente();
+  }
+
+  function blocoAssistente() {
+    var h = '<div class="card assistente">';
+    h += "<h2>Dúvida sobre o documento?</h2>";
+    h += '<p class="sub">Pergunte e eu explico o que está escrito neste contrato. ' +
+         "Não opino se é bom ou ruim, e não dou orientação jurídica — para isso, fale com quem enviou.</p>";
+    h += '<div id="conversa">' + info.perguntas.map(itemConversa).join("") + "</div>";
+    if (info.perguntasRestantes > 0) {
+      h += '<div class="pergunta-box">';
+      h += '<textarea id="pergunta" rows="2" maxlength="500" placeholder="Ex.: quando vence o aluguel? posso ter animais? quem paga o condomínio?"></textarea>';
+      h += '<div class="acoes" style="margin-top:10px"><button class="btn-ok" type="button" id="btn-perguntar">Perguntar</button></div>';
+      h += '<p class="hint">Restam ' + info.perguntasRestantes + " pergunta(s) neste documento.</p>";
+      h += "</div>";
+    } else {
+      h += '<p class="hint">Limite de perguntas atingido. Para continuar, fale com quem enviou o documento.</p>';
+    }
+    h += '<div id="erro-ia"></div>';
+    h += "</div>";
+    return h;
+  }
+
+  function itemConversa(p) {
+    return '<div class="troca">' +
+      '<div class="p-cliente"><b>' + esc(p.por) + ":</b> " + esc(p.pergunta) + "</div>" +
+      '<div class="p-robo">' + esc(p.resposta) + "</div></div>";
+  }
+
+  function ligarAssistente() {
+    var btn = document.getElementById("btn-perguntar");
+    if (!btn) return;
+    btn.addEventListener("click", function () {
+      var campo = document.getElementById("pergunta");
+      var texto = campo.value.trim();
+      var box = document.getElementById("erro-ia");
+      box.innerHTML = "";
+      if (!texto) { campo.focus(); return; }
+      btn.disabled = true;
+      btn.textContent = "Consultando...";
+
+      fetch("/api/revisao/" + encodeURIComponent(token) + "/perguntar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pergunta: texto, acesso: acesso }),
+      })
+        .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+        .then(function (res) {
+          btn.disabled = false;
+          btn.textContent = "Perguntar";
+          if (!res.ok) { box.innerHTML = '<div class="erro">' + esc(res.j.error || "Não foi possível responder.") + "</div>"; return; }
+          info.perguntas.push(res.j);
+          info.perguntasRestantes = res.j.restantes;
+          campo.value = "";
+          render();
+          var c = document.getElementById("conversa");
+          if (c && c.lastElementChild) c.lastElementChild.scrollIntoView({ block: "center", behavior: "smooth" });
+        })
+        .catch(function () {
+          btn.disabled = false;
+          btn.textContent = "Perguntar";
+          box.innerHTML = '<div class="erro">Falha de conexão. Tente novamente.</div>';
+        });
+    });
   }
 
   function renderIdentificacao() {

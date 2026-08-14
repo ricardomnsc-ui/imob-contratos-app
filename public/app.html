@@ -249,6 +249,11 @@
     white-space: nowrap; display: inline-block; }
   .confere.ok { background: #e7f4ee; color: #0f7a52; }
   .confere.na { background: #f1f3f5; color: var(--muted); }
+  .revisao-perguntas { margin-top: 9px; }
+  .pergunta-item { margin-top: 6px; border: 1px solid var(--border); border-radius: 8px; background: #fafbfc; }
+  .pergunta-item summary { cursor: pointer; padding: 8px 12px; font-size: 13.5px; font-weight: 600; }
+  .pergunta-item summary::marker { color: var(--brand); }
+  .pergunta-resposta { padding: 0 12px 10px; font-size: 13.5px; color: var(--muted); line-height: 1.55; white-space: pre-wrap; }
   .revisao-acoes { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .revisao-acoes button { padding: 7px 13px; font-size: 13px; }
   .revisao-status {
@@ -2016,6 +2021,22 @@ async function renderRevisoes() {
     return `<span class="revisao-data">${as.length === 1 ? "aberto por" : `${as.length} aberturas:`} ${nomes}</span>`;
   };
 
+  // Cada pergunta aqui é uma ligação que o corretor não recebeu. Vale mostrar
+  // também a resposta, pra ele conferir se o assistente falou algo torto.
+  const perguntasFeitas = (s) => {
+    const ps = s.perguntas || [];
+    if (!ps.length) return "";
+    const itens = ps.map(p => `
+      <details class="pergunta-item">
+        <summary>${escapeHtml(p.pergunta)}</summary>
+        <div class="pergunta-resposta">${escapeHtml(p.resposta)}</div>
+      </details>`).join("");
+    return `<div class="revisao-perguntas">
+      <span class="revisao-data">${ps.length} pergunta(s) ao assistente — o cliente não precisou te ligar</span>
+      ${itens}
+    </div>`;
+  };
+
   const linhas = lista.map(s => `
     <div class="revisao-row">
       <div class="revisao-info">
@@ -2024,6 +2045,7 @@ async function renderRevisoes() {
         <span class="revisao-data">enviado em ${new Date(s.criadoEm).toLocaleDateString("pt-BR")}</span>
         ${leitores(s)}
         ${autoria(s)}
+        ${perguntasFeitas(s)}
         ${s.status === "ajuste" && s.comentario
           ? `<blockquote class="revisao-comentario">${escapeHtml(s.comentario)}</blockquote>` : ""}
       </div>

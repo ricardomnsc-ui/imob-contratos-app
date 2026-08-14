@@ -10,7 +10,7 @@ const FileStore = require("session-file-store")(session);
 const bcrypt = require("bcryptjs");
 const multer = require("multer");
 const { nanoid } = require("nanoid");
-const { gerarContrato } = require("./lib/generator");
+const { gerarContrato, extrairTextoDocx } = require("./lib/generator");
 const { convertDocxToPdf } = require("./lib/pdf");
 const store = require("./lib/store");
 const { PLANOS, limitesDoPlano, precoDoPlano, mesAtual, contratosUsadosNoMes, LIMITE_IA_MENSAL, iaUsadaNoMes } = require("./lib/planos");
@@ -706,6 +706,18 @@ app.post("/api/gerar", requireAuth, async (req, res) => {
     const branding = brandingDoTenant(tenant);
 
     let buffer = await gerarContrato(dados, branding);
+
+    // O texto sai do .docx, antes de ele virar PDF. É o que alimenta o robô de
+    // perguntas na página de revisão: as dúvidas do cliente são sobre a
+    // redação das cláusulas, que não está nos campos do formulário.
+    let textoContrato = "";
+    if (querLink) {
+      try {
+        textoContrato = await extrairTextoDocx(buffer);
+      } catch (err) {
+        console.error("Falha ao extrair texto do contrato:", err.message);
+      }
+    }
     const prefixo = DOCS_AUXILIARES[dados.tipo] || `Contrato_${(dados.tipo || "contrato").replace(/_/g, "-")}`;
     const nomeBase = `${prefixo}_${(dados.imovel && dados.imovel.endereco || "").slice(0, 20).replace(/[^a-zA-Z0-9]+/g, "")}` || "documento";
 
@@ -751,6 +763,10 @@ app.post("/api/gerar", requireAuth, async (req, res) => {
         contratoId: ehAuxiliar ? null : contratoId,
         partes: partesDoContrato(dados),
         acessos: [],
+        // Texto usado só pra responder perguntas do cliente sobre este
+        // documento. Nunca sai em listagem e some junto com o link.
+        texto: textoContrato,
+        perguntas: [],
         status: "pendente",
         comentario: "",
         respondidoEm: null,
@@ -974,6 +990,10 @@ const revisaoLimiter = rateLimit({
   message: { error: "Muitas requisições. Aguarde alguns minutos e tente novamente." },
 });
 
+// Teto de perguntas por link. O endereço é público e quem paga a IA é a conta
+// do corretor: sem isso, um cliente curioso esvaziaria a cota mensal dele.
+const LIMITE_PERGUNTAS_POR_LINK = 10;
+
 app.get("/r/:token", revisaoLimiter, (req, res) => {
   res.sendFile(path.join(__dirname, "public", "revisao.html"));
 });
@@ -1000,6 +1020,9 @@ app.get("/api/revisao/:token", revisaoLimiter, async (req, res) => {
     comentario: acesso ? share.comentario : null,
     respondidoEm: acesso ? share.respondidoEm : null,
     respondidoPor: acesso ? share.respondidoPor : null,
+    assistente: acesso && ai.disponivel && !!share.texto,
+    perguntas: acesso ? (share.perguntas || []).map(p => ({ pergunta: p.pergunta, resposta: p.resposta, por: p.por, em: p.em })) : [],
+    perguntasRestantes: acesso ? Math.max(0, LIMITE_PERGUNTAS_POR_LINK - (share.perguntas || []).length) : 0,
   });
 });
 
@@ -1093,6 +1116,52 @@ app.post("/api/revisao/:token/resposta", revisaoLimiter, async (req, res) => {
   res.json({ ok: true, ...patch });
 });
 
+app.post("/api/revisao/:token/perguntar", revisaoLimiter, async (req, res) => {
+  const share = await store.getShare(req.params.token);
+  if (!share) return res.status(404).json({ error: "Este link não existe mais ou expirou." });
+  const acesso = acessoValido(share, req.body.acesso);
+  if (!acesso) return res.status(403).json({ error: "Identifique-se para perguntar." });
+  if (!ai.disponivel) return res.status(503).json({ error: "Assistente indisponível no momento." });
+  if (!share.texto) {
+    return res.status(409).json({ error: "Este documento não tem texto disponível para consulta. Fale com quem enviou." });
+  }
+
+  const perguntas = share.perguntas || [];
+  if (perguntas.length >= LIMITE_PERGUNTAS_POR_LINK) {
+    return res.status(429).json({
+      error: `Este documento já recebeu ${LIMITE_PERGUNTAS_POR_LINK} perguntas. Para continuar, fale direto com quem enviou.`,
+    });
+  }
+
+  // Quem paga a IA é a conta que gerou o contrato, então a cota é a dela.
+  const tenant = await store.getTenant(share.tenantId);
+  if (!tenant) return res.status(404).json({ error: "Assistente indisponível para este documento." });
+  if (iaUsadaNoMes(tenant) >= LIMITE_IA_MENSAL) {
+    return res.status(429).json({ error: "O assistente atingiu o limite deste mês. Fale direto com quem enviou o documento." });
+  }
+
+  try {
+    const resposta = await ai.responderSobreContrato({
+      textoContrato: share.texto,
+      pergunta: req.body.pergunta,
+    });
+    await registrarUsoIa(share.tenantId, tenant);
+
+    const registro = {
+      pergunta: String(req.body.pergunta).trim().slice(0, 500),
+      resposta,
+      por: acesso.nome,
+      em: new Date().toISOString(),
+    };
+    await store.updateShareMeta(req.params.token, { perguntas: [...perguntas, registro] });
+
+    res.json({ ...registro, restantes: LIMITE_PERGUNTAS_POR_LINK - perguntas.length - 1 });
+  } catch (err) {
+    console.error("Erro ao responder pergunta do cliente:", err.message);
+    res.status(502).json({ error: "Não consegui responder agora. Tente de novo ou fale com quem enviou o documento." });
+  }
+});
+
 // ---- lado do corretor: acompanhar o que foi enviado ----
 app.get("/api/compartilhamentos", requireAuth, async (req, res) => {
   const shares = await store.getSharesByTenant(req.user.tenantId);
@@ -1111,6 +1180,9 @@ app.get("/api/compartilhamentos", requireAuth, async (req, res) => {
     respondidoEm: s.respondidoEm,
     respondidoPor: s.respondidoPor || null,
     acessos: s.acessos || [],
+    // O que o cliente perguntou ao assistente. É o retorno mais útil aqui:
+    // mostra a dúvida que teria virado ligação pro corretor.
+    perguntas: s.perguntas || [],
     criadoEm: s.criadoEm,
     expiraEm: s.expiraEm,
   })));
