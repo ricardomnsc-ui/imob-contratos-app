@@ -280,6 +280,35 @@
     white-space: nowrap; display: inline-block; }
   .confere.ok { background: #e7f4ee; color: #0f7a52; }
   .confere.na { background: #f1f3f5; color: var(--muted); }
+  /* Situação do negócio (esteira) — controlada pelo corretor */
+  .filtros-situacao { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 18px; }
+  .filtros-situacao button {
+    border: 1px solid var(--border); background: var(--paper); color: var(--muted);
+    padding: 6px 13px; border-radius: 999px; font-size: 12.5px; font-weight: 500; cursor: pointer;
+    transition: border-color .15s, color .15s, background .15s;
+  }
+  .filtros-situacao button:hover { color: var(--ink); border-color: var(--muted); }
+  .filtros-situacao button.ativo { background: var(--brand-soft); border-color: var(--brand); color: var(--brand-text); font-weight: 600; }
+
+  /* O próprio seletor é o indicador: colorido pra bater o olho e é onde se
+     muda. Um selo separado repetiria a mesma informação ao lado. */
+  .sel-situacao {
+    font-size: 13px; font-weight: 600; padding: 7px 10px; border-radius: 7px;
+    border: 1px solid transparent; cursor: pointer; width: auto;
+  }
+  .sel-situacao.aguardando { background: #eef1f4; color: #46566b; }
+  .sel-situacao.atencao { background: var(--brand-soft); color: var(--brand-text); }
+  .sel-situacao.ok { background: #e7f4ee; color: #0f7a52; }
+  .sel-situacao.ruim { background: #fdeeee; color: #a3282a; }
+  .sel-situacao:focus { outline: 2px solid var(--brand); outline-offset: 1px; }
+
+  .obs-linha { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+  .obs-linha input {
+    flex: 1; min-width: 0; font-size: 13px; padding: 7px 11px;
+    border: 1px solid var(--border); border-radius: 7px; background: var(--paper); color: var(--ink);
+  }
+  .obs-linha input:focus { border-color: var(--brand); outline: none; }
+
   .revisao-perguntas { margin-top: 9px; }
   .pergunta-item { margin-top: 6px; border: 1px solid var(--border); border-radius: 8px; background: #fafbfc; }
   .pergunta-item summary { cursor: pointer; padding: 8px 12px; font-size: 13.5px; font-weight: 600; }
@@ -2029,6 +2058,18 @@ function abrirModalLink(info) {
   document.getElementById("modalLinkUrl").select();
 }
 
+// Onde o negócio está, na visão do corretor. Ordem = ordem real da esteira,
+// então o seletor já sugere o próximo passo.
+const SITUACOES = [
+  { id: "em_revisao", nome: "Em revisão", cor: "aguardando", ajuda: "Enviado, esperando o cliente responder" },
+  { id: "em_correcao", nome: "Em correção", cor: "atencao", ajuda: "Precisa mexer no contrato" },
+  { id: "aguardando_assinatura", nome: "Aguardando assinatura", cor: "atencao", ajuda: "Combinado, falta assinar" },
+  { id: "assinado", nome: "Assinado", cor: "ok", ajuda: "Fechado" },
+  { id: "perdido", nome: "Perdido", cor: "ruim", ajuda: "Negócio não saiu" },
+];
+const situacaoPorId = (id) => SITUACOES.find(s => s.id === id) || SITUACOES[0];
+let filtroSituacao = "todas";
+
 async function renderRevisoes() {
   const el = document.getElementById("view-revisoes");
   el.innerHTML = `<div class="card"><div class="empty">Carregando...</div></div>`;
@@ -2048,7 +2089,14 @@ async function renderRevisoes() {
     return;
   }
 
-  const rotulo = { pendente: "Aguardando", aprovado: "Aprovado", ajuste: "Ajuste pedido" };
+  // Deixa explícito que este é o retorno do CLIENTE, não a situação que o
+  // corretor controla — antes os dois selos diziam "Aguardando" e se
+  // confundiam lado a lado.
+  const rotulo = {
+    pendente: "Cliente não respondeu",
+    aprovado: "Cliente aprovou",
+    ajuste: "Cliente pediu ajuste",
+  };
 
   // Quem respondeu, com o resultado da conferência do CPF/CNPJ contra as partes
   // do contrato — é isso que diz se foi mesmo o locatário que aprovou.
@@ -2086,7 +2134,36 @@ async function renderRevisoes() {
     </div>`;
   };
 
-  const linhas = lista.map(s => `
+  // Contagem por situação — é o que responde "o que está travado e precisa de
+  // mim" sem abrir cada envio.
+  const contagem = SITUACOES.reduce((acc, sit) => {
+    acc[sit.id] = lista.filter(s => (s.situacao || "em_revisao") === sit.id).length;
+    return acc;
+  }, {});
+  const filtros = `
+    <div class="filtros-situacao">
+      <button type="button" data-filtro="todas" class="${filtroSituacao === "todas" ? "ativo" : ""}">Todas (${lista.length})</button>
+      ${SITUACOES.filter(sit => contagem[sit.id] > 0).map(sit => `
+        <button type="button" data-filtro="${sit.id}" class="${filtroSituacao === sit.id ? "ativo" : ""}">
+          ${sit.nome} (${contagem[sit.id]})</button>`).join("")}
+    </div>`;
+
+  const visiveis = filtroSituacao === "todas"
+    ? lista
+    : lista.filter(s => (s.situacao || "em_revisao") === filtroSituacao);
+
+  // Um controle só: mostra a situação (colorido, dá pra bater o olho) e é onde
+  // se muda. Ter selo + seletor lado a lado dizia a mesma coisa duas vezes.
+  const seletorSituacao = (s) => {
+    const atual = s.situacao || "em_revisao";
+    return `
+      <select class="sel-situacao ${situacaoPorId(atual).cor}" data-token="${s.token}"
+        title="Situação do negócio — quem controla é você">
+        ${SITUACOES.map(sit => `<option value="${sit.id}" ${sit.id === atual ? "selected" : ""}>${sit.nome}</option>`).join("")}
+      </select>`;
+  };
+
+  const linhas = visiveis.map(s => `
     <div class="revisao-row">
       <div class="revisao-info">
         <strong>${escapeHtml(s.titulo)}</strong>
@@ -2097,9 +2174,16 @@ async function renderRevisoes() {
         ${perguntasFeitas(s)}
         ${s.status === "ajuste" && s.comentario
           ? `<blockquote class="revisao-comentario">${escapeHtml(s.comentario)}</blockquote>` : ""}
+        <div class="obs-linha">
+          <input type="text" class="inp-obs" data-token="${s.token}" maxlength="500"
+            placeholder="Observação (ex.: cliente pediu prazo maior, assinatura marcada pra sexta)"
+            value="${escapeHtml(s.observacao || "")}" />
+          <button type="button" class="link acao btn-salvar-obs" data-token="${s.token}">salvar</button>
+        </div>
       </div>
       <div class="revisao-acoes">
-        <span class="revisao-status ${s.status}">${rotulo[s.status]}</span>
+        ${seletorSituacao(s)}
+        <span class="revisao-status ${s.status}" title="Resposta do cliente na página de revisão">${rotulo[s.status]}</span>
         ${s.contratoId ? `<button type="button" class="${s.status === "ajuste" ? "primary" : "secondary"} btn-editar" data-contrato="${s.contratoId}">Editar contrato</button>` : ""}
         <button type="button" class="secondary btn-copiar" data-url="${s.url}">Copiar link</button>
         <button type="button" class="secondary btn-excluir" data-token="${s.token}">Excluir</button>
@@ -2107,7 +2191,47 @@ async function renderRevisoes() {
     </div>
   `).join("");
 
-  el.innerHTML = `<div class="card">${cabecalho}${linhas}</div>`;
+  el.innerHTML = `<div class="card">${cabecalho}${filtros}${
+    visiveis.length ? linhas : `<div class="empty">Nenhum envio nessa situação.</div>`
+  }</div>`;
+
+  el.querySelectorAll("[data-filtro]").forEach(b => b.addEventListener("click", () => {
+    filtroSituacao = b.dataset.filtro;
+    renderRevisoes();
+  }));
+
+  // Salvar a situação é a ação mais frequente aqui — sem botão de confirmar,
+  // grava direto na troca do seletor.
+  const salvar = async (token, corpo, aviso) => {
+    const r = await api(`/api/compartilhamentos/${token}/situacao`, {
+      method: "PATCH",
+      body: JSON.stringify(corpo),
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      toast(err.error || "Não foi possível salvar", true);
+      return false;
+    }
+    toast(aviso);
+    return true;
+  };
+
+  el.querySelectorAll(".sel-situacao").forEach(sel => {
+    sel.addEventListener("change", async () => {
+      const obs = el.querySelector(`.inp-obs[data-token="${sel.dataset.token}"]`);
+      const ok = await salvar(sel.dataset.token, { situacao: sel.value, observacao: obs ? obs.value : undefined },
+        `Marcado como "${situacaoPorId(sel.value).nome}".`);
+      if (ok) renderRevisoes();
+    });
+  });
+
+  el.querySelectorAll(".btn-salvar-obs").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const inp = el.querySelector(`.inp-obs[data-token="${btn.dataset.token}"]`);
+      const sel = el.querySelector(`.sel-situacao[data-token="${btn.dataset.token}"]`);
+      await salvar(btn.dataset.token, { situacao: sel.value, observacao: inp.value }, "Observação salva.");
+    });
+  });
 
   el.querySelectorAll(".btn-editar").forEach(b => b.addEventListener("click", () => editarContrato(b.dataset.contrato)));
   el.querySelectorAll(".btn-copiar").forEach(b => b.addEventListener("click", async () => {

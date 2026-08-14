@@ -763,6 +763,9 @@ app.post("/api/gerar", requireAuth, async (req, res) => {
         contratoId: ehAuxiliar ? null : contratoId,
         partes: partesDoContrato(dados),
         acessos: [],
+        situacao: "em_revisao",
+        situacaoManual: false,
+        observacao: "",
         // Texto usado só pra responder perguntas do cliente sobre este
         // documento. Nunca sai em listagem e some junto com o link.
         texto: textoContrato,
@@ -994,6 +997,21 @@ const revisaoLimiter = rateLimit({
 // do corretor: sem isso, um cliente curioso esvaziaria a cota mensal dele.
 const LIMITE_PERGUNTAS_POR_LINK = 10;
 
+// Situação do negócio, controlada pelo corretor. É diferente do "status", que
+// é a resposta do cliente (pendente/aprovado/ajuste) e vem da própria página de
+// revisão. Separar os dois evita um sobrescrever o outro: o cliente aprovar não
+// significa que já assinou, e o corretor marcar "assinado" não apaga o registro
+// de que o cliente havia pedido ajuste.
+const SITUACOES = ["em_revisao", "em_correcao", "aguardando_assinatura", "assinado", "perdido"];
+
+// Quando o cliente responde, a situação anda sozinha — mas só enquanto o
+// corretor não tiver mexido nela. Depois disso ela é dele, e o sistema não
+// desfaz o que ele marcou.
+function situacaoAposResposta(share, acao) {
+  if (share.situacaoManual) return null;
+  return acao === "ajuste" ? "em_correcao" : "aguardando_assinatura";
+}
+
 app.get("/r/:token", revisaoLimiter, (req, res) => {
   res.sendFile(path.join(__dirname, "public", "revisao.html"));
 });
@@ -1100,8 +1118,10 @@ app.post("/api/revisao/:token/resposta", revisaoLimiter, async (req, res) => {
   if (acao === "ajuste" && !comentario) {
     return res.status(400).json({ error: "Descreva o que precisa ser ajustado." });
   }
+  const novaSituacao = situacaoAposResposta(share, acao);
   const patch = {
     status: acao === "aprovar" ? "aprovado" : "ajuste",
+    ...(novaSituacao ? { situacao: novaSituacao } : {}),
     comentario,
     respondidoEm: new Date().toISOString(),
     respondidoPor: {
@@ -1173,6 +1193,9 @@ app.get("/api/compartilhamentos", requireAuth, async (req, res) => {
     endereco: s.endereco,
     destinatario: s.destinatario,
     status: s.status,
+    // Envios antigos não têm situação: entram como "em revisão".
+    situacao: s.situacao || "em_revisao",
+    observacao: s.observacao || "",
     // Liga a revisão ao contrato de origem, pra dar pra editar direto do
     // pedido de ajuste. É só o id — os dados ficam atrás da rota própria.
     contratoId: s.contratoId || null,
@@ -1186,6 +1209,24 @@ app.get("/api/compartilhamentos", requireAuth, async (req, res) => {
     criadoEm: s.criadoEm,
     expiraEm: s.expiraEm,
   })));
+});
+
+// Corretor marca onde o negócio está. A partir da primeira vez que ele mexe,
+// o avanço automático para de agir — a situação passa a ser dele.
+app.patch("/api/compartilhamentos/:token/situacao", requireAuth, async (req, res) => {
+  const share = await store.getShare(req.params.token);
+  if (!share || share.tenantId !== req.user.tenantId) {
+    return res.status(404).json({ error: "Envio não encontrado" });
+  }
+  const situacao = String(req.body.situacao || "");
+  if (!SITUACOES.includes(situacao)) return res.status(400).json({ error: "Situação inválida" });
+
+  const patch = { situacao, situacaoManual: true };
+  if (req.body.observacao !== undefined) {
+    patch.observacao = String(req.body.observacao).trim().slice(0, 500);
+  }
+  await store.updateShareMeta(req.params.token, patch);
+  res.json({ ok: true, ...patch });
 });
 
 app.delete("/api/compartilhamentos/:token", requireAuth, async (req, res) => {
