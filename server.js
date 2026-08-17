@@ -13,7 +13,7 @@ const { nanoid } = require("nanoid");
 const { gerarContrato, extrairTextoDocx } = require("./lib/generator");
 const { convertDocxToPdf } = require("./lib/pdf");
 const store = require("./lib/store");
-const { PLANOS, limitesDoPlano, precoDoPlano, mesAtual, contratosUsadosNoMes, LIMITE_IA_MENSAL, iaUsadaNoMes } = require("./lib/planos");
+const { PLANOS, limitesDoPlano, precoDoPlano, mesAtual, contratosUsadosNoMes, LIMITE_IA_MENSAL, iaUsadaNoMes, planoEfetivo, DIAS_TOLERANCIA_ATRASO } = require("./lib/planos");
 const stripe = require("./lib/stripe");
 const ai = require("./lib/ai");
 
@@ -79,6 +79,64 @@ const uploadDocumento = multer({
   },
 });
 
+// ================= ESTADO DA ASSINATURA =================
+// O acesso aos planos pagos depende do que o Stripe diz, não só do campo
+// `plano` gravado na conta. Ver planoEfetivo() em lib/planos.js.
+
+async function tenantPorAssinatura(subId) {
+  if (!subId) return null;
+  const tenants = await store.getAllTenants();
+  return tenants.find(t => t.stripeSubscriptionId === subId) || null;
+}
+
+// Grava na conta o estado atual da assinatura. `assinaturaAtrasadaDesde` marca
+// quando o atraso começou, pra tolerância ser contada a partir dali e não se
+// renovar a cada evento novo do Stripe.
+async function gravarEstadoAssinatura(tenantId, tenant, sub) {
+  const atrasada = sub.status === "past_due";
+  await store.setTenant(tenantId, {
+    ...tenant,
+    assinaturaStatus: sub.status,
+    assinaturaAtrasadaDesde: atrasada
+      ? (tenant.assinaturaAtrasadaDesde || new Date().toISOString())
+      : null,
+    assinaturaVerificadaEm: new Date().toISOString(),
+  });
+}
+
+// Rede de segurança: webhook que não chega é normal (endpoint fora do ar,
+// evento não configurado no painel, falha de entrega). Sem isto, um único
+// webhook perdido deixa acesso liberado pra sempre — foi assim que uma conta
+// sem pagamento continuou funcionando. Aqui o estado é reconferido direto na
+// fonte, no máximo uma vez a cada 6h por conta pra não pesar.
+const INTERVALO_RECONFERIR_MS = 6 * 60 * 60 * 1000;
+
+async function assinaturaAtualizada(tenantId, tenant) {
+  if (!stripe || !tenant || !tenant.stripeSubscriptionId) return tenant;
+  const ultima = tenant.assinaturaVerificadaEm ? new Date(tenant.assinaturaVerificadaEm).getTime() : 0;
+  if (Date.now() - ultima < INTERVALO_RECONFERIR_MS) return tenant;
+
+  try {
+    const sub = await stripe.subscriptions.retrieve(tenant.stripeSubscriptionId);
+    await gravarEstadoAssinatura(tenantId, tenant, sub);
+    return (await store.getTenant(tenantId)) || tenant;
+  } catch (err) {
+    // Assinatura sumiu do Stripe: não existe mais, então não dá acesso.
+    if (err && err.code === "resource_missing") {
+      const zerado = {
+        ...tenant, plano: "gratis", stripeSubscriptionId: null,
+        assinaturaStatus: "canceled", assinaturaAtrasadaDesde: null,
+        assinaturaVerificadaEm: new Date().toISOString(),
+      };
+      await store.setTenant(tenantId, zerado);
+      return zerado;
+    }
+    // Stripe fora do ar: mantém o que está gravado em vez de cortar quem paga.
+    console.error("Falha ao reconferir assinatura no Stripe:", err.message);
+    return tenant;
+  }
+}
+
 // Precisa vir antes do express.json() — o Stripe exige o corpo bruto (não
 // parseado) da requisição para validar a assinatura do webhook.
 app.post("/api/billing/webhook", express.raw({ type: "application/json" }), async (req, res) => {
@@ -110,12 +168,45 @@ app.post("/api/billing/webhook", express.raw({ type: "application/json" }), asyn
         }
         break;
       }
+      // Mudança de status da assinatura — inclusive a ida pra past_due/unpaid
+      // quando o pagamento falha. Sem tratar isto, uma assinatura que parou de
+      // ser paga continuava dando acesso: o "deleted" abaixo só dispara se o
+      // Stripe chegar a CANCELAR a assinatura, e na configuração que deixa em
+      // "unpaid" no fim das retentativas ele nunca dispara.
+      case "customer.subscription.updated": {
+        const sub = event.data.object;
+        const tenant = await tenantPorAssinatura(sub.id);
+        if (tenant) await gravarEstadoAssinatura(tenant.id, tenant, sub);
+        break;
+      }
+
+      case "invoice.payment_failed": {
+        const inv = event.data.object;
+        const subId = inv.subscription || (inv.parent && inv.parent.subscription_details && inv.parent.subscription_details.subscription);
+        const tenant = subId ? await tenantPorAssinatura(subId) : null;
+        if (tenant && stripe) {
+          try {
+            const sub = await stripe.subscriptions.retrieve(subId);
+            await gravarEstadoAssinatura(tenant.id, tenant, sub);
+          } catch (err) {
+            console.error("Falha ao ler assinatura após pagamento recusado:", err.message);
+          }
+        }
+        break;
+      }
+
       case "customer.subscription.deleted": {
         const sub = event.data.object;
-        const tenants = await store.getAllTenants();
-        const tenant = tenants.find(t => t.stripeSubscriptionId === sub.id);
+        const tenant = await tenantPorAssinatura(sub.id);
         if (tenant) {
-          await store.setTenant(tenant.id, { ...tenant, plano: "gratis", stripeSubscriptionId: null });
+          await store.setTenant(tenant.id, {
+            ...tenant,
+            plano: "gratis",
+            stripeSubscriptionId: null,
+            assinaturaStatus: "canceled",
+            assinaturaAtrasadaDesde: null,
+            assinaturaVerificadaEm: new Date().toISOString(),
+          });
         }
         break;
       }
@@ -253,7 +344,7 @@ app.post("/api/team/invite", requireAuth, async (req, res) => {
   if (String(password).length < 8) return res.status(400).json({ error: "A senha precisa ter pelo menos 8 caracteres" });
 
   const tenant = await store.getTenant(req.user.tenantId);
-  const limites = limitesDoPlano(tenant && tenant.plano);
+  const limites = limitesDoPlano(planoEfetivo(tenant));
   const allUsers = await store.getAllUsers();
   const tamanhoEquipe = allUsers.filter(u => u.tenantId === req.user.tenantId).length;
   if (tamanhoEquipe >= limites.maxUsuarios) {
@@ -282,9 +373,10 @@ app.delete("/api/team/:id", requireAuth, async (req, res) => {
 
 // ================= TENANT (marca da própria imobiliária) =================
 app.get("/api/tenant", requireAuth, async (req, res) => {
-  const tenant = await store.getTenant(req.user.tenantId);
+  let tenant = await store.getTenant(req.user.tenantId);
   if (!tenant) return res.json(null);
-  const limites = limitesDoPlano(tenant.plano);
+  tenant = await assinaturaAtualizada(req.user.tenantId, tenant);
+  const limites = limitesDoPlano(planoEfetivo(tenant));
   res.json({
     ...tenant,
     plano: tenant.plano || "gratis",
@@ -294,6 +386,12 @@ app.get("/api/tenant", requireAuth, async (req, res) => {
     limiteIaPorMes: LIMITE_IA_MENSAL,
     limiteUsuarios: limites.maxUsuarios === Infinity ? null : limites.maxUsuarios,
     temAssinaturaAtiva: !!tenant.stripeCustomerId,
+    // Estado do pagamento, pra tela avisar antes/depois do corte. Sem isso o
+    // usuário perde acesso sem entender o motivo.
+    assinaturaStatus: tenant.assinaturaStatus || null,
+    planoContratado: tenant.plano || "gratis",
+    pagamentoEmAtraso: !!tenant.assinaturaAtrasadaDesde,
+    diasDeTolerancia: DIAS_TOLERANCIA_ATRASO,
   });
 });
 
@@ -352,7 +450,7 @@ app.get("/api/billing/assinatura", requireAuth, async (req, res) => {
   const tenant = await store.getTenant(req.user.tenantId);
   if (!tenant) return res.status(404).json({ error: "Imobiliária não encontrada" });
 
-  const planoAtual = tenant.plano || "gratis";
+  const planoAtual = planoEfetivo(tenant);
   const limites = limitesDoPlano(planoAtual);
 
   const planos = [];
@@ -656,8 +754,11 @@ app.post("/api/gerar", requireAuth, async (req, res) => {
     // saídas — é o mesmo contrato, só entregue de outro jeito.
     const querLink = formato === "link";
     const querPdf = formato === "pdf" || querLink;
-    const tenant = await store.getTenant(req.user.tenantId);
+    let tenant = await store.getTenant(req.user.tenantId);
     if (!tenant) return res.status(404).json({ error: "Imobiliária não encontrada" });
+    // Gerar contrato é a ação que o plano paga libera: reconfere a assinatura
+    // aqui também, não só quando o app carrega.
+    tenant = await assinaturaAtualizada(req.user.tenantId, tenant);
 
     // Documentos auxiliares (fichas, propostas, autorizações) são mais leves,
     // liberados em todos os planos: não consomem a cota mensal de contratos
@@ -686,7 +787,7 @@ app.post("/api/gerar", requireAuth, async (req, res) => {
           new Date(Date.now() - JANELA_REGERACAO_MS)
         ).catch(() => null);
 
-    const limites = limitesDoPlano(tenant.plano);
+    const limites = limitesDoPlano(planoEfetivo(tenant));
     if (!ehAuxiliar && !jaGerado) {
       const usados = contratosUsadosNoMes(tenant);
       if (usados >= limites.contratosPorMes) {
@@ -697,7 +798,7 @@ app.post("/api/gerar", requireAuth, async (req, res) => {
     }
 
     const LAYOUTS_PAGOS = new Set(["profissional", "elegante"]);
-    if ((tenant.plano || "gratis") === "gratis" && LAYOUTS_PAGOS.has(dados.layout)) {
+    if (planoEfetivo(tenant) === "gratis" && LAYOUTS_PAGOS.has(dados.layout)) {
       return res.status(402).json({
         error: `O layout "${dados.layout === "profissional" ? "Profissional" : "Elegante"}" é exclusivo dos planos pagos. Faça upgrade para usar esse visual.`,
       });
@@ -806,7 +907,7 @@ async function registrarUsoIa(tenantId, tenant) {
 app.post("/api/ia/clausula", requireAuth, async (req, res) => {
   try {
     const tenant = await store.getTenant(req.user.tenantId);
-    if (!tenant || (tenant.plano || "gratis") === "gratis") {
+    if (!tenant || planoEfetivo(tenant) === "gratis") {
       return res.status(402).json({ error: "O Assistente de IA de cláusulas é exclusivo dos planos pagos. Faça upgrade para usar essa ferramenta." });
     }
     if (iaUsadaNoMes(tenant) >= LIMITE_IA_MENSAL) {
@@ -825,7 +926,7 @@ app.post("/api/ia/clausula", requireAuth, async (req, res) => {
 app.post("/api/ia/extrair-documento", requireAuth, uploadDocumento.single("documento"), async (req, res) => {
   try {
     const tenant = await store.getTenant(req.user.tenantId);
-    if (!tenant || (tenant.plano || "gratis") === "gratis") {
+    if (!tenant || planoEfetivo(tenant) === "gratis") {
       return res.status(402).json({ error: "O preenchimento automático por CNH/RG é exclusivo dos planos pagos. Faça upgrade para usar essa ferramenta." });
     }
     if (iaUsadaNoMes(tenant) >= LIMITE_IA_MENSAL) {

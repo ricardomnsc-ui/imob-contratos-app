@@ -280,6 +280,10 @@
     white-space: nowrap; display: inline-block; }
   .confere.ok { background: #e7f4ee; color: #0f7a52; }
   .confere.na { background: #f1f3f5; color: var(--muted); }
+  .banner-pagamento { border-color: #d33; background: #fff5f5; }
+  .banner-pagamento strong { display: block; font-size: 16px; margin-bottom: 5px; color: #a3282a; }
+  .banner-pagamento p { font-size: 14px; color: var(--ink); margin: 0 0 14px; max-width: 70ch; }
+
   /* Situação do negócio (esteira) — controlada pelo corretor */
   .filtros-situacao { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 18px; }
   .filtros-situacao button {
@@ -622,6 +626,7 @@ function renderApp() {
         <button data-view="config">${ICONES.config}Configurações</button>
       </nav>
       <main>
+        <div id="avisoPagamento">${bannerPagamento()}</div>
         <div id="view-dashboard"></div>
         <div id="view-gerar" style="display:none"></div>
         <div id="view-documentos" style="display:none"></div>
@@ -654,6 +659,7 @@ function renderApp() {
     renderAuth();
   });
 
+  ligarBannerPagamento();
   renderDashboard();
 }
 
@@ -1203,6 +1209,43 @@ function collectParcelas() {
     const obj = {};
     card.querySelectorAll("[data-f]").forEach(inp => obj[inp.dataset.f] = inp.dataset.f === "valor" ? parseFloat(inp.value || 0) : inp.value);
     return obj;
+  });
+}
+
+// Aviso de pagamento. Aparece ANTES do corte (durante a tolerância) e depois
+// dele — cortar o acesso sem dizer o porquê é pior do que não cortar.
+function bannerPagamento() {
+  const t = state.tenant;
+  if (!t || !t.planoContratado || t.planoContratado === "gratis") return "";
+
+  const st = t.assinaturaStatus;
+  const caiuPraGratis = t.plano === "gratis" && t.planoContratado !== "gratis";
+  if (!caiuPraGratis && !t.pagamentoEmAtraso) return "";
+
+  const titulo = caiuPraGratis
+    ? "Seu acesso voltou para o plano Grátis"
+    : "Pagamento pendente";
+  const texto = caiuPraGratis
+    ? `A cobrança do plano não foi confirmada${st === "unpaid" ? " (fatura em aberto)" : st === "canceled" ? " (assinatura cancelada)" : ""}. Regularize para recuperar os recursos do seu plano — seus contratos continuam salvos.`
+    : `A última cobrança não passou. Você tem ${t.diasDeTolerancia} dia(s) para regularizar antes do acesso voltar ao plano Grátis.`;
+
+  return `
+    <div class="card banner-pagamento">
+      <strong>${titulo}</strong>
+      <p>${texto}</p>
+      <button type="button" class="primary" id="btnRegularizar">Atualizar forma de pagamento</button>
+    </div>`;
+}
+
+function ligarBannerPagamento() {
+  const b = document.getElementById("btnRegularizar");
+  if (!b) return;
+  b.addEventListener("click", async () => {
+    b.disabled = true;
+    const r = await api("/api/billing/portal", { method: "POST" });
+    const j = await r.json().catch(() => ({}));
+    if (r.ok && j.url) window.location.href = j.url;
+    else { toast(j.error || "Não foi possível abrir o portal.", true); b.disabled = false; }
   });
 }
 
