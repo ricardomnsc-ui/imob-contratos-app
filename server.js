@@ -1342,6 +1342,32 @@ app.delete("/api/compartilhamentos/:token", requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
+// ================= ATALHOS SEM .html =================
+// As páginas moram em arquivos com extensão (/app.html, /corretor.html), mas
+// "/app" é o que as pessoas digitam e o que link antigo aponta — e caía num
+// "Cannot GET /app". Em vez de uma lista manual que envelhece a cada página
+// nova, todo caminho de primeiro nível com um .html correspondente em public/
+// redireciona pro arquivo real. Fica no fim de propósito: o static já serviu
+// os arquivos e as pastas (/blog, /crm, /educacional) e as rotas de API já
+// responderam, então aqui só chega o que sobrou.
+//
+// revisao.html fica de fora: ela só funciona carregada por /r/:token, que é
+// quem coloca o token na URL. Mandar /revisao pra lá entregaria uma página
+// quebrada, que é pior que um 404 honesto.
+const PAGINAS_SEM_ATALHO = new Set(["index", "revisao"]);
+const ATALHOS_HTML = new Set(
+  fs.readdirSync(path.join(__dirname, "public"))
+    .filter(f => f.endsWith(".html"))
+    .map(f => f.slice(0, -".html".length))
+    .filter(nome => !PAGINAS_SEM_ATALHO.has(nome))
+);
+
+app.get("/:pagina", (req, res, next) => {
+  if (!ATALHOS_HTML.has(req.params.pagina)) return next();
+  const query = req.originalUrl.slice(req.path.length); // preserva ?upgrade=sucesso
+  res.redirect(301, `/${req.params.pagina}.html${query}`);
+});
+
 app.use((err, req, res, next) => {
   if (err) return res.status(400).json({ error: err.message || "Erro na requisição" });
   next();
