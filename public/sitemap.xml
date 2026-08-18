@@ -1,43 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- Sempre com "www": o dominio sem www so redireciona a raiz; qualquer
+     caminho profundo nele devolve 404. Sitemap com URL quebrada faz o Google
+     descartar a pagina. -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://minutei.app.br/</loc>
-    <changefreq>weekly</changefreq>
-    <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>https://minutei.app.br/crm/</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://minutei.app.br/corretor.html</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://minutei.app.br/blog/</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://minutei.app.br/blog/modelo-contrato-locacao-residencial.html</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://minutei.app.br/blog/clausulas-contrato-compra-e-venda-imovel.html</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://minutei.app.br/blog/caucao-ou-fiador.html</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://minutei.app.br/blog/como-fazer-contrato-imovel.html</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
+  <url><loc>https://www.minutei.app.br/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://www.minutei.app.br/crm/</loc><lastmod>2026-08-18</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://www.minutei.app.br/educacional/</loc><lastmod>2026-08-18</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://www.minutei.app.br/corretor.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.minutei.app.br/blog/</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://www.minutei.app.br/blog/modelo-contrato-locacao-residencial.html</loc><priority>0.6</priority></url>
+  <url><loc>https://www.minutei.app.br/blog/clausulas-contrato-compra-e-venda-imovel.html</loc><priority>0.6</priority></url>
+  <url><loc>https://www.minutei.app.br/blog/caucao-ou-fiador.html</loc><priority>0.6</priority></url>
+  <url><loc>https://www.minutei.app.br/blog/como-fazer-contrato-imovel.html</loc><priority>0.6</priority></url>
+  <url><loc>https://www.minutei.app.br/blog/como-analisar-fiador.html</loc><priority>0.6</priority></url>
+  <url><loc>https://www.minutei.app.br/blog/devolucao-caucao-corrigida.html</loc><priority>0.6</priority></url>
+  <url><loc>https://www.minutei.app.br/blog/manutencao-imovel-locacao.html</loc><priority>0.6</priority></url>
+  <url><loc>https://www.minutei.app.br/blog/prazo-de-locacao.html</loc><priority>0.6</priority></url>
+  <url><loc>https://www.minutei.app.br/blog/seguro-incendio-locacao.html</loc><priority>0.6</priority></url>
 </urlset>

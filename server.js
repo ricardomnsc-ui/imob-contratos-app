@@ -228,6 +228,13 @@ app.use(session({
   saveUninitialized: false,
   cookie: { httpOnly: true, maxAge: 30 * 24 * 60 * 60 * 1000, sameSite: "lax", secure: IS_PROD },
 }));
+// ================= CAMINHOS DOS PRODUTOS =================
+// A home vende Contratos, e /contratos e o mesmo produto. Em vez de servir a
+// mesma pagina em dois enderecos (conteudo duplicado, que divide o SEO entre
+// os dois), /contratos redireciona pra raiz — o caminho funciona e existe uma
+// URL canonica so.
+app.get(["/contratos", "/contratos/"], (req, res) => res.redirect(301, "/"));
+
 app.use(express.static(path.join(__dirname, "public")));
 app.use("/uploads", express.static(UPLOAD_DIR));
 

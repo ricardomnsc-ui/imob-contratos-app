@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Minutei Educacional — guias práticos para corretores e imobiliárias</title>
+<meta name="description" content="Guias práticos sobre contratos, locação e rotina imobiliária. Escritos por quem constrói o sistema que gera esses contratos todo dia." />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Minutei Educacional — guias práticos para corretores" />
+<meta property="og:description" content="Guias práticos sobre contratos, locação e rotina imobiliária, escritos por quem constrói o sistema." />
+<meta property="og:url" content="https://www.minutei.app.br/educacional/" />
+<meta property="og:image" content="https://www.minutei.app.br/brand/og-image.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<link rel="icon" type="image/png" sizes="32x32" href="/brand/favicon-32.png" />
+<link rel="apple-touch-icon" href="/brand/apple-touch-icon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0d1b2a; --brand:#ff6b00; --brand-dark:#e05c00; --brand-soft:#fff2e8;
+    --brand-text:#a84300; --ink:#0d1b2a; --muted:#5b6b7f; --border:#e4e9f0;
+    --bg:#f5f5f5; --paper:#fff;
+    --sombra-sm:0 1px 2px rgba(13,27,42,.06); --sombra-md:0 6px 20px rgba(13,27,42,.08);
+    --sans:"Manrope",-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{font-family:var(--sans);margin:0;background:var(--bg);color:var(--ink);
+    -webkit-font-smoothing:antialiased;line-height:1.55}
+  a{color:inherit}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+
+  header.topo{background:var(--paper);border-bottom:1px solid var(--border)}
+  header.topo .bar{display:flex;align-items:center;justify-content:space-between;
+    gap:16px;padding:16px 0;flex-wrap:wrap}
+  .brand-logo{height:32px;width:auto;display:block}
+  header.topo nav{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .navlink{padding:8px 12px;border-radius:8px;font-size:14px;font-weight:500;
+    color:var(--muted);text-decoration:none}
+  .navlink:hover{color:var(--ink);background:var(--bg)}
+  .btn{display:inline-block;padding:11px 20px;border-radius:10px;font-size:14.5px;
+    font-weight:700;text-decoration:none;border:1px solid transparent}
+  .btn-primary{background:var(--brand);color:#fff}
+  .btn-primary:hover{background:var(--brand-dark)}
+  .btn-ghost{border-color:var(--border);color:var(--ink);background:var(--paper)}
+
+  .hero{padding:64px 0 46px;text-align:center}
+  .olho{font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--brand-text);font-weight:700;margin-bottom:16px}
+  h1{font-size:clamp(32px,5.6vw,50px);line-height:1.08;letter-spacing:-.022em;
+    font-weight:800;margin:0 0 18px;text-wrap:balance}
+  .hero p{font-size:19px;color:var(--muted);max-width:60ch;margin:0 auto;line-height:1.5}
+
+  section{padding:20px 0 56px}
+  h2{font-size:clamp(23px,3.4vw,30px);line-height:1.15;letter-spacing:-.018em;
+    font-weight:800;margin:0 0 10px;text-wrap:balance}
+  .sub{color:var(--muted);font-size:15.5px;margin:0 0 28px;max-width:62ch}
+
+  .grade{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px}
+  .card{background:var(--paper);border:1px solid var(--border);border-radius:14px;
+    padding:26px;box-shadow:var(--sombra-sm);display:flex;flex-direction:column}
+  .card .selo{font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    font-weight:700;color:var(--brand-text);margin-bottom:12px}
+  .card h3{font-size:20px;font-weight:800;letter-spacing:-.012em;margin:0 0 8px;line-height:1.2}
+  .card p{color:var(--muted);font-size:14.5px;margin:0 0 16px}
+  .card ul{margin:0 0 20px;padding-left:20px;color:var(--muted);font-size:14px}
+  .card li{margin-bottom:5px}
+  .card .rodape{margin-top:auto;display:flex;align-items:center;
+    justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .preco{font-size:22px;font-weight:800;letter-spacing:-.01em}
+  .preco .de{font-size:13px;font-weight:500;color:var(--muted);
+    text-decoration:line-through;margin-right:6px}
+  .card.embreve{background:#fafbfc;border-style:dashed;box-shadow:none}
+  .card.embreve h3{color:var(--muted)}
+  .aviso-breve{font-size:13px;font-weight:600;color:var(--muted)}
+
+  .porque{background:var(--paper);border-top:1px solid var(--border);
+    border-bottom:1px solid var(--border);padding:50px 0}
+  .porque .grade{grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:26px}
+  .porque .item h3{font-size:16.5px;font-weight:700;margin:0 0 6px}
+  .porque .item p{color:var(--muted);font-size:14.5px;margin:0}
+
+  .lista{background:var(--navy);color:#fff;border-radius:16px;padding:40px 34px;
+    margin:44px 0;text-align:center}
+  .lista h2{color:#fff}
+  .lista p{color:#aebbc9;max-width:52ch;margin:0 auto 22px}
+  .form{display:flex;gap:10px;max-width:440px;margin:0 auto;flex-wrap:wrap}
+  .form input{flex:1;min-width:200px;padding:13px 15px;border-radius:10px;
+    border:1px solid transparent;font-family:inherit;font-size:15px}
+  .form input:focus{outline:2px solid var(--brand);outline-offset:1px}
+  .form .btn{flex-shrink:0}
+  .obs{font-size:12.5px;color:#8b9aab;margin-top:14px}
+
+  footer.rodape{background:var(--navy);color:#93a4b8;padding:36px 0;font-size:14px}
+  footer.rodape .bar{display:flex;justify-content:space-between;align-items:center;
+    gap:16px;flex-wrap:wrap}
+  footer.rodape a{color:#c9d4e0;text-decoration:none}
+  footer.rodape a:hover{color:#fff}
+  @media(max-width:640px){.hero{padding:44px 0 34px}.lista{padding:32px 22px}}
+</style>
+
+<style id="mn-barra-produtos">
+  /* Barra de produtos — autocontida de proposito: nao usa as variaveis de
+     cada pagina, que sao diferentes entre si. Assim ela fica identica em
+     todas e nao entra em conflito com o CSS local. */
+  .mn-produtos{background:#0d1b2a;border-bottom:1px solid rgba(255,255,255,.08);
+    font-family:"Manrope",-apple-system,"Segoe UI",Roboto,sans-serif;}
+  .mn-produtos-in{max-width:1080px;margin:0 auto;padding:0 24px;display:flex;
+    align-items:center;gap:4px;flex-wrap:wrap;min-height:38px;}
+  .mn-produtos .mn-rot{font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+    color:#7c8ea3;font-weight:700;margin-right:10px;}
+  .mn-produtos a{display:inline-block;padding:6px 12px;border-radius:999px;
+    font-size:12.5px;font-weight:600;color:#b8c4d2;text-decoration:none;
+    transition:background .15s,color .15s;white-space:nowrap;}
+  .mn-produtos a:hover{color:#fff;background:rgba(255,255,255,.08);}
+  .mn-produtos a.mn-aqui{color:#fff;background:rgba(255,107,0,.22);}
+  .mn-produtos a .mn-tag{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;
+    background:#ff6b00;color:#fff;border-radius:4px;padding:1px 5px;margin-left:6px;
+    vertical-align:1px;font-weight:700;}
+  @media(max-width:640px){
+    .mn-produtos-in{padding:6px 14px;gap:2px}
+    .mn-produtos .mn-rot{width:100%;margin:0 0 2px}
+  }
+</style>
+</head>
+<body>
+<div class="mn-produtos"><div class="mn-produtos-in"><span class="mn-rot">Minutei</span><a href="/" class="">Contratos</a><a href="/crm/" class="">CRM<span class="mn-tag">novo</span></a><a href="/educacional/" class="mn-aqui" aria-current="page">Educacional</a></div></div>
+
+<header class="topo">
+  <div class="wrap bar">
+    <a href="/educacional/" class="brand"><img src="/brand/minutei-logo-dark.png" alt="Minutei" class="brand-logo" /></a>
+    <nav>
+      <a class="navlink" href="#guias">Guias</a>
+      <a class="navlink" href="/blog/">Blog</a>
+      <a class="navlink" href="/">Minutei Contratos</a>
+      <a class="btn btn-primary" href="#lista">Avise-me no lançamento</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+  <section class="hero">
+    <div class="olho">Minutei Educacional</div>
+    <h1>Quem escreve o contrato deveria entender cada cláusula dele</h1>
+    <p>Guias práticos sobre contratos, locação e rotina imobiliária — escritos por quem constrói,
+    todo dia, o sistema que gera esses documentos.</p>
+  </section>
+
+  <section id="guias">
+    <h2>Os guias</h2>
+    <p class="sub">Material direto, sem juridiquês, feito para usar entre uma visita e outra.</p>
+
+    <div class="grade">
+      <article class="card">
+        <div class="selo">Guia · Compra e venda</div>
+        <h3>O contrato que custa sua comissão</h3>
+        <p>Os 10 pontos onde a compra e venda desanda — e o que escrever para fechar cada um antes da assinatura.</p>
+        <ul>
+          <li>As 10 cláusulas, uma a uma</li>
+          <li>O que costuma faltar e o que isso custa</li>
+          <li>Modelo de cláusula para o financiamento negado</li>
+          <li>A cláusula de corretagem que protege o seu dinheiro</li>
+          <li>Checklist final de 16 itens</li>
+        </ul>
+        <div class="rodape">
+          <span class="preco"><span class="de">R$ 47</span>R$ 27</span>
+          <a class="btn btn-primary" href="#lista">Quero avisar quando abrir</a>
+        </div>
+      </article>
+
+      <article class="card embreve">
+        <div class="selo">Em preparo</div>
+        <h3>Locação sem dor de cabeça</h3>
+        <p>Garantias, reajuste, benfeitorias e rescisão à luz da Lei do Inquilinato — e o que o contrato precisa dizer sobre cada uma.</p>
+        <ul>
+          <li>Caução, fiador, seguro fiança e título: qual usar</li>
+          <li>Reajuste e revisão sem conflito</li>
+          <li>Benfeitorias: quem paga, quem leva</li>
+          <li>Vistoria de entrada e saída</li>
+        </ul>
+        <div class="rodape"><span class="aviso-breve">Em breve</span></div>
+      </article>
+
+      <article class="card embreve">
+        <div class="selo">Em preparo</div>
+        <h3>A rotina que fecha mais negócios</h3>
+        <p>Como organizar carteira, follow-up e comissões sem depender da memória — e o que medir para saber onde você perde venda.</p>
+        <ul>
+          <li>Funil realista para quem trabalha sozinho</li>
+          <li>Follow-up que não parece cobrança</li>
+          <li>Controle de comissão e recebíveis</li>
+        </ul>
+        <div class="rodape"><span class="aviso-breve">Em breve</span></div>
+      </article>
+    </div>
+  </section>
+</div>
+
+<div class="porque">
+  <div class="wrap">
+    <h2>Por que confiar neste material</h2>
+    <p class="sub">Não é conteúdo de internet reciclado.</p>
+    <div class="grade">
+      <div class="item">
+        <h3>Sai da prática, não da teoria</h3>
+        <p>Cada ponto veio de um problema real encontrado gerando contratos de verdade — inclusive erros que só aparecem no cartório.</p>
+      </div>
+      <div class="item">
+        <h3>Escrito para corretor</h3>
+        <p>Sem juridiquês e sem enrolação. O que importa é o que você precisa conferir antes de mandar o cliente assinar.</p>
+      </div>
+      <div class="item">
+        <h3>Com os dispositivos citados</h3>
+        <p>Quando cita a lei, diz qual artigo. Você confere, mostra ao cliente, e usa como argumento.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="lista" id="lista">
+    <h2>Entre na lista</h2>
+    <p>Avisamos quando cada guia sair, com preço de lançamento para quem estiver na lista.</p>
+    <form class="form" id="formLista">
+      <input type="email" name="email" required placeholder="seu@email.com.br" aria-label="Seu e-mail" />
+      <button class="btn btn-primary" type="submit">Quero ser avisado</button>
+    </form>
+    <p class="obs">Sem spam. Só aviso de material novo.</p>
+  </div>
+</div>
+
+<footer class="rodape">
+  <div class="wrap bar">
+    <span>© Minutei — contratos imobiliários em minutos</span>
+    <span>
+      <a href="/">Contratos</a> ·
+      <a href="/crm/">CRM</a> ·
+      <a href="/blog/">Blog</a>
+    </span>
+  </div>
+</footer>
+
+<script>
+  // Sem back-end de lista ainda: o formulario abre o e-mail com o assunto
+  // pronto. É honesto e funciona hoje; quando houver ferramenta de e-mail,
+  // troca-se só este trecho.
+  document.getElementById("formLista").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var email = e.target.email.value.trim();
+    if (!email) return;
+    window.location.href = "mailto:contato@minutei.app.br"
+      + "?subject=" + encodeURIComponent("Quero entrar na lista do Minutei Educacional")
+      + "&body=" + encodeURIComponent("Meu e-mail: " + email + "\n\nAvise-me quando os guias saírem.");
+  });
+</script>
+</body>
+</html>

@@ -2,5 +2,6 @@ User-agent: *
 Allow: /
 Disallow: /app.html
 Disallow: /api/
+Disallow: /r/
 
-Sitemap: https://minutei.app.br/sitemap.xml
+Sitemap: https://www.minutei.app.br/sitemap.xml
