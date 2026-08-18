@@ -1478,6 +1478,9 @@ app.get("/api/ebook/compra/:sessionId", async (req, res) => {
     if (!nova) return res.status(404).json({ error: "Pagamento não localizado." });
     res.json({ token: nova.token, email: nova.email, titulo: nova.ebook.titulo });
   } catch (err) {
+    // Sessão que o Stripe não conhece é link inválido, não falha nossa: dizer
+    // "tente de novo" mandaria a pessoa insistir num botão que nunca vai dar certo.
+    if (err && err.code === "resource_missing") return res.status(404).json({ error: "Pagamento não localizado." });
     console.error("Falha ao liberar e-book:", err.message);
     res.status(502).json({ error: "Não foi possível confirmar o pagamento agora." });
   }
