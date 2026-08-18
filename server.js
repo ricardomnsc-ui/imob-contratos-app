@@ -153,6 +153,11 @@ app.post("/api/billing/webhook", express.raw({ type: "application/json" }), asyn
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object;
+        // Compra avulsa de e-book: não tem tenant nem plano, tem produto.
+        if (session.mode === "payment" && session.metadata && session.metadata.ebook) {
+          await registrarCompraDaSessao(session.id);
+          break;
+        }
         const tenantId = session.metadata && session.metadata.tenantId;
         const planoId = session.metadata && session.metadata.plano;
         if (tenantId && planoId) {
@@ -1340,6 +1345,164 @@ app.patch("/api/compartilhamentos/:token/situacao", requireAuth, async (req, res
 app.delete("/api/compartilhamentos/:token", requireAuth, async (req, res) => {
   await store.deleteShare(req.params.token, req.user.tenantId);
   res.json({ ok: true });
+});
+
+// ================= LOJA DE E-BOOKS =================
+// Venda avulsa, fora da assinatura. O preço baixo é proposital: não é a receita
+// que importa e sim o filtro — quem paga por um guia de contrato é corretor com
+// a dor, e o Stripe entrega o e-mail dessa pessoa junto com o pagamento.
+//
+// O PDF mora FORA de public/ de propósito. Em public/ ele seria servido pelo
+// express.static a quem descobrisse a URL, e aí a venda seria decorativa.
+const EBOOKS_DIR = path.join(__dirname, "arquivos", "ebooks");
+
+// Preço em centavos. Sai daqui, nunca do que o navegador manda: preço enviado
+// pelo cliente é preço que o cliente escolhe.
+const EBOOK_PRECO_CENTAVOS = Number(process.env.EBOOK_PRECO_CENTAVOS || 499);
+// Preço depois da promoção e data em que ela acaba. Só existe urgência quando
+// as DUAS estão configuradas — sem isso a página não promete prazo nenhum, em
+// vez de exibir uma contagem que não muda nada quando zera.
+const EBOOK_PRECO_APOS_CENTAVOS = Number(process.env.EBOOK_PRECO_APOS_CENTAVOS || 0);
+const EBOOK_PROMO_ATE = process.env.EBOOK_PROMO_ATE || "";
+
+const EBOOKS = {
+  "compra-e-venda": {
+    slug: "compra-e-venda",
+    titulo: "O contrato que custa sua comissão",
+    subtitulo: "Guia prático de compra e venda de imóveis · 21 páginas",
+    arquivo: "o-contrato-que-custa-sua-comissao.pdf",
+  },
+};
+
+function promoVigente() {
+  if (!EBOOK_PROMO_ATE || !EBOOK_PRECO_APOS_CENTAVOS) return false;
+  const fim = new Date(EBOOK_PROMO_ATE);
+  if (Number.isNaN(fim.getTime())) return false;
+  return Date.now() < fim.getTime();
+}
+
+// Quanto custa AGORA. Passada a data da promoção, passa a valer o preço cheio —
+// é o que torna o prazo verdadeiro em vez de enfeite.
+function precoEbook() {
+  if (EBOOK_PRECO_APOS_CENTAVOS && EBOOK_PROMO_ATE && !promoVigente()) return EBOOK_PRECO_APOS_CENTAVOS;
+  return EBOOK_PRECO_CENTAVOS;
+}
+
+function arquivoDoEbook(ebook) {
+  return path.join(EBOOKS_DIR, ebook.arquivo);
+}
+
+function ebookDisponivel(ebook) {
+  return fs.existsSync(arquivoDoEbook(ebook));
+}
+
+// Estado da vitrine: preço vigente, prazo e se o arquivo já está no servidor.
+// A página usa `disponivel` pra decidir entre vender e avisar que está saindo —
+// assim o botão de compra nunca aparece antes de existir o que entregar.
+app.get("/api/ebook/:slug", (req, res) => {
+  const ebook = EBOOKS[req.params.slug];
+  if (!ebook) return res.status(404).json({ error: "E-book não encontrado" });
+  res.json({
+    slug: ebook.slug,
+    titulo: ebook.titulo,
+    subtitulo: ebook.subtitulo,
+    disponivel: ebookDisponivel(ebook),
+    precoCentavos: precoEbook(),
+    promo: promoVigente() ? { ate: EBOOK_PROMO_ATE, precoAposCentavos: EBOOK_PRECO_APOS_CENTAVOS } : null,
+    pagamentoConfigurado: !!stripe,
+  });
+});
+
+app.post("/api/ebook/:slug/checkout", async (req, res) => {
+  const ebook = EBOOKS[req.params.slug];
+  if (!ebook) return res.status(404).json({ error: "E-book não encontrado" });
+  if (!stripe) return res.status(503).json({ error: "Pagamento indisponível no momento." });
+  if (!ebookDisponivel(ebook)) return res.status(409).json({ error: "Este guia ainda não está disponível." });
+
+  try {
+    const base = baseUrl(req);
+    const sessao = await stripe.checkout.sessions.create({
+      mode: "payment",
+      locale: "pt-BR",
+      line_items: [{
+        quantity: 1,
+        price_data: {
+          currency: "brl",
+          unit_amount: precoEbook(),
+          product_data: { name: ebook.titulo, description: ebook.subtitulo },
+        },
+      }],
+      metadata: { ebook: ebook.slug },
+      success_url: `${base}/educacional/obrigado.html?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${base}/educacional/`,
+    });
+    res.json({ url: sessao.url });
+  } catch (err) {
+    console.error("Falha ao criar checkout do e-book:", err.message);
+    res.status(502).json({ error: "Não foi possível abrir o pagamento. Tente de novo." });
+  }
+});
+
+// Troca a sessão do Stripe pelo link de download.
+//
+// Consulta o Stripe em vez de confiar na volta do navegador: quem chegar aqui
+// com um session_id inventado não recebe nada, porque quem diz se foi pago é o
+// Stripe. E cria a compra se o webhook ainda não tiver chegado — a página de
+// obrigado abre segundos depois do pagamento, às vezes na frente do webhook, e
+// o comprador não pode ficar sem o arquivo por causa dessa corrida.
+async function registrarCompraDaSessao(sessionId) {
+  const sessao = await stripe.checkout.sessions.retrieve(sessionId);
+  if (!sessao || sessao.payment_status !== "paid") return null;
+  const slug = sessao.metadata && sessao.metadata.ebook;
+  const ebook = EBOOKS[slug];
+  if (!ebook) return null;
+  const email = (sessao.customer_details && sessao.customer_details.email) || sessao.customer_email || "";
+  const token = await store.addCompra(nanoid(32), sessao.id, email, {
+    ebook: ebook.slug,
+    titulo: ebook.titulo,
+    valorCentavos: sessao.amount_total,
+    downloads: 0,
+  });
+  return { token, email, ebook };
+}
+
+app.get("/api/ebook/compra/:sessionId", async (req, res) => {
+  if (!stripe) return res.status(503).json({ error: "Pagamento indisponível no momento." });
+  try {
+    const jaTinha = await store.getCompraPorSessao(req.params.sessionId);
+    if (jaTinha) {
+      const compra = await store.getCompra(jaTinha);
+      return res.json({ token: compra.id, email: compra.email, titulo: compra.titulo });
+    }
+    const nova = await registrarCompraDaSessao(req.params.sessionId);
+    if (!nova) return res.status(404).json({ error: "Pagamento não localizado." });
+    res.json({ token: nova.token, email: nova.email, titulo: nova.ebook.titulo });
+  } catch (err) {
+    console.error("Falha ao liberar e-book:", err.message);
+    res.status(502).json({ error: "Não foi possível confirmar o pagamento agora." });
+  }
+});
+
+// O link de download em si. Sem validade: sem e-mail transacional, esse link é
+// a única via de entrega que o comprador tem — expirar significaria cobrar de
+// alguém e depois tirar o acesso.
+app.get("/api/ebook/download/:token", async (req, res) => {
+  const compra = await store.getCompra(req.params.token);
+  if (!compra) return res.status(404).send("Link inválido.");
+  const ebook = EBOOKS[compra.ebook];
+  if (!ebook || !ebookDisponivel(ebook)) return res.status(404).send("Arquivo indisponível.");
+  await store.registrarDownloadCompra(compra.id);
+  res.download(arquivoDoEbook(ebook), `${ebook.arquivo}`);
+});
+
+// Lista de quem comprou — é a captação que justificou cobrar barato. Fechada
+// para um e-mail só, definido por variável de ambiente; sem ela, a rota não
+// existe, em vez de ficar aberta esperando alguém lembrar de protegê-la.
+app.get("/api/ebook/admin/compras", requireAuth, async (req, res) => {
+  const admin = (process.env.ADMIN_EMAIL || "").trim().toLowerCase();
+  if (!admin || req.user.email.toLowerCase() !== admin) return res.status(404).json({ error: "Não encontrado" });
+  const compras = await store.getCompras();
+  res.json({ compras: compras.map(c => ({ email: c.email, titulo: c.titulo, valorCentavos: c.valorCentavos, downloads: c.downloads || 0, criadoEm: c.criadoEm })) });
 });
 
 // ================= ATALHOS SEM .html =================

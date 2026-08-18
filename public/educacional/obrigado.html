@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Seu guia está pronto — Minutei Educacional</title>
+<meta name="robots" content="noindex" />
+<link rel="icon" type="image/png" sizes="32x32" href="/brand/favicon-32.png" />
+<link rel="apple-touch-icon" href="/brand/apple-touch-icon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0d1b2a; --brand:#ff6b00; --brand-dark:#e05c00;
+    --brand-text:#a84300; --ink:#0d1b2a; --muted:#5b6b7f; --border:#e4e9f0;
+    --bg:#f5f5f5; --paper:#fff;
+    --sombra-md:0 6px 20px rgba(13,27,42,.08);
+    --sans:"Manrope",-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{font-family:var(--sans);margin:0;background:var(--bg);color:var(--ink);
+    -webkit-font-smoothing:antialiased;line-height:1.55}
+  a{color:inherit}
+  .wrap{max-width:640px;margin:0 auto;padding:0 24px}
+  header.topo{background:var(--paper);border-bottom:1px solid var(--border)}
+  header.topo .bar{display:flex;align-items:center;justify-content:center;padding:16px 0}
+  .brand-logo{height:32px;width:auto;display:block}
+
+  .painel{background:var(--paper);border:1px solid var(--border);border-radius:16px;
+    padding:38px 32px;margin:44px 0;box-shadow:var(--sombra-md);text-align:center}
+  .olho{font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--brand-text);font-weight:700;margin-bottom:14px}
+  h1{font-size:clamp(25px,4.4vw,33px);line-height:1.12;letter-spacing:-.02em;
+    font-weight:800;margin:0 0 14px;text-wrap:balance}
+  .painel p{color:var(--muted);font-size:15.5px;margin:0 auto 8px;max-width:46ch}
+  .btn{display:inline-block;padding:14px 26px;border-radius:10px;font-size:16px;
+    font-weight:700;text-decoration:none;border:1px solid transparent;cursor:pointer;
+    font-family:inherit}
+  .btn-primary{background:var(--brand);color:#fff}
+  .btn-primary:hover{background:var(--brand-dark)}
+  .btn-ghost{border-color:var(--border);color:var(--ink);background:var(--paper);
+    font-size:14.5px;padding:11px 20px}
+  .acao{margin:26px 0 0}
+
+  .guardar{background:#fff8f2;border:1px solid #ffd9bd;border-radius:12px;
+    padding:16px 18px;margin:26px 0 0;text-align:left}
+  .guardar strong{display:block;font-size:14px;margin-bottom:8px}
+  .guardar .link{display:block;width:100%;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:12.5px;padding:10px 12px;border-radius:8px;border:1px solid var(--border);
+    background:var(--paper);color:var(--ink);word-break:break-all}
+  .guardar .copiar{margin-top:10px}
+  .erro{background:#fef3f2;border:1px solid #fecdca;color:#b42318;border-radius:12px;
+    padding:16px 18px;margin:22px 0 0;font-size:14.5px;text-align:left}
+  .sumiu{display:none}
+  .depois{color:var(--muted);font-size:14px;margin-top:30px}
+  footer.rodape{background:var(--navy);color:#93a4b8;padding:30px 0;font-size:13.5px;text-align:center}
+  footer.rodape a{color:#c9d4e0;text-decoration:none}
+</style>
+</head>
+<body>
+
+<header class="topo">
+  <div class="wrap bar">
+    <a href="/educacional/"><img src="/brand/minutei-logo-dark.png" alt="Minutei" class="brand-logo" /></a>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="painel">
+
+    <div id="carregando">
+      <div class="olho">Confirmando</div>
+      <h1>Só um instante…</h1>
+      <p>Estamos confirmando seu pagamento com o Stripe.</p>
+    </div>
+
+    <div id="pronto" class="sumiu">
+      <div class="olho">Pagamento confirmado</div>
+      <h1>Seu guia está pronto</h1>
+      <p id="recibo"></p>
+      <div class="acao">
+        <a class="btn btn-primary" id="btnBaixar" href="#">Baixar o PDF</a>
+      </div>
+
+      <!-- Sem e-mail transacional, este link é a única via de entrega que o
+           comprador tem. Por isso ele aparece na tela, dá pra copiar e não
+           expira — em vez de sumir junto com a aba. -->
+      <div class="guardar">
+        <strong>Guarde este link — é o seu acesso permanente</strong>
+        <code class="link" id="linkPermanente"></code>
+        <button class="btn btn-ghost copiar" id="btnCopiar" type="button">Copiar link</button>
+      </div>
+
+      <p class="depois">Problema para baixar? Escreva para
+        <a href="mailto:contato@minutei.app.br">contato@minutei.app.br</a> com o e-mail da compra.</p>
+    </div>
+
+    <div id="falhou" class="sumiu">
+      <div class="olho">Ops</div>
+      <h1>Não conseguimos confirmar agora</h1>
+      <div class="erro" id="msgErro"></div>
+      <div class="acao">
+        <button class="btn btn-primary" id="btnTentar" type="button">Tentar de novo</button>
+      </div>
+      <p class="depois">Se o valor já saiu do seu cartão, o pagamento está feito — escreva para
+        <a href="mailto:contato@minutei.app.br">contato@minutei.app.br</a> que liberamos o acesso na mão.</p>
+    </div>
+
+  </div>
+</div>
+
+<footer class="rodape">
+  <div class="wrap">
+    <a href="/educacional/">Minutei Educacional</a> · <a href="/">Contratos</a> · <a href="/crm/">CRM</a>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var sessionId = new URLSearchParams(location.search).get("session_id");
+  var elCarregando = document.getElementById("carregando");
+  var elPronto = document.getElementById("pronto");
+  var elFalhou = document.getElementById("falhou");
+  var elErro = document.getElementById("msgErro");
+
+  function mostrar(qual) {
+    elCarregando.className = qual === "carregando" ? "" : "sumiu";
+    elPronto.className = qual === "pronto" ? "" : "sumiu";
+    elFalhou.className = qual === "falhou" ? "" : "sumiu";
+  }
+
+  function falhar(msg) {
+    elErro.textContent = msg;
+    mostrar("falhou");
+  }
+
+  function liberar(dados) {
+    var url = location.origin + "/api/ebook/download/" + dados.token;
+    document.getElementById("btnBaixar").href = url;
+    document.getElementById("linkPermanente").textContent = url;
+    document.getElementById("recibo").textContent =
+      dados.titulo + (dados.email ? " · recibo enviado pelo Stripe para " + dados.email : "");
+    document.getElementById("btnCopiar").addEventListener("click", function () {
+      var btn = this;
+      navigator.clipboard.writeText(url).then(function () {
+        btn.textContent = "Link copiado";
+        setTimeout(function () { btn.textContent = "Copiar link"; }, 2500);
+      }).catch(function () {
+        btn.textContent = "Copie o link acima";
+      });
+    });
+    mostrar("pronto");
+  }
+
+  function confirmar() {
+    mostrar("carregando");
+    fetch("/api/ebook/compra/" + encodeURIComponent(sessionId))
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (x) {
+        if (!x.ok || !x.j.token) throw new Error(x.j.error || "Pagamento não localizado.");
+        liberar(x.j);
+      })
+      .catch(function (err) { falhar(err.message); });
+  }
+
+  if (!sessionId) {
+    falhar("Este endereço precisa vir da tela de pagamento. Abra o guia pela página do Educacional.");
+    return;
+  }
+  document.getElementById("btnTentar").addEventListener("click", confirmar);
+  confirmar();
+})();
+</script>
+</body>
+</html>

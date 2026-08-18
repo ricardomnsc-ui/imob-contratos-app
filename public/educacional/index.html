@@ -70,6 +70,9 @@
   .preco{font-size:22px;font-weight:800;letter-spacing:-.01em}
   .preco .de{font-size:13px;font-weight:500;color:var(--muted);
     text-decoration:line-through;margin-right:6px}
+  .prazo{font-size:13px;color:var(--brand-text);font-weight:600;margin:14px 0 0}
+  .erro-compra{font-size:13.5px;color:#b42318;background:#fef3f2;border:1px solid #fecdca;
+    border-radius:8px;padding:10px 12px;margin:14px 0 0}
   .card.embreve{background:#fafbfc;border-style:dashed;box-shadow:none}
   .card.embreve h3{color:var(--muted)}
   .aviso-breve{font-size:13px;font-weight:600;color:var(--muted)}
@@ -154,18 +157,22 @@
       <article class="card">
         <div class="selo">Guia · Compra e venda</div>
         <h3>O contrato que custa sua comissão</h3>
-        <p>Os 10 pontos onde a compra e venda desanda — e o que escrever para fechar cada um antes da assinatura.</p>
+        <p>Cada cláusula da compra e venda — o que costuma faltar, o que isso custa e a pergunta
+        que confirma se a minuta já pode seguir.</p>
         <ul>
-          <li>As 10 cláusulas, uma a uma</li>
-          <li>O que costuma faltar e o que isso custa</li>
-          <li>Modelo de cláusula para o financiamento negado</li>
-          <li>A cláusula de corretagem que protege o seu dinheiro</li>
-          <li>Checklist final de 16 itens</li>
+          <li>Cláusula por cláusula: objeto, pagamento, posse, legalização, ônus, corretagem, rescisão e assinatura</li>
+          <li>Documentos e certidões antes de redigir — o capítulo que evita a venda anulada</li>
+          <li>A regra de ouro: nunca deixar parcela para depois da escritura</li>
+          <li>A cláusula de corretagem que protege a sua comissão</li>
+          <li>Checklist final antes de gerar a minuta</li>
+          <li>21 páginas, com os artigos do Código Civil citados</li>
         </ul>
         <div class="rodape">
-          <span class="preco"><span class="de">R$ 47</span>R$ 27</span>
-          <a class="btn btn-primary" href="#lista">Quero avisar quando abrir</a>
+          <span class="preco" id="precoGuia">&nbsp;</span>
+          <button class="btn btn-primary" id="btnComprar" type="button" disabled>Carregando…</button>
         </div>
+        <p class="prazo" id="prazoGuia" hidden></p>
+        <p class="erro-compra" id="erroCompra" hidden></p>
       </article>
 
       <article class="card embreve">
@@ -244,6 +251,67 @@
   // Sem back-end de lista ainda: o formulario abre o e-mail com o assunto
   // pronto. É honesto e funciona hoje; quando houver ferramenta de e-mail,
   // troca-se só este trecho.
+  // ================= VITRINE DO GUIA =================
+  // Preco e disponibilidade vem do servidor. A pagina nunca escolhe quanto
+  // custa nem decide sozinha que o arquivo existe — se o PDF ainda nao subiu,
+  // o botao vira "avise-me" em vez de vender o que nao da pra entregar.
+  var GUIA = "compra-e-venda";
+  var elPreco = document.getElementById("precoGuia");
+  var elBtn = document.getElementById("btnComprar");
+  var elPrazo = document.getElementById("prazoGuia");
+  var elErro = document.getElementById("erroCompra");
+
+  function moeda(centavos) {
+    return (centavos / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  }
+  function dia(iso) {
+    var d = new Date(iso);
+    return isNaN(d) ? "" : d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+  }
+  function mostrarErro(msg) {
+    elErro.textContent = msg;
+    elErro.hidden = false;
+  }
+
+  function paraLista(texto) {
+    elPreco.textContent = "Em breve";
+    elPreco.style.fontSize = "17px";
+    elBtn.textContent = texto;
+    elBtn.disabled = false;
+    elBtn.addEventListener("click", function () { location.hash = "#lista"; });
+  }
+
+  fetch("/api/ebook/" + GUIA)
+    .then(function (r) { return r.json(); })
+    .then(function (g) {
+      if (!g.disponivel || !g.pagamentoConfigurado) return paraLista("Quero ser avisado");
+      elPreco.textContent = moeda(g.precoCentavos);
+      elBtn.textContent = "Comprar agora";
+      elBtn.disabled = false;
+      if (g.promo) {
+        elPrazo.textContent = "Preço de lançamento até " + dia(g.promo.ate)
+          + " · depois passa a " + moeda(g.promo.precoAposCentavos) + ".";
+        elPrazo.hidden = false;
+      }
+      elBtn.addEventListener("click", function () {
+        elErro.hidden = true;
+        elBtn.disabled = true;
+        elBtn.textContent = "Abrindo pagamento…";
+        fetch("/api/ebook/" + GUIA + "/checkout", { method: "POST" })
+          .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+          .then(function (x) {
+            if (!x.ok || !x.j.url) throw new Error(x.j.error || "Não foi possível abrir o pagamento.");
+            location.href = x.j.url;
+          })
+          .catch(function (err) {
+            mostrarErro(err.message);
+            elBtn.disabled = false;
+            elBtn.textContent = "Comprar agora";
+          });
+      });
+    })
+    .catch(function () { paraLista("Quero ser avisado"); });
+
   document.getElementById("formLista").addEventListener("submit", function (e) {
     e.preventDefault();
     var email = e.target.email.value.trim();
