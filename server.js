@@ -407,25 +407,44 @@ app.get("/api/tenant", requireAuth, async (req, res) => {
   });
 });
 
+// Campos que o formulário da imobiliária pode gravar. O resto do tenant —
+// estado da assinatura, uso mensal, ids do Stripe — é preservado por cima do
+// registro existente.
+//
+// Antes esta rota REMONTAVA o tenant do zero a partir de uma lista fixa, e todo
+// campo fora dela era apagado ao salvar. Isso derrubava `assinaturaStatus` e
+// `assinaturaAtrasadaDesde`; como planoEfetivo() libera o plano quando não há
+// status ("assinatura anterior à checagem"), salvar os dados da imobiliária
+// devolvia acesso a uma conta inadimplente até a próxima reconferência. Partir
+// do existente resolve a classe inteira do problema, não só esses dois campos.
+const CAMPOS_IMOBILIARIA = [
+  "nome", "creci", "cnpj", "email", "endereco", "cidade", "foroPadrao",
+  "corPrimaria", "tipoConta",
+  // Conta para receber a comissão — entra no contrato, na cláusula de
+  // corretagem, pra ninguém precisar passar dado bancário por WhatsApp.
+  "pixChave", "bancoNome", "bancoAgencia", "bancoConta", "bancoTipoConta", "bancoTitular",
+];
+
+const PADRAO_IMOBILIARIA = { cidade: "Natal", foroPadrao: "Natal/RN", corPrimaria: "0D1B2A", tipoConta: "imobiliaria" };
+
 app.post("/api/tenant", requireAuth, upload.single("logo"), async (req, res) => {
   const existing = (await store.getTenant(req.user.tenantId)) || {};
-  const branding = {
-    nome: req.body.nome || existing.nome || "",
-    creci: req.body.creci || existing.creci || "",
-    cnpj: req.body.cnpj || existing.cnpj || "",
-    email: req.body.email || existing.email || "",
-    endereco: req.body.endereco || existing.endereco || "",
-    cidade: req.body.cidade || existing.cidade || "Natal",
-    foroPadrao: req.body.foroPadrao || existing.foroPadrao || "Natal/RN",
-    corPrimaria: req.body.corPrimaria || existing.corPrimaria || "0D1B2A",
-    logoPath: req.file ? `/uploads/${req.file.filename}` : existing.logoPath || null,
-    tipoConta: req.body.tipoConta || existing.tipoConta || "imobiliaria",
-    plano: existing.plano || "gratis",
-    usoMensal: existing.usoMensal || {},
-    usoIaMensal: existing.usoIaMensal || {},
-    stripeCustomerId: existing.stripeCustomerId || null,
-    stripeSubscriptionId: existing.stripeSubscriptionId || null,
-  };
+  const branding = { ...existing };
+
+  for (const campo of CAMPOS_IMOBILIARIA) {
+    // String vazia é apagamento deliberado (limpar a agência, por exemplo); só
+    // campo ausente no envio mantém o valor antigo. Sem essa distinção não dá
+    // pra remover um dado bancário errado depois de gravado.
+    if (req.body[campo] !== undefined) branding[campo] = String(req.body[campo]).trim();
+    else if (branding[campo] === undefined) branding[campo] = PADRAO_IMOBILIARIA[campo] || "";
+  }
+  if (req.file) branding.logoPath = `/uploads/${req.file.filename}`;
+  else if (branding.logoPath === undefined) branding.logoPath = null;
+
+  branding.plano = existing.plano || "gratis";
+  branding.usoMensal = existing.usoMensal || {};
+  branding.usoIaMensal = existing.usoIaMensal || {};
+
   await store.setTenant(req.user.tenantId, branding);
   res.json(branding);
 });

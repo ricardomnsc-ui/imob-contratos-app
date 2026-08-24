@@ -868,6 +868,25 @@ function renderConfig() {
           <input name="logo" type="file" accept="image/png,image/jpeg" />
           ${t.logoPath ? `<img src="${t.logoPath}" class="logo-preview" style="margin-top:8px" />` : ""}
         </div>
+
+        <div class="section-title">Conta para receber a comissão</div>
+        <p class="hint">Entra na cláusula de corretagem dos contratos de compra e venda. Com os dados no
+        contrato assinado, o vendedor tem onde conferir para quem está pagando — em vez de receber a conta
+        por mensagem na hora de transferir, que é como o golpe da conta trocada funciona.</p>
+        <div class="grid cols3">
+          <div class="field"><label>Chave PIX</label><input name="pixChave" value="${t.pixChave || ""}" placeholder="CNPJ, e-mail ou telefone" /></div>
+          <div class="field"><label>Banco</label><input name="bancoNome" value="${t.bancoNome || ""}" placeholder="Ex.: Banco do Brasil (001)" /></div>
+          <div class="field"><label>Agência</label><input name="bancoAgencia" value="${t.bancoAgencia || ""}" placeholder="0000-0" /></div>
+          <div class="field"><label>Conta</label><input name="bancoConta" value="${t.bancoConta || ""}" placeholder="00000-0" /></div>
+          <div class="field"><label>Tipo de conta</label>
+            <select name="bancoTipoConta">
+              <option value="corrente" ${t.bancoTipoConta !== "poupanca" ? "selected" : ""}>Corrente</option>
+              <option value="poupanca" ${t.bancoTipoConta === "poupanca" ? "selected" : ""}>Poupança</option>
+            </select>
+          </div>
+          <div class="field"><label>Titular da conta</label><input name="bancoTitular" value="${t.bancoTitular || ""}" placeholder="vazio = nome da ${t.tipoConta === "corretor" ? "conta" : "imobiliária"}" /></div>
+        </div>
+
         <div class="footer-actions">
           <button type="submit" class="primary">Salvar</button>
         </div>
@@ -1361,8 +1380,15 @@ function renderGerar() {
           <button type="button" class="secondary" id="btnAddParcela" style="margin-top:10px">+ adicionar parcela</button>
 
           <div class="section-title">Comissão de corretagem</div>
-          <div class="grid">
-            <div class="field"><label>Percentual (%)</label><input name="corretagem.percentual" type="number" value="5" /></div>
+          <div class="grid cols3">
+            <div class="field"><label>Forma</label>
+              <select name="corretagem.modo" id="selCorretagem">
+                <option value="percentual">Percentual sobre a venda</option>
+                <option value="valor">Valor fixo</option>
+              </select>
+            </div>
+            <div class="field" id="corretPercField"><label>Percentual (%)</label><input name="corretagem.percentual" type="number" step="0.01" value="5" /></div>
+            <div class="field" id="corretValorField" style="display:none"><label>Valor da comissão (R$)</label><input name="corretagem.valorFixo" type="number" step="0.01" placeholder="Ex.: 15000" /></div>
           </div>
         </div>
 
@@ -1457,16 +1483,28 @@ function renderGerar() {
         </div>
 
         <div class="section-title">Entrega de chaves</div>
-        <div class="grid">
-          <div class="field"><label>Modo</label>
-            <select name="entregaChaves.modo">
-              <option value="na_assinatura">Na assinatura</option>
-              <option value="ultima_parcela">Condicionada à última parcela</option>
-              <option value="data_fixa">Data fixa</option>
+        <div class="grid cols3">
+          <div class="field"><label>Quando as chaves são entregues</label>
+            <select name="entregaChaves.modo" id="selEntregaChaves">
+              <option value="na_assinatura">Na assinatura deste contrato</option>
+              ${state.tipo === "compra_venda" ? `
+              <option value="assinatura_banco">Na assinatura do contrato com o banco</option>
+              <option value="pagamento_entrada">No pagamento da entrada</option>
+              <option value="quitacao_banco">Na liberação do financiamento pelo banco</option>
+              <option value="quitacao_total">Na quitação integral do preço</option>
+              <option value="ultima_parcela">Na quitação da última parcela</option>` : ""}
+              <option value="data_fixa">Em uma data fixa</option>
+              <option value="outro">Outro (descrever)</option>
             </select>
           </div>
-          <div class="field"><label>Data</label><input name="entregaChaves.data" type="date" /></div>
+          <div class="field" id="prazoChavesField"><label>Prazo depois do evento (dias)</label><input name="entregaChaves.prazoDias" type="number" min="0" step="1" placeholder="vazio = no mesmo dia" /></div>
+          <div class="field" id="dataChavesField"><label>Data prevista (opcional)</label><input name="entregaChaves.data" type="date" /></div>
         </div>
+        <div class="field" id="descricaoChavesField" style="display:none">
+          <label>Como será a entrega</label>
+          <input name="entregaChaves.descricao" placeholder="Ex.: 15 dias após a averbação da construção na matrícula." />
+        </div>
+        <p class="hint" id="hintChaves">A entrega fica presa a um evento verificável, não a uma data solta: se a operação atrasar, a regra continua valendo. Use o prazo para casos do tipo "em até 5 dias após o evento".</p>
 
         <div class="section-title">Cláusula especial (opcional)</div>
         <div class="field">
@@ -1498,6 +1536,31 @@ function renderGerar() {
     state.layout = b.dataset.layout;
     renderGerar();
   }));
+
+  // Entrega de chaves: prazo só faz sentido depois de um evento; data fixa e
+  // "outro" não têm evento de onde contar.
+  const selChaves = el.querySelector("#selEntregaChaves");
+  const sincronizarChaves = () => {
+    const m = selChaves.value;
+    el.querySelector("#prazoChavesField").style.display = (m === "data_fixa" || m === "outro") ? "none" : "";
+    el.querySelector("#dataChavesField").style.display = m === "outro" ? "none" : "";
+    el.querySelector("#descricaoChavesField").style.display = m === "outro" ? "" : "none";
+    el.querySelector("#dataChavesField").querySelector("label").textContent =
+      m === "data_fixa" ? "Data da entrega *" : "Data prevista (opcional)";
+  };
+  selChaves.addEventListener("change", sincronizarChaves);
+  sincronizarChaves();
+
+  const selCorret = el.querySelector("#selCorretagem");
+  if (selCorret) {
+    const sincronizarCorret = () => {
+      const porValor = selCorret.value === "valor";
+      el.querySelector("#corretPercField").style.display = porValor ? "none" : "";
+      el.querySelector("#corretValorField").style.display = porValor ? "" : "none";
+    };
+    selCorret.addEventListener("change", sincronizarCorret);
+    sincronizarCorret();
+  }
 
   const isLocacao = state.tipo !== "compra_venda";
   el.querySelector("#compraVendaFields").style.display = isLocacao ? "none" : "";
@@ -1684,7 +1747,12 @@ async function handleSubmit(e) {
     tipoUso: getByPath(fd, "imovel.tipoUso") || "residencial",
     concessionarias: getByPath(fd, "imovel.concessionarias"),
   };
-  dados.entregaChaves = { modo: getByPath(fd, "entregaChaves.modo"), data: getByPath(fd, "entregaChaves.data") };
+  dados.entregaChaves = {
+    modo: getByPath(fd, "entregaChaves.modo"),
+    data: getByPath(fd, "entregaChaves.data"),
+    prazoDias: parseInt(getByPath(fd, "entregaChaves.prazoDias") || 0, 10) || 0,
+    descricao: getByPath(fd, "entregaChaves.descricao") || "",
+  };
   dados.clausulaEspecial = getByPath(fd, "clausulaEspecial");
 
   const isLocacao = state.tipo !== "compra_venda";
@@ -1740,7 +1808,11 @@ async function handleSubmit(e) {
     const valorTotalInput = parseFloat(getByPath(fd, "valor.total") || 0);
     const valorTotal = valorTotalInput || parcelas.reduce((a, p) => a + (p.valor || 0), 0);
     dados.valor = { total: valorTotal, extenso: getByPath(fd, "valor.extenso") };
-    dados.corretagem = { percentual: parseFloat(getByPath(fd, "corretagem.percentual") || 5) };
+    // Percentual e valor fixo são exclusivos: gravar os dois deixaria o
+    // documento com duas versões da comissão e nenhuma regra de desempate.
+    dados.corretagem = getByPath(fd, "corretagem.modo") === "valor"
+      ? { modo: "valor", valorFixo: parseFloat(getByPath(fd, "corretagem.valorFixo") || 0) }
+      : { modo: "percentual", percentual: parseFloat(getByPath(fd, "corretagem.percentual") || 5) };
   }
 
   const formato = (e.submitter && e.submitter.dataset.formato) || "docx";
