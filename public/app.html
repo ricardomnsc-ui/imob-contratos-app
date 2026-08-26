@@ -337,6 +337,8 @@
   .toast.error { background: #942d2d; }
   .footer-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-top: 6px; }
   .error-msg { color: #a13a3a; font-size: 13px; margin-top: 8px; min-height: 16px; }
+  .ok-msg { color: #1c6b4a; background: #eaf6f0; border: 1px solid #bfe3d1; border-radius: 8px;
+    font-size: 13px; line-height: 1.45; margin-top: 10px; padding: 10px 12px; }
 
   .auth-wrap {
     min-height: 100vh; display: flex; align-items: center; justify-content: center;
@@ -410,7 +412,8 @@ const state = {
   tipo: "compra_venda",
   docTipo: "ficha_locacao",
   layout: "padrao",
-  authMode: "login", // login | signup
+  authMode: "login", // login | signup | esqueci
+  resetToken: null,  // preenchido pelo ?redefinir= do link do e-mail
   pendingPlano: null,
   pendingCiclo: "mensal", // mensal | anual
 };
@@ -453,8 +456,103 @@ async function api(url, opts = {}) {
 }
 
 // ================= AUTH SCREENS =================
+// ================= RECUPERAÇÃO DE SENHA =================
+// Duas telas: pedir o link e escolher a nova senha. Ficam no mesmo app.html
+// porque o link do e-mail cai aqui com ?redefinir=TOKEN.
+
+function renderEsqueci() {
+  const app = document.getElementById("app");
+  app.innerHTML = `
+    <div class="auth-wrap">
+      <div class="auth-card">
+        <div class="brand"><img src="/brand/minutei-logo-dark.png" alt="Minutei" class="brand-logo" /></div>
+        <p class="hint">Informe o e-mail da conta e enviamos um link para você criar uma nova senha.</p>
+        <form id="esqueciForm">
+          <div class="field"><label>E-mail *</label><input name="email" type="email" required autocomplete="email" /></div>
+          <div class="error-msg" id="authError"></div>
+          <div class="ok-msg" id="authOk" style="display:none"></div>
+          <button type="submit" class="primary" style="width:100%">Enviar link</button>
+        </form>
+        <div class="auth-switch" style="margin-top:14px">Lembrou? <button id="toLogin">Voltar para o login</button></div>
+      </div>
+    </div>
+  `;
+  app.querySelector("#toLogin").addEventListener("click", () => { state.authMode = "login"; renderAuth(); });
+  app.querySelector("#esqueciForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const errEl = app.querySelector("#authError");
+    const okEl = app.querySelector("#authOk");
+    errEl.textContent = ""; okEl.style.display = "none";
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    try {
+      const res = await api("/api/auth/esqueci", { method: "POST", body: JSON.stringify({ email: e.target.email.value.trim() }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Não foi possível enviar agora.");
+      okEl.textContent = data.mensagem || "Se existir uma conta com esse e-mail, o link foi enviado.";
+      okEl.style.display = "";
+      e.target.querySelector('input[name="email"]').value = "";
+    } catch (err) {
+      errEl.textContent = err.message;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
+function renderRedefinir() {
+  const app = document.getElementById("app");
+  app.innerHTML = `
+    <div class="auth-wrap">
+      <div class="auth-card">
+        <div class="brand"><img src="/brand/minutei-logo-dark.png" alt="Minutei" class="brand-logo" /></div>
+        <p class="hint">Escolha uma nova senha para a sua conta.</p>
+        <form id="redefinirForm">
+          <div class="field"><label>Nova senha *</label><input name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="mínimo 8 caracteres" /></div>
+          <div class="field"><label>Repita a nova senha *</label><input name="password2" type="password" required minlength="8" autocomplete="new-password" /></div>
+          <div class="error-msg" id="authError"></div>
+          <button type="submit" class="primary" style="width:100%">Salvar nova senha</button>
+        </form>
+        <div class="auth-switch" style="margin-top:14px"><button id="toLogin">Voltar para o login</button></div>
+      </div>
+    </div>
+  `;
+  const limparUrl = () => {
+    // Tira o token da barra de endereço: ele não precisa mais existir ali, e
+    // URL fica em histórico e é o que a pessoa copia sem perceber.
+    state.resetToken = null;
+    history.replaceState({}, "", location.pathname);
+  };
+  app.querySelector("#toLogin").addEventListener("click", () => { limparUrl(); state.authMode = "login"; renderAuth(); });
+  app.querySelector("#redefinirForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const errEl = app.querySelector("#authError");
+    errEl.textContent = "";
+    const senha = e.target.password.value;
+    if (senha !== e.target.password2.value) { errEl.textContent = "As duas senhas não são iguais."; return; }
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    try {
+      const res = await api("/api/auth/redefinir", { method: "POST", body: JSON.stringify({ token: state.resetToken, password: senha }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Não foi possível redefinir a senha.");
+      state.user = data.user;
+      limparUrl();
+      toast("Senha alterada!");
+      await bootstrapApp();
+    } catch (err) {
+      errEl.textContent = err.message;
+      btn.disabled = false;
+    }
+  });
+}
+
 function renderAuth() {
   const app = document.getElementById("app");
+  // "redefinir" vem do link do e-mail e tem precedência: quem clicou ali quer
+  // trocar a senha, não ver a tela de login.
+  if (state.resetToken) return renderRedefinir();
+  if (state.authMode === "esqueci") return renderEsqueci();
   const isSignup = state.authMode === "signup";
   const plano = isSignup ? PLANOS_PAGOS[state.pendingPlano] : null;
   app.innerHTML = `
@@ -479,6 +577,7 @@ function renderAuth() {
             ? `Já tem conta? <button id="toLogin">Entrar</button>`
             : `Ainda não tem conta? <button id="toSignup">Criar conta da imobiliária</button>`}
         </div>
+        ${isSignup ? "" : `<div class="auth-switch" style="margin-top:6px"><button id="toEsqueci">Esqueci minha senha</button></div>`}
       </div>
     </div>
   `;
@@ -487,6 +586,8 @@ function renderAuth() {
   if (toLogin) toLogin.addEventListener("click", () => { state.authMode = "login"; renderAuth(); });
   const toSignup = app.querySelector("#toSignup");
   if (toSignup) toSignup.addEventListener("click", () => { state.authMode = "signup"; renderAuth(); });
+  const toEsqueci = app.querySelector("#toEsqueci");
+  if (toEsqueci) toEsqueci.addEventListener("click", () => { state.authMode = "esqueci"; renderAuth(); });
 
   app.querySelector("#authForm").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -2682,6 +2783,17 @@ function setPath(obj, path, value) {
   const planoParam = params.get("plano");
   if (PLANOS_PAGOS[planoParam]) state.pendingPlano = planoParam;
   if (params.get("ciclo") === "anual") state.pendingCiclo = "anual";
+  // Link de redefinição vence a sessão: quem chegou por ele quer trocar a
+  // senha. Sem isso, o dono de uma sessão ainda aberta clicaria no link e
+  // cairia no app, sem nunca ver a tela — e é justamente quem perdeu o acesso
+  // em outro aparelho que precisa dela.
+  const tokenReset = params.get("redefinir");
+  if (tokenReset) {
+    state.resetToken = tokenReset;
+    renderAuth();
+    return;
+  }
+
   const res = await api("/api/auth/me");
   if (res.ok) {
     const data = await res.json();

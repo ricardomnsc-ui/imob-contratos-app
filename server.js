@@ -16,6 +16,10 @@ const store = require("./lib/store");
 const { PLANOS, limitesDoPlano, precoDoPlano, mesAtual, contratosUsadosNoMes, LIMITE_IA_MENSAL, iaUsadaNoMes, planoEfetivo, DIAS_TOLERANCIA_ATRASO } = require("./lib/planos");
 const stripe = require("./lib/stripe");
 const ai = require("./lib/ai");
+// `mailer` e nao `email`: varias rotas desestruturam `const { email } = req.body`,
+// o que sombrearia o modulo dentro do handler e so quebraria quando alguem
+// tentasse enviar um e-mail ali dentro.
+const mailer = require("./lib/email");
 
 const app = express();
 const PORT = process.env.PORT || 4173;
@@ -94,14 +98,38 @@ async function tenantPorAssinatura(subId) {
 // renovar a cada evento novo do Stripe.
 async function gravarEstadoAssinatura(tenantId, tenant, sub) {
   const atrasada = sub.status === "past_due";
-  await store.setTenant(tenantId, {
+  const atrasadaDesde = atrasada ? (tenant.assinaturaAtrasadaDesde || new Date().toISOString()) : null;
+  const novoEstado = {
     ...tenant,
     assinaturaStatus: sub.status,
-    assinaturaAtrasadaDesde: atrasada
-      ? (tenant.assinaturaAtrasadaDesde || new Date().toISOString())
-      : null,
+    assinaturaAtrasadaDesde: atrasadaDesde,
     assinaturaVerificadaEm: new Date().toISOString(),
-  });
+    // Regularizou: zera o controle do aviso, pra um atraso futuro voltar a avisar.
+    avisoAtrasoEnviadoPara: atrasada ? tenant.avisoAtrasoEnviadoPara : null,
+  };
+  await store.setTenant(tenantId, novoEstado);
+
+  // Aviso de cobrança recusada. Até aqui o alerta só existia dentro do app: quem
+  // não abrisse o Minutei nos 3 dias de tolerância perdia o acesso sem nunca ter
+  // sido avisado — e o corte chegava como surpresa no meio de um contrato.
+  //
+  // O Stripe reenvia invoice.payment_failed a cada retentativa. Guardar PARA QUAL
+  // atraso o aviso saiu (e não um simples "já avisei") faz o e-mail sair uma vez
+  // por episódio: repetido enquanto for o mesmo atraso, novo se houver outro.
+  if (atrasada && novoEstado.avisoAtrasoEnviadoPara !== atrasadaDesde) {
+    const para = tenant.email || "";
+    if (para) {
+      const envio = await mailer.cobrancaFalhou({
+        para,
+        nome: tenant.nome,
+        url: `${PUBLIC_BASE_URL || "https://www.minutei.app.br"}/app.html`,
+        dias: DIAS_TOLERANCIA_ATRASO,
+      });
+      if (envio.ok) {
+        await store.setTenant(tenantId, { ...novoEstado, avisoAtrasoEnviadoPara: atrasadaDesde });
+      }
+    }
+  }
 }
 
 // Rede de segurança: webhook que não chega é normal (endpoint fora do ar,
@@ -309,6 +337,102 @@ app.post("/api/auth/login", authLimiter, async (req, res) => {
 
 app.post("/api/auth/logout", (req, res) => {
   req.session.destroy(() => res.json({ ok: true }));
+});
+
+// ================= RECUPERAÇÃO DE SENHA =================
+// Sem isto, quem esquecia a senha perdia a conta: só dava pra voltar mexendo no
+// banco na mão.
+//
+// O token vai por e-mail em texto puro, mas no banco fica só o HASH dele —
+// mesmo padrão da senha. Assim, um vazamento do banco não entrega a chave de
+// redefinição de ninguém. Vale uma hora, uma vez só.
+const VALIDADE_RESET_MIN = 60;
+
+// Limite próprio, mais apertado que o de login: aqui cada requisição dispara um
+// e-mail para terceiro, então repetir vira ferramenta de importunar alguém.
+const resetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  // Configurável porque o limite é um palpite: se um cliente legítimo travar
+  // (escritório inteiro atrás do mesmo IP, por exemplo), dá pra afrouxar sem
+  // mexer no código.
+  max: Number(process.env.LIMITE_RESET_SENHA || 5),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Muitas tentativas. Aguarde alguns minutos e tente novamente." },
+});
+
+function hashToken(token) {
+  return crypto.createHash("sha256").update(String(token)).digest("hex");
+}
+
+app.post("/api/auth/esqueci", resetLimiter, async (req, res) => {
+  const emailNorm = String((req.body && req.body.email) || "").trim().toLowerCase();
+  // Resposta idêntica exista ou não a conta. Responder "e-mail não encontrado"
+  // transformaria a tela num verificador de quem tem conta aqui.
+  const resposta = { ok: true, mensagem: "Se existir uma conta com esse e-mail, o link de redefinição foi enviado." };
+  if (!emailNorm) return res.json(resposta);
+
+  // A checagem do provedor vem ANTES de procurar a conta, e não depois: se o
+  // 503 só aparecesse quando o e-mail existe, a diferença entre 503 e 200 diria
+  // exatamente quem tem conta aqui — o vazamento que a resposta única evita.
+  // Sem provedor, a resposta é a mesma para todo mundo.
+  if (!mailer.disponivel) {
+    return res.status(503).json({ error: "O envio de e-mail ainda não está configurado. Fale com o suporte para redefinir sua senha." });
+  }
+
+  try {
+    const user = await store.getUserByEmail(emailNorm);
+    if (!user) return res.json(resposta);
+
+    const token = crypto.randomBytes(32).toString("hex");
+    await store.setUser(user.id, {
+      ...user,
+      resetTokenHash: hashToken(token),
+      resetExpiraEm: new Date(Date.now() + VALIDADE_RESET_MIN * 60 * 1000).toISOString(),
+    });
+
+    const url = `${baseUrl(req)}/app.html?redefinir=${token}`;
+    const envio = await mailer.recuperacaoSenha({ para: user.email, nome: user.nome, url, minutos: VALIDADE_RESET_MIN });
+    // Falha pontual do provedor fica no log. Devolver o erro aqui também
+    // revelaria que a conta existe — quem não tem conta nunca chega a esta linha.
+    if (!envio.ok) console.error("Recuperação de senha: e-mail não enviado —", envio.motivo);
+    res.json(resposta);
+  } catch (err) {
+    console.error("Erro na recuperação de senha:", err);
+    res.json(resposta);
+  }
+});
+
+app.post("/api/auth/redefinir", resetLimiter, async (req, res) => {
+  const { token, password } = req.body || {};
+  if (!token || !password) return res.status(400).json({ error: "Link inválido ou senha não informada." });
+  if (String(password).length < 8) return res.status(400).json({ error: "A senha precisa ter pelo menos 8 caracteres" });
+
+  try {
+    const alvo = hashToken(token);
+    const usuarios = await store.getAllUsers();
+    const lista = Array.isArray(usuarios) ? usuarios : Object.values(usuarios || {});
+    const user = lista.find(u => u && u.resetTokenHash === alvo);
+    if (!user) return res.status(400).json({ error: "Link inválido ou já utilizado. Peça um novo." });
+    if (!user.resetExpiraEm || new Date(user.resetExpiraEm) <= new Date()) {
+      return res.status(400).json({ error: "Este link expirou. Peça um novo." });
+    }
+
+    const passwordHash = await bcrypt.hash(String(password), 10);
+    // O token sai do registro no mesmo gravar da senha: é o que garante uso único.
+    const atualizado = { ...user, passwordHash, resetTokenHash: null, resetExpiraEm: null };
+    await store.setUser(user.id, atualizado);
+
+    // Avisa no e-mail que a senha mudou. Se a redefinição não partiu do dono, é
+    // por aqui que ele fica sabendo.
+    mailer.senhaAlterada({ para: user.email, nome: user.nome }).catch(() => {});
+
+    req.session.userId = user.id;
+    res.json({ user: publicUser(atualizado) });
+  } catch (err) {
+    console.error("Erro ao redefinir senha:", err);
+    res.status(500).json({ error: "Erro ao redefinir a senha" });
+  }
 });
 
 app.get("/api/auth/me", requireAuth, (req, res) => {
@@ -1475,14 +1599,34 @@ async function registrarCompraDaSessao(sessionId) {
   const slug = sessao.metadata && sessao.metadata.ebook;
   const ebook = EBOOKS[slug];
   if (!ebook) return null;
-  const email = (sessao.customer_details && sessao.customer_details.email) || sessao.customer_email || "";
-  const token = await store.addCompra(nanoid(32), sessao.id, email, {
+  // Nome local separado: `email` no escopo do módulo é o lib/email.js.
+  const emailComprador = (sessao.customer_details && sessao.customer_details.email) || sessao.customer_email || "";
+  const token = await store.addCompra(nanoid(32), sessao.id, emailComprador, {
     ebook: ebook.slug,
     titulo: ebook.titulo,
     valorCentavos: sessao.amount_total,
     downloads: 0,
   });
-  return { token, email, ebook };
+
+  // Manda o link por e-mail. A página de obrigado também mostra o link, mas ela
+  // vive uma aba: quem fechar sem copiar ficaria sem o material que pagou.
+  //
+  // Esta função é chamada por dois caminhos (webhook e página de obrigado), e o
+  // `emailEnviado` é o que impede o comprador de receber o mesmo e-mail duas
+  // vezes quando os dois chegam.
+  if (emailComprador) {
+    const compra = await store.getCompra(token);
+    if (compra && !compra.emailEnviado) {
+      const envio = await mailer.entregaEbook({
+        para: emailComprador,
+        titulo: ebook.titulo,
+        url: `${PUBLIC_BASE_URL || "https://www.minutei.app.br"}/api/ebook/download/${token}`,
+      });
+      if (envio.ok) await store.atualizarCompra(token, { emailEnviado: new Date().toISOString() });
+    }
+  }
+
+  return { token, email: emailComprador, ebook };
 }
 
 app.get("/api/ebook/compra/:sessionId", async (req, res) => {
