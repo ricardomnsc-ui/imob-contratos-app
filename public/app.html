@@ -1491,6 +1491,24 @@ function renderGerar() {
             <div class="field" id="corretPercField"><label>Percentual (%)</label><input name="corretagem.percentual" type="number" step="0.01" value="5" /></div>
             <div class="field" id="corretValorField" style="display:none"><label>Valor da comissão (R$)</label><input name="corretagem.valorFixo" type="number" step="0.01" placeholder="Ex.: 15000" /></div>
           </div>
+          <div class="grid">
+            <div class="field"><label>Quando a comissão é paga</label>
+              <select name="corretagem.pagamento" id="selCorretQuando">
+                <option value="entrada">Integralmente no pagamento da entrada</option>
+                <option value="primeira_parcela">Integralmente na primeira parcela</option>
+                <option value="assinatura">Integralmente na assinatura do contrato</option>
+                <option value="liberacao_banco">Integralmente na liberação do financiamento</option>
+                <option value="escritura">Integralmente na escritura</option>
+                <option value="quitacao_total">Integralmente na quitação do preço</option>
+                <option value="proporcional">Proporcional a cada parcela recebida</option>
+                <option value="outro">Outro (descrever)</option>
+              </select>
+            </div>
+            <div class="field" id="corretQuandoOutroField" style="display:none">
+              <label>Como foi combinado</label>
+              <input name="corretagem.pagamentoDescricao" placeholder="Ex.: 50% na entrada e 50% na escritura" />
+            </div>
+          </div>
         </div>
 
         <div id="locacaoFields" style="display:none">
@@ -1651,6 +1669,15 @@ function renderGerar() {
   };
   selChaves.addEventListener("change", sincronizarChaves);
   sincronizarChaves();
+
+  const selQuando = el.querySelector("#selCorretQuando");
+  if (selQuando) {
+    const sincronizarQuando = () => {
+      el.querySelector("#corretQuandoOutroField").style.display = selQuando.value === "outro" ? "" : "none";
+    };
+    selQuando.addEventListener("change", sincronizarQuando);
+    sincronizarQuando();
+  }
 
   const selCorret = el.querySelector("#selCorretagem");
   if (selCorret) {
@@ -1914,6 +1941,8 @@ async function handleSubmit(e) {
     dados.corretagem = getByPath(fd, "corretagem.modo") === "valor"
       ? { modo: "valor", valorFixo: parseFloat(getByPath(fd, "corretagem.valorFixo") || 0) }
       : { modo: "percentual", percentual: parseFloat(getByPath(fd, "corretagem.percentual") || 5) };
+    dados.corretagem.pagamento = getByPath(fd, "corretagem.pagamento") || "entrada";
+    dados.corretagem.pagamentoDescricao = getByPath(fd, "corretagem.pagamentoDescricao") || "";
   }
 
   const formato = (e.submitter && e.submitter.dataset.formato) || "docx";
