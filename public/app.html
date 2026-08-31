@@ -1159,6 +1159,28 @@ function pessoaFields(prefix, idx, tipoLabel) {
         <div class="field" data-pj style="display:none"><label>Cargo do representante</label><input data-f="repCargo" placeholder="Sócio-administrador, procurador..." /></div>
       </div>
       <div class="field"><label data-label-endereco>Endereço residencial completo</label><input data-f="endereco" placeholder="Rua, nº, bairro, cidade/UF, CEP" /></div>
+      ${tipoLabel === "Anuente" ? `
+      <div class="grid">
+        <div class="field"><label>Por que precisa anuir *</label>
+          <select data-f="tipoAnuencia" data-anuencia-tipo>
+            <option value="conjuge">Cônjuge do vendedor — outorga conjugal (art. 1.647)</option>
+            <option value="companheiro">Companheiro(a) em união estável</option>
+            <option value="usufrutuario">Usufrutuário(a) do imóvel</option>
+            <option value="nu_proprietario">Nu-proprietário(a)</option>
+            <option value="coproprietario">Coproprietário(a) — preferência (art. 504)</option>
+            <option value="herdeiro">Herdeiro(a) / espólio</option>
+            <option value="descendente">Descendente — venda a descendente (art. 496)</option>
+            <option value="credor_fiduciario">Credor fiduciário / banco</option>
+            <option value="outro">Outro (descrever)</option>
+          </select>
+        </div>
+        <div class="field"><label>Vínculo (opcional)</label><input data-f="vinculo" placeholder="Ex.: João Silva" /></div>
+      </div>
+      <p class="hint" style="margin-top:-4px">Em cônjuge, companheiro(a) e descendente, o vínculo é o <strong>nome do vendedor</strong> — sai no contrato como "na qualidade de cônjuge de João Silva". Nos demais casos, use como observação curta.</p>
+      <div class="field" data-anuencia-outro style="display:none">
+        <label>Com o que essa pessoa está concordando</label>
+        <input data-f="descricao" placeholder="Ex.: renuncia ao direito de passagem sobre o imóvel" />
+      </div>` : ""}
       ${tipoLabel === "Fiador" ? `
       <div class="field">
         <label style="display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer">
@@ -1186,6 +1208,23 @@ function addPersonRow(containerId, prefix, tipoLabel) {
   wireCnhUploads(container);
   wireConjugeToggle(container);
   wireTipoPessoa(container);
+  wireAnuenciaTipo(container);
+}
+
+// Mostra o campo de texto livre só quando o motivo da anuência é "outro" — nos
+// demais casos o contrato já traz o fundamento legal pronto e um campo aberto
+// ali só convidaria a reescrever pior o que a lei já diz.
+function wireAnuenciaTipo(container) {
+  container.querySelectorAll("[data-anuencia-tipo]").forEach(sel => {
+    if (sel.dataset.wired) return;
+    sel.dataset.wired = "1";
+    const card = sel.closest(".person-card");
+    const campo = card.querySelector("[data-anuencia-outro]");
+    if (!campo) return;
+    const sincronizar = () => { campo.style.display = sel.value === "outro" ? "" : "none"; };
+    sel.addEventListener("change", sincronizar);
+    sincronizar();
+  });
 }
 
 /**
@@ -1451,6 +1490,13 @@ function renderGerar() {
           <button type="button" class="secondary" id="btnAddFiador" style="margin-top:10px">+ adicionar</button>
         </div>
 
+        <div id="anuenteSection" style="display:none">
+          <div class="section-title">Anuente(s) — opcional</div>
+          <p class="hint" style="margin-top:-8px;margin-bottom:10px">Quem não vende nem compra, mas precisa concordar para a venda valer: cônjuge do vendedor, usufrutuário, coproprietário, demais descendentes, banco credor. Sem essa assinatura a venda é anulável — e isso costuma aparecer no cartório, com o comprador já tendo pago.</p>
+          <div class="row-list" id="anuentes"></div>
+          <button type="button" class="secondary" id="btnAddAnuente" style="margin-top:10px">+ adicionar anuente</button>
+        </div>
+
         <div class="section-title">Dados bancários (opcional)</div>
         <p class="hint" style="margin-top:-8px;margin-bottom:10px">Usados no recebimento de valores por PIX/transferência — em compra e venda, ou em locação sem administração pela imobiliária.</p>
         <div class="grid">
@@ -1695,6 +1741,9 @@ function renderGerar() {
   el.querySelector("#locacaoFields").style.display = isLocacao ? "" : "none";
   el.querySelector("#descricaoRegistroField").style.display = isLocacao ? "none" : "";
   el.querySelector("#fiadorSection").style.display = state.tipo === "locacao_fiador" ? "" : "none";
+  // Só compra e venda: as cláusulas de anuência que o gerador monta são
+  // específicas da alienação (vênia conjugal, preferência, art. 496).
+  el.querySelector("#anuenteSection").style.display = state.tipo === "compra_venda" ? "" : "none";
   el.querySelector("#labelVendedores").textContent = isLocacao ? "Locador(es)" : "Vendedor(es)";
   el.querySelector("#labelCompradores").textContent = isLocacao ? "Locatário(s)" : "Comprador(es)";
   if (isLocacao) {
@@ -1747,6 +1796,8 @@ function renderGerar() {
   el.querySelector("#btnAddComprador").addEventListener("click", () => addPersonRow("compradores", "comp", isLocacao ? "Locatário" : "Comprador"));
   const btnAddFiador = el.querySelector("#btnAddFiador");
   if (btnAddFiador) btnAddFiador.addEventListener("click", () => addPersonRow("fiadores", "fiad", "Fiador"));
+  const btnAddAnuente = el.querySelector("#btnAddAnuente");
+  if (btnAddAnuente) btnAddAnuente.addEventListener("click", () => addPersonRow("anuentes", "anu", "Anuente"));
   const btnAddParcela = el.querySelector("#btnAddParcela");
   if (btnAddParcela) btnAddParcela.addEventListener("click", addParcelaRow);
 
@@ -1941,6 +1992,9 @@ async function handleSubmit(e) {
     dados.corretagem = getByPath(fd, "corretagem.modo") === "valor"
       ? { modo: "valor", valorFixo: parseFloat(getByPath(fd, "corretagem.valorFixo") || 0) }
       : { modo: "percentual", percentual: parseFloat(getByPath(fd, "corretagem.percentual") || 5) };
+    // Card em branco não vira anuente: o corretor pode abrir um e desistir, e
+    // um anuente sem nome faria o contrato citar uma parte que não existe.
+    dados.anuentes = collectPessoas("anuentes").filter(a => (a.nome || "").trim());
     dados.corretagem.pagamento = getByPath(fd, "corretagem.pagamento") || "entrada";
     dados.corretagem.pagamentoDescricao = getByPath(fd, "corretagem.pagamentoDescricao") || "";
   }
@@ -2052,6 +2106,10 @@ function preencherFormulario(d) {
   preencherPessoas("vendedores", ehLocacao ? d.locadores : d.vendedores, "vend", ehLocacao ? "Locador" : "Vendedor", naoRestaurados);
   preencherPessoas("compradores", ehLocacao ? d.locatarios : d.compradores, "comp", ehLocacao ? "Locatário" : "Comprador", naoRestaurados);
   if (d.tipo === "locacao_fiador") preencherPessoas("fiadores", d.fiadores, "fiad", "Fiador", naoRestaurados);
+  if (d.tipo === "compra_venda" && d.anuentes && d.anuentes.length) {
+    preencherPessoas("anuentes", d.anuentes, "anu", "Anuente", naoRestaurados);
+    document.querySelectorAll("#anuentes [data-anuencia-tipo]").forEach(sel => sel.dispatchEvent(new Event("change", { bubbles: true })));
+  }
 
   const parcelas = (d.pagamento && d.pagamento.parcelas) || [];
   const contParcelas = document.getElementById("parcelasContainer");

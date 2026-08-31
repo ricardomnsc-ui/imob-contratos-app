@@ -856,7 +856,7 @@ const hashDocumento = (d) => crypto.createHash("sha256").update(soDigitos(d)).di
 function partesDoContrato(dados) {
   const grupos = [
     ["locadores", "Locador(a)"], ["locatarios", "Locatário(a)"], ["fiadores", "Fiador(a)"],
-    ["vendedores", "Vendedor(a)"], ["compradores", "Comprador(a)"],
+    ["vendedores", "Vendedor(a)"], ["compradores", "Comprador(a)"], ["anuentes", "Anuente"],
   ];
   const partes = [];
   for (const [chave, rotulo] of grupos) {
