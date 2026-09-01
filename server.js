@@ -904,6 +904,22 @@ app.post("/api/gerar", requireAuth, async (req, res) => {
   try {
     const { dados, formato, destinatario } = req.body;
     if (!dados) return res.status(400).json({ error: "dados são obrigatórios" });
+
+    // Rateio da corretagem que passa de 100% produziria um contrato assinado
+    // prometendo mais comissão do que existe — uma dívida que o vendedor nunca
+    // aceitou. Recusar é melhor que gerar o documento errado, e a checagem fica
+    // aqui e não só no formulário porque é o servidor que emite o documento.
+    const parceirosCorret = (dados.corretagem && dados.corretagem.parceiros) || [];
+    if (parceirosCorret.length) {
+      const soma = parceirosCorret.reduce((a, x) => a + (Number(x && x.percentual) || 0), 0);
+      if (soma > 100.0001) {
+        return res.status(400).json({ error: `A soma das participações dos parceiros é ${String(Math.round(soma * 100) / 100).replace(".", ",")}% da comissão, acima de 100%. Ajuste as porcentagens antes de gerar.` });
+      }
+      const invalido = parceirosCorret.find(x => x && String(x.nome || "").trim() && !(Number(x.percentual) > 0));
+      if (invalido) {
+        return res.status(400).json({ error: `Informe a participação de ${String(invalido.nome).trim()} na comissão (maior que zero).` });
+      }
+    }
     // "link" gera o mesmo documento, mas em vez de devolver o arquivo guarda o
     // PDF e devolve uma URL pública de revisão. Consome a cota igual às outras
     // saídas — é o mesmo contrato, só entregue de outro jeito.

@@ -1200,6 +1200,12 @@ function pessoaFields(prefix, idx, tipoLabel) {
     </div>`;
 }
 
+function addParceiroRow() {
+  const container = document.getElementById("parceiros");
+  container.insertAdjacentHTML("beforeend", parceiroRow(container.children.length));
+  wireRemoveButtons(container);
+}
+
 function addPersonRow(containerId, prefix, tipoLabel) {
   const container = document.getElementById(containerId);
   const idx = container.children.length;
@@ -1340,6 +1346,22 @@ function collectPessoas(containerId) {
     card.querySelectorAll("[data-f]").forEach(inp => obj[inp.dataset.f] = inp.value);
     return obj;
   });
+}
+
+function parceiroRow(idx) {
+  return `<div class="person-card" data-parceiro>
+    <div class="grid">
+      <div class="field"><label>Nome do parceiro *</label><input data-f="nome" placeholder="Corretor ou imobiliária parceira" /></div>
+      <div class="field"><label>CRECI</label><input data-f="creci" placeholder="0000-F ou 0000-J" /></div>
+      <div class="field"><label>CPF ou CNPJ</label><input data-f="documento" placeholder="000.000.000-00" /></div>
+      <div class="field"><label>Fatia da comissão (%) *</label><input data-f="percentual" type="number" step="0.01" min="0.01" max="100" placeholder="Ex.: 50" data-rateio /></div>
+    </div>
+    <div class="field"><label>Chave PIX do parceiro (opcional)</label><input data-f="pixChave" placeholder="Onde ele recebe a parte dele" /></div>
+    <div class="row-actions">
+      <span style="font-size:12px;color:var(--muted)">Parceiro ${idx + 1}</span>
+      <button type="button" class="link" data-remove-person>remover</button>
+    </div>
+  </div>`;
 }
 
 function parcelaRow(idx) {
@@ -1555,6 +1577,19 @@ function renderGerar() {
               <input name="corretagem.pagamentoDescricao" placeholder="Ex.: 50% na entrada e 50% na escritura" />
             </div>
           </div>
+
+          <div class="field" style="margin-top:4px">
+            <label style="display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer">
+              <input type="checkbox" id="chkParceria" style="width:auto" />
+              Venda em parceria com outro corretor ou imobiliária
+            </label>
+          </div>
+          <div id="parceriaFields" style="display:none">
+            <p class="hint" style="margin-top:-4px;margin-bottom:10px">O parceiro entra no contrato como intermediário, com a fatia dele da comissão em % e em reais. Sem isso, quem não está no documento não tem prova do combinado — e o vendedor que paga tudo a um só continua devendo ao outro.</p>
+            <div class="row-list" id="parceiros"></div>
+            <button type="button" class="secondary" id="btnAddParceiro" style="margin-top:10px">+ adicionar parceiro</button>
+            <p class="hint" id="resumoRateio" style="margin-top:10px"></p>
+          </div>
         </div>
 
         <div id="locacaoFields" style="display:none">
@@ -1715,6 +1750,42 @@ function renderGerar() {
   };
   selChaves.addEventListener("change", sincronizarChaves);
   sincronizarChaves();
+
+  // Parceria: a fatia da imobiliária é o RESTO de 100%, então some as fatias dos
+  // parceiros e mostre o que sobra. Pedir a própria porcentagem também abriria a
+  // porta pra um rateio que não fecha — e um contrato com 130% de comissão é uma
+  // dívida que o vendedor nunca aceitou.
+  const chkParceria = el.querySelector("#chkParceria");
+  if (chkParceria) {
+    const campos = el.querySelector("#parceriaFields");
+    const resumo = el.querySelector("#resumoRateio");
+    const nomeImob = (state.tenant && state.tenant.nome) || "sua imobiliária";
+
+    const recalcular = () => {
+      const cards = [...el.querySelectorAll("#parceiros .person-card")];
+      const soma = cards.reduce((a, c) => a + (parseFloat(c.querySelector('[data-f="percentual"]').value) || 0), 0);
+      const resto = Math.round((100 - soma) * 100) / 100;
+      if (!cards.length) { resumo.textContent = ""; return; }
+      if (soma > 100) {
+        resumo.innerHTML = `<strong style="color:#a13a3a">As fatias somam ${String(soma).replace(".", ",")}% — passa de 100%.</strong> Ajuste antes de gerar.`;
+      } else {
+        resumo.innerHTML = `Fica para <strong>${escapeHtml(nomeImob)}</strong>: ${String(resto).replace(".", ",")}% da comissão.`;
+      }
+    };
+
+    const sincronizarParceria = () => {
+      campos.style.display = chkParceria.checked ? "" : "none";
+      if (chkParceria.checked && !el.querySelectorAll("#parceiros .person-card").length) addParceiroRow();
+      recalcular();
+    };
+    chkParceria.addEventListener("change", sincronizarParceria);
+    el.querySelector("#btnAddParceiro").addEventListener("click", () => { addParceiroRow(); recalcular(); });
+    el.querySelector("#parceiros").addEventListener("input", e => { if (e.target.matches("[data-rateio]")) recalcular(); });
+    el.querySelector("#parceiros").addEventListener("click", e => {
+      if (e.target.matches("[data-remove-person]")) setTimeout(recalcular, 0);
+    });
+    sincronizarParceria();
+  }
 
   const selQuando = el.querySelector("#selCorretQuando");
   if (selQuando) {
@@ -1995,6 +2066,14 @@ async function handleSubmit(e) {
     // Card em branco não vira anuente: o corretor pode abrir um e desistir, e
     // um anuente sem nome faria o contrato citar uma parte que não existe.
     dados.anuentes = collectPessoas("anuentes").filter(a => (a.nome || "").trim());
+    dados.corretagem.parceiros = document.getElementById("chkParceria") && document.getElementById("chkParceria").checked
+      ? [...document.querySelectorAll("#parceiros .person-card")].map(c => {
+          const o = {};
+          c.querySelectorAll("[data-f]").forEach(i => o[i.dataset.f] = i.value);
+          o.percentual = parseFloat(o.percentual) || 0;
+          return o;
+        }).filter(x => (x.nome || "").trim())
+      : [];
     dados.corretagem.pagamento = getByPath(fd, "corretagem.pagamento") || "entrada";
     dados.corretagem.pagamentoDescricao = getByPath(fd, "corretagem.pagamentoDescricao") || "";
   }
@@ -2106,6 +2185,23 @@ function preencherFormulario(d) {
   preencherPessoas("vendedores", ehLocacao ? d.locadores : d.vendedores, "vend", ehLocacao ? "Locador" : "Vendedor", naoRestaurados);
   preencherPessoas("compradores", ehLocacao ? d.locatarios : d.compradores, "comp", ehLocacao ? "Locatário" : "Comprador", naoRestaurados);
   if (d.tipo === "locacao_fiador") preencherPessoas("fiadores", d.fiadores, "fiad", "Fiador", naoRestaurados);
+  const parceirosSalvos = (d.corretagem && d.corretagem.parceiros) || [];
+  if (parceirosSalvos.length) {
+    const chk = document.getElementById("chkParceria");
+    if (chk) {
+      chk.checked = true;
+      const cont = document.getElementById("parceiros");
+      cont.innerHTML = "";
+      parceirosSalvos.forEach(() => addParceiroRow());
+      [...cont.querySelectorAll(".person-card")].forEach((card, i) => {
+        const pa = parceirosSalvos[i] || {};
+        card.querySelectorAll("[data-f]").forEach(inp => {
+          if (pa[inp.dataset.f] !== undefined && pa[inp.dataset.f] !== null) inp.value = pa[inp.dataset.f];
+        });
+      });
+      chk.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  }
   if (d.tipo === "compra_venda" && d.anuentes && d.anuentes.length) {
     preencherPessoas("anuentes", d.anuentes, "anu", "Anuente", naoRestaurados);
     document.querySelectorAll("#anuentes [data-anuencia-tipo]").forEach(sel => sel.dispatchEvent(new Event("change", { bubbles: true })));
