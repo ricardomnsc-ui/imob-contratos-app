@@ -432,6 +432,7 @@ const TIPO_LABEL = {
   locacao_caucao: "Locação (Caução)",
   locacao_fiador: "Locação (Fiador)",
   locacao_seguro_fianca: "Locação (Seguro Fiança)",
+  locacao_sem_garantia: "Locação (Sem Garantia)",
 };
 
 // O tipo `locacao_caucao` é o guarda-chuva das locações sem fiador nem seguro,
@@ -445,6 +446,9 @@ const GARANTIA_LABEL_CURTO = {
 };
 
 function rotuloContrato(c) {
+  // `locacao_caucao` é o guarda-chuva de caução, título de capitalização e
+  // garantia personalizada — e, nos contratos anteriores ao tipo próprio,
+  // também de "sem garantia". A garantia real está em `garantiaTipo`.
   if (c.tipo === "locacao_caucao" && c.garantiaTipo && GARANTIA_LABEL_CURTO[c.garantiaTipo]) {
     return `Locação (${GARANTIA_LABEL_CURTO[c.garantiaTipo]})`;
   }
@@ -1478,6 +1482,7 @@ function renderGerar() {
         <button data-tipo="locacao_caucao" class="${state.tipo === "locacao_caucao" ? "active" : ""}">Locação (Caução)</button>
         <button data-tipo="locacao_fiador" class="${state.tipo === "locacao_fiador" ? "active" : ""}">Locação (Fiador)</button>
         <button data-tipo="locacao_seguro_fianca" class="${state.tipo === "locacao_seguro_fianca" ? "active" : ""}">Locação (Seguro Fiança)</button>
+        <button data-tipo="locacao_sem_garantia" class="${state.tipo === "locacao_sem_garantia" ? "active" : ""}">Locação (Sem Garantia)</button>
       </div>
 
       <h2>Layout do documento</h2>
@@ -1670,7 +1675,6 @@ function renderGerar() {
               <select name="garantiaTipo" id="selGarantiaTipo">
                 <option value="caucao">Caução</option>
                 <option value="titulo_capitalizacao">Título de Capitalização</option>
-                <option value="sem_garantia">Sem garantia</option>
                 <option value="personalizada">Outra (cláusula específica da imobiliária)</option>
               </select>
             </div>
@@ -1880,6 +1884,10 @@ function renderGerar() {
       el.querySelector("#garantiaTitle").textContent = "Garantia (seguro fiança)";
       el.querySelector("#garantiaTipoField").style.display = "none";
       mostrarSoBloco("seguro_fianca");
+    } else if (state.tipo === "locacao_sem_garantia") {
+      el.querySelector("#garantiaTitle").textContent = "Sem garantia";
+      el.querySelector("#garantiaTipoField").style.display = "none";
+      mostrarSoBloco("sem_garantia");
     } else {
       const selGarantia = el.querySelector("#selGarantiaTipo");
       selGarantia.addEventListener("change", () => mostrarSoBloco(selGarantia.value));
@@ -2050,6 +2058,7 @@ async function handleSubmit(e) {
 
     const garantiaTipo = state.tipo === "locacao_fiador" ? "fiador"
       : state.tipo === "locacao_seguro_fianca" ? "seguro_fianca"
+      : state.tipo === "locacao_sem_garantia" ? "sem_garantia"
       : (getByPath(fd, "garantiaTipo") || "caucao");
     dados.garantiaTipo = garantiaTipo;
     if (garantiaTipo === "seguro_fianca") dados.garantia = { seguradora: getByPath(fd, "garantia.seguradora"), apolice: getByPath(fd, "garantia.apolice"), taxaMensal: parseFloat(getByPath(fd, "garantia.taxaMensal") || 0), clausula: getByPath(fd, "garantia.clausula") };

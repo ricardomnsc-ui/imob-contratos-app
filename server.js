@@ -783,6 +783,7 @@ const TITULOS_DOC = {
   locacao_caucao: "Contrato de Locação",
   locacao_fiador: "Contrato de Locação",
   locacao_seguro_fianca: "Contrato de Locação",
+  locacao_sem_garantia: "Contrato de Locação",
   ficha_locacao: "Ficha de Locação",
   proposta_compra: "Proposta de Compra",
   proposta_aluguel: "Proposta de Locação",
@@ -869,7 +870,8 @@ function partesDoContrato(dados) {
 }
 
 function resumoContrato(dados) {
-  const isLocacao = dados.tipo === "locacao_caucao" || dados.tipo === "locacao_fiador" || dados.tipo === "locacao_seguro_fianca";
+  const isLocacao = dados.tipo === "locacao_caucao" || dados.tipo === "locacao_fiador"
+    || dados.tipo === "locacao_seguro_fianca" || dados.tipo === "locacao_sem_garantia";
   let valor = 0;
   let comissaoValor = 0;
   if (isLocacao) {
@@ -1155,6 +1157,7 @@ app.get("/api/dashboard", requireAuth, async (req, res) => {
       compra_venda: contratos.filter(c => c.tipo === "compra_venda").length,
       locacao_caucao: contratos.filter(c => c.tipo === "locacao_caucao").length,
       locacao_seguro_fianca: contratos.filter(c => c.tipo === "locacao_seguro_fianca").length,
+      locacao_sem_garantia: contratos.filter(c => c.tipo === "locacao_sem_garantia").length,
       locacao_fiador: contratos.filter(c => c.tipo === "locacao_fiador").length,
     },
     valorMedioVenda: media(vendas, "valor"),
