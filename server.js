@@ -888,6 +888,10 @@ function resumoContrato(dados) {
     endereco: (dados.imovel && dados.imovel.endereco) || "",
     bairro: (dados.imovel && dados.imovel.bairro) || "",
     tipoUso: (dados.imovel && dados.imovel.tipoUso) || dados.uso || "residencial",
+    // Qual garantia foi usada. Não é dado pessoal, então pode ir em listagem —
+    // e é o que permite a lista distinguir "Locação (Caução)" de "Locação (Sem
+    // garantia)", que compartilham o mesmo `tipo`.
+    garantiaTipo: dados.garantiaTipo || null,
     valor,
     comissaoValor,
     hash: hashDados(dados),
@@ -1161,7 +1165,7 @@ app.get("/api/dashboard", requireAuth, async (req, res) => {
     contratosEsteMes: contarNoMes(mesAtualStr),
     contratosMesPassado: contarNoMes(mesPassadoStr),
     ultimosContratos: contratos.slice(0, 10).map(c => ({
-      id: c.id, tipo: c.tipo, endereco: c.endereco, bairro: c.bairro, valor: c.valor, data: c.data, criadoEm: c.criadoEm,
+      id: c.id, tipo: c.tipo, garantiaTipo: c.garantiaTipo || null, endereco: c.endereco, bairro: c.bairro, valor: c.valor, data: c.data, criadoEm: c.criadoEm,
       // Só os gerados depois da mudança guardam os dados e podem ser reabertos.
       // Nunca mandamos o payload em si aqui — ele tem CPF/RG das partes.
       temDados: !!c.dados,

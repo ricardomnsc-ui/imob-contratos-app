@@ -434,6 +434,23 @@ const TIPO_LABEL = {
   locacao_seguro_fianca: "Locação (Seguro Fiança)",
 };
 
+// O tipo `locacao_caucao` é o guarda-chuva das locações sem fiador nem seguro,
+// e a garantia de verdade está em `garantiaTipo`. Sem olhar os dois, um contrato
+// sem garantia apareceria na lista como "Locação (Caução)".
+const GARANTIA_LABEL_CURTO = {
+  caucao: "Caução",
+  titulo_capitalizacao: "Título de Capitalização",
+  sem_garantia: "Sem garantia",
+  personalizada: "Garantia específica",
+};
+
+function rotuloContrato(c) {
+  if (c.tipo === "locacao_caucao" && c.garantiaTipo && GARANTIA_LABEL_CURTO[c.garantiaTipo]) {
+    return `Locação (${GARANTIA_LABEL_CURTO[c.garantiaTipo]})`;
+  }
+  return TIPO_LABEL[c.tipo] || "Locação";
+}
+
 function escapeHtml(s) {
   return String(s == null ? "" : s).replace(/[&<>"']/g, c => (
     { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
@@ -861,7 +878,7 @@ async function renderDashboard() {
             <tbody>
               ${d.ultimosContratos.map(c => `
                 <tr style="border-bottom:1px solid var(--border)">
-                  <td style="padding:10px 10px 10px 0">${TIPO_LABEL[c.tipo] || "Locação (Caução)"}</td>
+                  <td style="padding:10px 10px 10px 0">${rotuloContrato(c)}</td>
                   <td style="padding:10px">${c.endereco || "—"}</td>
                   <td style="padding:10px">${c.bairro || "—"}</td>
                   <td style="padding:10px 0 10px 10px;text-align:right;font-weight:600">${fmtBRL(c.valor)}</td>
@@ -1653,8 +1670,19 @@ function renderGerar() {
               <select name="garantiaTipo" id="selGarantiaTipo">
                 <option value="caucao">Caução</option>
                 <option value="titulo_capitalizacao">Título de Capitalização</option>
+                <option value="sem_garantia">Sem garantia</option>
                 <option value="personalizada">Outra (cláusula específica da imobiliária)</option>
               </select>
+            </div>
+          </div>
+          <div id="garantiaFieldsSem" style="display:none">
+            <p class="hint" style="margin-top:-4px">O art. 37 da Lei 8.245/91 <strong>faculta</strong> ao locador exigir garantia — não obriga. O contrato registra a ausência e o que a lei dá em troca: possibilidade de desocupação liminar por falta de pagamento (art. 59, § 1º, IX) e, se marcado abaixo, aluguel antecipado.</p>
+            <div class="field">
+              <label style="display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer">
+                <input type="checkbox" name="garantia.aluguelAntecipado" style="width:auto" />
+                Aluguel pago antecipadamente (art. 42 da Lei 8.245/91)
+              </label>
+              <p class="hint" style="margin-top:4px">Sem garantia, o locador pode exigir o aluguel até o 6º dia útil do mês a vencer. É a única forma de reduzir o risco que ele aceitou ao dispensar a garantia.</p>
             </div>
           </div>
           <div class="grid" id="garantiaFieldsCaucao">
@@ -1835,6 +1863,7 @@ function renderGerar() {
       seguro_fianca: el.querySelector("#garantiaFieldsSeguro"),
       titulo_capitalizacao: el.querySelector("#garantiaFieldsTitulo"),
       personalizada: el.querySelector("#garantiaFieldsPersonalizada"),
+      sem_garantia: el.querySelector("#garantiaFieldsSem"),
     };
     const mostrarSoBloco = (chave) => {
       Object.entries(garantiaBlocos).forEach(([t, bloco]) => { bloco.style.display = t === chave ? "" : "none"; });
@@ -2027,6 +2056,7 @@ async function handleSubmit(e) {
     else if (garantiaTipo === "titulo_capitalizacao") dados.garantia = { instituicao: getByPath(fd, "garantia.instituicao"), numero: getByPath(fd, "garantia.numero"), valor: parseFloat(getByPath(fd, "garantia.valorTitulo") || 0) };
     else if (garantiaTipo === "personalizada") dados.garantia = { descricao: getByPath(fd, "garantia.descricao") };
     else if (garantiaTipo === "caucao") dados.garantia = { valor: parseFloat(getByPath(fd, "garantia.valor") || 0) };
+    else if (garantiaTipo === "sem_garantia") dados.garantia = { aluguelAntecipado: fd.get("garantia.aluguelAntecipado") === "on" };
 
     dados.uso = dados.imovel.tipoUso === "comercial" ? "comercial" : "residencial";
     dados.pagamento = {
