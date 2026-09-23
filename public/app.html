@@ -1600,7 +1600,7 @@ function renderGerar() {
             </div>
           </div>
           <div class="grid cols3">
-            <div class="field"><label>Prazo para pagar (dias)</label><input name="corretagem.prazoDias" type="number" min="0" step="1" value="5" /></div>
+            <div class="field"><label>Prazo para pagar (dias úteis)</label><input name="corretagem.prazoDias" type="number" min="0" step="1" value="1" /></div>
             <div class="field"><label>Multa por atraso (%)</label><input name="corretagem.multaPercentual" type="number" min="0" step="0.01" value="2" /></div>
             <div class="field"><label>Juros ao mês (%)</label><input name="corretagem.jurosMensal" type="number" min="0" step="0.01" value="1" /></div>
           </div>
@@ -2124,7 +2124,7 @@ async function handleSubmit(e) {
     // parseFloat("") é NaN, e NaN || padrão devolveria o padrão — aqui o campo
     // zerado precisa significar zero (quem não quer multa deixa 0).
     const num = (v, padrao) => { const n = parseFloat(v); return Number.isFinite(n) ? n : padrao; };
-    dados.corretagem.prazoDias = num(getByPath(fd, "corretagem.prazoDias"), 5);
+    dados.corretagem.prazoDias = num(getByPath(fd, "corretagem.prazoDias"), 1);
     dados.corretagem.multaPercentual = num(getByPath(fd, "corretagem.multaPercentual"), 2);
     dados.corretagem.jurosMensal = num(getByPath(fd, "corretagem.jurosMensal"), 1);
   }
