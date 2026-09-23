@@ -1599,6 +1599,12 @@ function renderGerar() {
               <input name="corretagem.pagamentoDescricao" placeholder="Ex.: 50% na entrada e 50% na escritura" />
             </div>
           </div>
+          <div class="grid cols3">
+            <div class="field"><label>Prazo para pagar (dias)</label><input name="corretagem.prazoDias" type="number" min="0" step="1" value="5" /></div>
+            <div class="field"><label>Multa por atraso (%)</label><input name="corretagem.multaPercentual" type="number" min="0" step="0.01" value="2" /></div>
+            <div class="field"><label>Juros ao mês (%)</label><input name="corretagem.jurosMensal" type="number" min="0" step="0.01" value="1" /></div>
+          </div>
+          <p class="hint" style="margin-top:-4px">Dizer só <em>quando</em> a comissão é devida não basta: sem data-limite não existe vencimento e, sem vencimento, não há mora — foi assim que uma comissão devida na entrada virou "pago mês que vem". O contrato também passa a valer como título executivo para essa cobrança.</p>
 
           <div class="field" style="margin-top:4px">
             <label style="display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer">
@@ -2115,6 +2121,12 @@ async function handleSubmit(e) {
       : [];
     dados.corretagem.pagamento = getByPath(fd, "corretagem.pagamento") || "entrada";
     dados.corretagem.pagamentoDescricao = getByPath(fd, "corretagem.pagamentoDescricao") || "";
+    // parseFloat("") é NaN, e NaN || padrão devolveria o padrão — aqui o campo
+    // zerado precisa significar zero (quem não quer multa deixa 0).
+    const num = (v, padrao) => { const n = parseFloat(v); return Number.isFinite(n) ? n : padrao; };
+    dados.corretagem.prazoDias = num(getByPath(fd, "corretagem.prazoDias"), 5);
+    dados.corretagem.multaPercentual = num(getByPath(fd, "corretagem.multaPercentual"), 2);
+    dados.corretagem.jurosMensal = num(getByPath(fd, "corretagem.jurosMensal"), 1);
   }
 
   const formato = (e.submitter && e.submitter.dataset.formato) || "docx";
