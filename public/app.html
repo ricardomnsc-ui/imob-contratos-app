@@ -2844,6 +2844,42 @@ const DOC_SCHEMAS = {
       ]},
     ],
   },
+  distrato_locacao: {
+    nome: "Distrato de Locação", desc: "Rescisão amigável com cálculo da multa proporcional",
+    secoes: [
+      { titulo: "Imóvel", campos: [
+        { name: "imovel.endereco", label: "Endereço", req: true, full: true },
+        { name: "imovel.complemento", label: "Complemento / unidade", ph: "Bloco B, apto 302" },
+      ]},
+      { titulo: "Locador(a)", campos: camposPessoa("locador") },
+      { titulo: "Locatário(a)", campos: camposPessoa("locatario") },
+      { titulo: "Contrato que está sendo distratado", campos: [
+        { name: "locacao.inicio", label: "Início da locação", tipo: "date", req: true },
+        { name: "locacao.meses", label: "Prazo contratado (meses)", tipo: "number", valor: "30" },
+        { name: "locacao.fim", label: "Término previsto (se souber)", tipo: "date", ph: "deixe vazio para calcular pelo prazo" },
+        { name: "locacao.aluguel", label: "Aluguel vigente (R$)", tipo: "number", req: true },
+        { name: "locacao.multaAlugueis", label: "Multa contratual (nº de aluguéis)", tipo: "number", valor: "3" },
+        { name: "locacao.garantia", label: "Garantia da locação", tipo: "select",
+          opts: ["Caução", "Fiador", "Seguro fiança", "Sem garantia"], vals: ["caucao", "fiador", "seguro_fianca", "sem_garantia"] },
+        { name: "locacao.caucaoValor", label: "Valor da caução (R$)", tipo: "number" },
+      ]},
+      { titulo: "Distrato", campos: [
+        { name: "distrato.data", label: "Data da rescisão / entrega das chaves", tipo: "date", req: true },
+        { name: "distrato.multaModo", label: "Multa rescisória", tipo: "select",
+          opts: ["Cobrar proporcional (art. 4º)", "Dispensada por acordo", "Dispensada — transferência pelo empregador", "Valor combinado entre as partes"],
+          vals: ["proporcional", "dispensada_acordo", "dispensada_transferencia", "valor_combinado"], full: true },
+        { name: "distrato.multaValor", label: "Valor combinado da multa (R$)", tipo: "number", ph: "só se escolheu valor combinado" },
+        { name: "distrato.formaPagamento", label: "Como a multa será paga", ph: "Ex.: à vista na assinatura, via PIX" },
+        { name: "distrato.prazoGarantiaDias", label: "Prazo para devolver a caução (dias)", tipo: "number", valor: "30" },
+        { name: "distrato.debitos", label: "Débitos já identificados", tipo: "textarea", full: true, ph: "Ex.: conta de energia de setembro, no valor de R$ 180,00, a ser quitada pelo locatário." },
+        { name: "distrato.observacoes", label: "Condições especiais", tipo: "textarea", full: true },
+      ]},
+      { titulo: "Fiador (se houver)", campos: [
+        { name: "fiador.nome", label: "Nome completo" },
+        { name: "fiador.cpf", label: "CPF", ph: "000.000.000-00" },
+      ]},
+    ],
+  },
   termo_entrega_chaves: {
     nome: "Termo de Entrega de Chaves", desc: "Entrega de chaves, acessos e situação de energia/água/gás",
     secoes: [
