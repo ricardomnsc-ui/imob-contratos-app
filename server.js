@@ -792,6 +792,7 @@ const TITULOS_DOC = {
   contrato_exclusividade: "Contrato de Exclusividade",
   termo_entrega_chaves: "Termo de Entrega de Chaves",
   distrato_locacao: "Distrato de Locação",
+  checklist_documentos: "Checklist de Documentos",
 };
 
 // Validade do link de revisão. Passado esse prazo o link para de funcionar e o
@@ -950,6 +951,7 @@ app.post("/api/gerar", requireAuth, async (req, res) => {
       contrato_exclusividade: "Contrato-de-Exclusividade",
       termo_entrega_chaves: "Termo-de-Entrega-de-Chaves",
       distrato_locacao: "Distrato-de-Locacao",
+      checklist_documentos: "Checklist-de-Documentos",
     };
     const ehAuxiliar = !!DOCS_AUXILIARES[dados.tipo];
 

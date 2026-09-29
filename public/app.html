@@ -2844,6 +2844,33 @@ const DOC_SCHEMAS = {
       ]},
     ],
   },
+  checklist_documentos: {
+    nome: "Checklist de Documentos", desc: "O que reunir antes de redigir o contrato, por tipo de negócio",
+    secoes: [
+      { titulo: "Negócio", campos: [
+        { name: "negocio", label: "Tipo de negócio", tipo: "select", opts: ["Compra e venda", "Locação"], vals: ["venda", "locacao"], full: true },
+        { name: "financiado", label: "Com financiamento bancário? (venda)", tipo: "select", opts: ["Não", "Sim"], vals: ["nao", "sim"] },
+        { name: "garantia", label: "Garantia (locação)", tipo: "select",
+          opts: ["Caução", "Fiador", "Seguro fiança", "Título de capitalização", "Sem garantia"],
+          vals: ["caucao", "fiador", "seguro_fianca", "titulo_capitalizacao", "sem_garantia"] },
+      ]},
+      { titulo: "Imóvel", campos: [
+        { name: "imovel.endereco", label: "Endereço", full: true },
+        { name: "condominio", label: "Imóvel em condomínio?", tipo: "select", opts: ["Não", "Sim"], vals: ["nao", "sim"] },
+      ]},
+      { titulo: "Vendedor(a) / Locador(a)", campos: [
+        { name: "parte1.nome", label: "Nome ou razão social" },
+        { name: "parte1Tipo", label: "Tipo de parte", tipo: "select", opts: ["Pessoa física", "Pessoa jurídica"], vals: ["fisica", "juridica"] },
+      ]},
+      { titulo: "Comprador(a) / Locatário(a)", campos: [
+        { name: "parte2.nome", label: "Nome ou razão social" },
+        { name: "parte2Tipo", label: "Tipo de parte", tipo: "select", opts: ["Pessoa física", "Pessoa jurídica"], vals: ["fisica", "juridica"] },
+      ]},
+      { titulo: "Observações", campos: [
+        { name: "observacoes", label: "Itens adicionais para este negócio", tipo: "textarea", full: true, ph: "Ex.: procuração do vendedor, que está no exterior." },
+      ]},
+    ],
+  },
   distrato_locacao: {
     nome: "Distrato de Locação", desc: "Rescisão amigável com cálculo da multa proporcional",
     secoes: [
