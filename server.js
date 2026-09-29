@@ -10,7 +10,7 @@ const FileStore = require("session-file-store")(session);
 const bcrypt = require("bcryptjs");
 const multer = require("multer");
 const { nanoid } = require("nanoid");
-const { gerarContrato, extrairTextoDocx } = require("./lib/generator");
+const { gerarContrato, extrairTextoDocx, checklistEmTexto } = require("./lib/generator");
 const { convertDocxToPdf } = require("./lib/pdf");
 const store = require("./lib/store");
 const { PLANOS, limitesDoPlano, precoDoPlano, mesAtual, contratosUsadosNoMes, LIMITE_IA_MENSAL, iaUsadaNoMes, planoEfetivo, DIAS_TOLERANCIA_ATRASO } = require("./lib/planos");
@@ -1515,6 +1515,15 @@ app.patch("/api/compartilhamentos/:token/situacao", requireAuth, async (req, res
 app.delete("/api/compartilhamentos/:token", requireAuth, async (req, res) => {
   await store.deleteShare(req.params.token, req.user.tenantId);
   res.json({ ok: true });
+});
+
+// Checklist em texto puro, pra colar no WhatsApp ou no e-mail do cliente.
+// Vem do servidor, e não montado no navegador, porque a lista é a mesma que o
+// documento imprime — duas cópias divergiriam no primeiro item que mudasse.
+app.post("/api/checklist/texto", requireAuth, async (req, res) => {
+  const dados = (req.body && req.body.dados) || {};
+  const tenant = await store.getTenant(req.user.tenantId);
+  res.json({ texto: checklistEmTexto(dados, { imobiliaria: (tenant && tenant.nome) || "" }) });
 });
 
 // ================= LOJA DE E-BOOKS =================

@@ -337,6 +337,9 @@
   .toast.error { background: #942d2d; }
   .footer-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-top: 6px; }
   .error-msg { color: #a13a3a; font-size: 13px; margin-top: 8px; min-height: 16px; }
+  .checklist-preview { white-space: pre-wrap; word-break: break-word; background: var(--bg);
+    border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-top: 12px;
+    font-family: inherit; font-size: 13px; line-height: 1.5; max-height: 320px; overflow: auto; }
   .ok-msg { color: #1c6b4a; background: #eaf6f0; border: 1px solid #bfe3d1; border-radius: 8px;
     font-size: 13px; line-height: 1.45; margin-top: 10px; padding: 10px 12px; }
 
@@ -3033,6 +3036,15 @@ function renderDocumentos() {
         ${secoes}
         <div class="section-title">Data do documento</div>
         <div class="grid"><div class="field"><label>Data</label><input data-f="data" type="date" /></div></div>
+        ${state.docTipo === "checklist_documentos" ? `
+        <div class="section-title">Enviar para o cliente</div>
+        <p class="hint" style="margin-top:-8px;margin-bottom:10px">A mesma lista em texto, pra colar no WhatsApp ou no e-mail — sem precisar mandar anexo.</p>
+        <div class="footer-actions" style="margin-top:0">
+          <button type="button" class="secondary" id="btnChecklistCopiar">Copiar lista</button>
+          <button type="button" class="secondary" id="btnChecklistWhats">Abrir no WhatsApp</button>
+        </div>
+        <pre id="checklistPreview" class="checklist-preview" style="display:none"></pre>
+        ` : ""}
         <div class="footer-actions" style="margin-top:20px">
           <button type="submit" class="secondary" data-formato="docx">Gerar .docx (editável)</button>
           <button type="submit" class="secondary" data-formato="link">Enviar p/ revisão</button>
@@ -3043,6 +3055,52 @@ function renderDocumentos() {
   `;
 
   wireTipoPessoaDoc(el);
+
+  // Copiar / WhatsApp: o texto vem do servidor pra não existir uma segunda
+  // versão da lista aqui no navegador.
+  const btnCopiar = el.querySelector("#btnChecklistCopiar");
+  if (btnCopiar) {
+    const lerFormulario = () => {
+      const dados = { tipo: "checklist_documentos" };
+      el.querySelectorAll("#docForm [data-f]").forEach(inp => setPath(dados, inp.dataset.f, inp.value));
+      return dados;
+    };
+    const pedirTexto = async () => {
+      const res = await api("/api/checklist/texto", { method: "POST", body: JSON.stringify({ dados: lerFormulario() }) });
+      if (!res.ok) throw new Error("Não foi possível montar a lista agora.");
+      return (await res.json()).texto;
+    };
+    btnCopiar.addEventListener("click", async () => {
+      btnCopiar.disabled = true;
+      try {
+        const texto = await pedirTexto();
+        // clipboard.writeText falha em contexto não seguro e quando a aba perde
+        // o foco; mostrar o texto deixa o corretor copiar na mão em vez de
+        // ficar sem saída.
+        try {
+          await navigator.clipboard.writeText(texto);
+          toast("Lista copiada!");
+        } catch {
+          const pre = el.querySelector("#checklistPreview");
+          pre.textContent = texto;
+          pre.style.display = "";
+          toast("Copie o texto abaixo", true);
+        }
+      } catch (err) {
+        toast(err.message, true);
+      } finally {
+        btnCopiar.disabled = false;
+      }
+    });
+    el.querySelector("#btnChecklistWhats").addEventListener("click", async () => {
+      try {
+        const texto = await pedirTexto();
+        window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank");
+      } catch (err) {
+        toast(err.message, true);
+      }
+    });
+  }
 
   el.querySelectorAll("[data-doc]").forEach(b => b.addEventListener("click", () => {
     state.docTipo = b.dataset.doc;
