@@ -1523,7 +1523,10 @@ app.delete("/api/compartilhamentos/:token", requireAuth, async (req, res) => {
 app.post("/api/checklist/texto", requireAuth, async (req, res) => {
   const dados = (req.body && req.body.dados) || {};
   const tenant = await store.getTenant(req.user.tenantId);
-  res.json({ texto: checklistEmTexto(dados, { imobiliaria: (tenant && tenant.nome) || "" }) });
+  res.json({ texto: checklistEmTexto(dados, {
+    imobiliaria: (tenant && tenant.nome) || "",
+    destinatario: (req.body && req.body.destinatario) || "",
+  }) });
 });
 
 // ================= LOJA DE E-BOOKS =================

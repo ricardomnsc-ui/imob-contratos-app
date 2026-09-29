@@ -3038,9 +3038,19 @@ function renderDocumentos() {
         <div class="grid"><div class="field"><label>Data</label><input data-f="data" type="date" /></div></div>
         ${state.docTipo === "checklist_documentos" ? `
         <div class="section-title">Enviar para o cliente</div>
-        <p class="hint" style="margin-top:-8px;margin-bottom:10px">A mesma lista em texto, pra colar no WhatsApp ou no e-mail — sem precisar mandar anexo.</p>
+        <p class="hint" style="margin-top:-8px;margin-bottom:10px">A mesma lista em texto, pra colar no WhatsApp ou no e-mail — sem precisar mandar anexo. Escolhendo uma das partes, vai só o que é dela.</p>
+        <div class="grid">
+          <div class="field" style="grid-column:1/-1">
+            <label>Pedir documentos a</label>
+            <select id="checklistDestino">
+              <option value="parte2">Comprador(a) / Locatário(a) — só os documentos dele(a)</option>
+              <option value="parte1">Vendedor(a) / Locador(a) — documentos dele(a) e do imóvel</option>
+              <option value="">Lista completa (uso interno)</option>
+            </select>
+          </div>
+        </div>
         <div class="footer-actions" style="margin-top:0">
-          <button type="button" class="secondary" id="btnChecklistCopiar">Copiar lista</button>
+          <button type="button" class="secondary" id="btnChecklistCopiar">Copiar texto</button>
           <button type="button" class="secondary" id="btnChecklistWhats">Abrir no WhatsApp</button>
         </div>
         <pre id="checklistPreview" class="checklist-preview" style="display:none"></pre>
@@ -3066,7 +3076,8 @@ function renderDocumentos() {
       return dados;
     };
     const pedirTexto = async () => {
-      const res = await api("/api/checklist/texto", { method: "POST", body: JSON.stringify({ dados: lerFormulario() }) });
+      const destinatario = el.querySelector("#checklistDestino").value;
+      const res = await api("/api/checklist/texto", { method: "POST", body: JSON.stringify({ dados: lerFormulario(), destinatario }) });
       if (!res.ok) throw new Error("Não foi possível montar a lista agora.");
       return (await res.json()).texto;
     };
