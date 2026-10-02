@@ -953,6 +953,52 @@ async function renderDashboard() {
       await renderDashboard();
     });
   });
+
+  renderAuditoriaEncargos(el);
+}
+
+// Aviso dos contratos de locação anteriores à opção "condomínio e IPTU
+// inclusos". Até ela existir, a Cláusula Sexta afirmava sempre que o encargo
+// era do locatário; nos contratos em que nenhum valor foi informado, não dá pra
+// saber pelo documento se o acordo era de valor fechado. O card só aparece
+// quando há o que conferir, e some sozinho conforme a lista zera.
+async function renderAuditoriaEncargos(el) {
+  const res = await api("/api/contratos/auditoria-encargos");
+  if (!res.ok) return;
+  const d = await res.json();
+  if (!d.aConferir) return;
+
+  const fmt = (n) => (n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const dataBR = (iso) => {
+    if (!iso) return "";
+    const [a, m, dia] = String(iso).slice(0, 10).split("-");
+    return dia ? `${dia}/${m}/${a}` : "";
+  };
+  const lista = d.itens.filter(i => i.situacao === "conferir");
+
+  const card = document.createElement("div");
+  card.className = "card";
+  card.style.borderColor = "#ffd9bd";
+  card.style.background = "#fff8f2";
+  card.innerHTML = `
+    <h2>Conferir quem paga condomínio e IPTU</h2>
+    <p class="hint">A Cláusula Sexta destes ${lista.length} contrato${lista.length > 1 ? "s" : ""} de locação diz que o condomínio e o IPTU são do locatário, mas nenhum valor foi informado na época. Se algum deles foi fechado por um valor único de <strong>aluguel + taxas</strong>, o contrato está cobrando o locatário duas vezes e precisa ser refeito com a opção <strong>“já inclusos no aluguel”</strong>.</p>
+    <table style="width:100%;border-collapse:collapse;font-size:13.5px">
+      <thead><tr style="text-align:left;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em">
+        <th style="padding:6px 8px 6px 0;font-weight:700">Imóvel</th>
+        <th style="padding:6px 8px;font-weight:700">Data</th>
+        <th style="padding:6px 0 6px 8px;font-weight:700;text-align:right">Aluguel</th>
+      </tr></thead>
+      <tbody>${lista.map(i => `
+        <tr style="border-top:1px solid var(--border)">
+          <td style="padding:8px 8px 8px 0">${i.endereco || "<span style=\"color:var(--muted)\">sem endereço</span>"}</td>
+          <td style="padding:8px;color:var(--muted);white-space:nowrap">${dataBR(i.data || i.criadoEm)}</td>
+          <td style="padding:8px 0 8px 8px;text-align:right;font-variant-numeric:tabular-nums">${fmt(i.aluguel)}</td>
+        </tr>`).join("")}</tbody>
+    </table>
+    <p class="hint" style="margin-top:12px;margin-bottom:0">Os contratos em que você informou o valor do condomínio ou do IPTU não entram nesta lista: neles o documento discrimina os encargos e está coerente.</p>
+  `;
+  el.prepend(card);
 }
 
 // ================= CONFIG (marca da imobiliária) =================
@@ -1641,6 +1687,14 @@ function renderGerar() {
             <div class="field"><label>IPTU mensal (R$)</label><input name="aluguel.iptu" type="number" step="0.01" placeholder="Deixe vazio se não houver" /></div>
           </div>
           <div class="field">
+            <label>Condomínio e IPTU</label>
+            <select name="aluguel.encargos">
+              <option value="separado">O locatário paga à parte, junto com o aluguel</option>
+              <option value="incluso">Já estão inclusos no valor do aluguel (valor fechado)</option>
+            </select>
+            <p class="hint" style="margin-top:4px">Fechou por "aluguel + taxas, tudo por R$ X"? Escolha <strong>inclusos</strong>: a Cláusula Sexta passa a dizer que o condomínio e o IPTU são do locador, em vez de cobrá-los do locatário.</p>
+          </div>
+          <div class="field">
             <label>Cosern, Água e Gás (opcional)</label>
             <input name="imovel.concessionarias" placeholder="Ex.: Energia e água individualizadas; gás por medidor próprio" />
             <p class="hint" style="margin-top:4px">Aparece no quadro-resumo da 1ª página. Use para indicar se as concessionárias são individualizadas.</p>
@@ -2060,7 +2114,7 @@ async function handleSubmit(e) {
     dados.locatarios = compradores;
     if (state.tipo === "locacao_fiador") dados.fiadores = collectPessoas("fiadores");
     dados.vigencia = { meses: getByPath(fd, "vigencia.meses"), inicio: getByPath(fd, "vigencia.inicio"), fim: getByPath(fd, "vigencia.fim") };
-    dados.aluguel = { valor: parseFloat(getByPath(fd, "aluguel.valor") || 0), diaVencimento: getByPath(fd, "aluguel.diaVencimento"), indice: getByPath(fd, "aluguel.indice"), primeiroVencimento: getByPath(fd, "aluguel.primeiroVencimento"), condominio: parseFloat(getByPath(fd, "aluguel.condominio") || 0), iptu: parseFloat(getByPath(fd, "aluguel.iptu") || 0) };
+    dados.aluguel = { valor: parseFloat(getByPath(fd, "aluguel.valor") || 0), diaVencimento: getByPath(fd, "aluguel.diaVencimento"), indice: getByPath(fd, "aluguel.indice"), primeiroVencimento: getByPath(fd, "aluguel.primeiroVencimento"), condominio: parseFloat(getByPath(fd, "aluguel.condominio") || 0), iptu: parseFloat(getByPath(fd, "aluguel.iptu") || 0), encargos: getByPath(fd, "aluguel.encargos") || "separado" };
 
     dados.administracao = { ativa: fd.get("administracao.ativa") === "on", taxaPercentual: parseFloat(getByPath(fd, "administracao.taxaPercentual") || 0) };
     dados.seguroIncendio = { incluir: fd.get("seguroIncendio.incluir") === "on", responsavel: getByPath(fd, "seguroIncendio.responsavel") || "locatario" };

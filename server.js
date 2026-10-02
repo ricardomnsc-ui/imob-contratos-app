@@ -1126,6 +1126,41 @@ app.post("/api/ia/extrair-documento", requireAuth, uploadDocumento.single("docum
   }
 });
 
+// Auditoria dos contratos de locacao ja emitidos quanto a quem paga condominio
+// e IPTU. Ate a opcao "inclusos" existir, a Clausula Sexta afirmava sempre que
+// o encargo era do locatario — inclusive nos acordos de valor fechado. Quem
+// informou os valores tem contrato coerente; quem nao informou nada e o caso a
+// conferir, porque o documento cobra um encargo que ninguem quantificou.
+//
+// So devolve o que o proprio tenant gerou, e sem nome das partes: o que
+// interessa aqui e o endereco, pra achar o contrato, e os numeros.
+app.get("/api/contratos/auditoria-encargos", requireAuth, async (req, res) => {
+  const TIPOS_LOCACAO = ["locacao_caucao", "locacao_fiador", "locacao_seguro_fianca", "locacao_sem_garantia"];
+  const contratos = await store.getContractsByTenant(req.user.tenantId);
+  const itens = contratos
+    .filter(c => TIPOS_LOCACAO.includes(c.tipo))
+    .map(c => {
+      const al = (c.dados && c.dados.aluguel) || {};
+      const condominio = Number(al.condominio || 0);
+      const iptu = Number(al.iptu || 0);
+      const incluso = (al.encargos || "separado") === "incluso";
+      return {
+        id: c.id,
+        criadoEm: c.criadoEm || null,
+        data: c.data || null,
+        endereco: c.endereco || "",
+        aluguel: Number(al.valor || 0),
+        condominio, iptu,
+        situacao: incluso ? "incluso" : (condominio || iptu ? "discriminado" : "conferir"),
+      };
+    });
+  res.json({
+    total: itens.length,
+    aConferir: itens.filter(i => i.situacao === "conferir").length,
+    itens,
+  });
+});
+
 // ================= DASHBOARD =================
 app.get("/api/dashboard", requireAuth, async (req, res) => {
   const contratos = await store.getContractsByTenant(req.user.tenantId);
