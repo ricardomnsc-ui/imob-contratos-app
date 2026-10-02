@@ -996,7 +996,7 @@ async function renderAuditoriaEncargos(el) {
           <td style="padding:8px 0 8px 8px;text-align:right;font-variant-numeric:tabular-nums">${fmt(i.aluguel)}</td>
         </tr>`).join("")}</tbody>
     </table>
-    <p class="hint" style="margin-top:12px;margin-bottom:0">Os contratos em que você informou o valor do condomínio ou do IPTU não entram nesta lista: neles o documento discrimina os encargos e está coerente.</p>
+    <p class="hint" style="margin-top:12px;margin-bottom:0">${d.total - lista.length > 0 ? `Os outros ${d.total - lista.length} contratos de locação têm condomínio ou IPTU discriminados — neles o documento bate com o que foi informado. Ainda assim, vale conferir se a <strong>taxa mensal</strong> do quadro-resumo é a que foi combinada: se o valor fechado já incluía as taxas, elas foram somadas por cima.` : "Nenhum outro contrato de locação tem os encargos discriminados."}</p>
   `;
   el.prepend(card);
 }
