@@ -239,8 +239,9 @@
   .conta-lista { list-style: none; padding: 0; margin: 14px 0 0; font-size: 13.5px; color: var(--muted); }
   .conta-lista li { padding: 4px 0; }
   .conta-lista li::before { content: "✓ "; color: var(--brand-text); font-weight: 700; }
-  .conta-acao { margin-top: auto; padding-top: 16px; }
+  .conta-acao { margin-top: auto; padding-top: 16px; display: flex; flex-direction: column; gap: 8px; }
   .conta-acao button { width: 100%; }
+  .conta-avista { font-size: 13.5px; }
   .conta-tag-atual { font-size: 12.5px; font-weight: 600; color: var(--brand-text); }
 
   /* ---- Revisão por link ---- */
@@ -2383,6 +2384,13 @@ const STATUS_ASSINATURA = {
   incomplete: { texto: "Pagamento incompleto", classe: "alerta" },
 };
 
+// Valor sem período. O fmtPreco sempre sufixa /mês ou /ano, e num pagamento
+// à vista isso seria mentira: não há recorrência nenhuma.
+function fmtValor(p) {
+  if (!p || p.centavos == null) return null;
+  return (p.centavos / 100).toLocaleString("pt-BR", { style: "currency", currency: (p.moeda || "brl").toUpperCase() });
+}
+
 function fmtPreco(p) {
   if (!p || p.centavos == null) return null;
   const v = (p.centavos / 100).toLocaleString("pt-BR", { style: "currency", currency: (p.moeda || "brl").toUpperCase() });
@@ -2414,6 +2422,19 @@ async function renderConta() {
       : `<div class="conta-linha"><span>Próxima cobrança</span><strong>${dt}</strong></div>`;
   }
 
+  // Período pago à vista. A data e o "não renova" ficam juntos de propósito:
+  // é um acesso que acaba sozinho, e quem pagou precisa saber disso antes de
+  // o contrato parar de sair.
+  const av = d.acessoAvulso;
+  let linhaAvista = "";
+  if (av && av.vigente) {
+    const dt = new Date(av.ate).toLocaleDateString("pt-BR");
+    const diasRestantes = Math.ceil((new Date(av.ate) - new Date()) / 86400000);
+    linhaAvista = `
+      <div class="conta-linha"><span>Pago à vista até</span><strong>${dt}</strong></div>
+      <p class="hint" style="margin:6px 0 0">Esse período foi pago de uma vez e <strong>não renova automaticamente</strong>${diasRestantes <= 30 ? ` — faltam ${diasRestantes} dia(s)` : ""}. Antes do fim, pague outro período ou assine no cartão.</p>`;
+  }
+
   const cartaoAtual = `
     <div class="card">
       <h2>Meu plano</h2>
@@ -2427,6 +2448,7 @@ async function renderConta() {
         <div class="conta-linha"><span>Uso de IA</span><strong>${d.usoIaNoMes} de ${d.limiteIaPorMes} neste mês</strong></div>
         ${a && a.valor ? `<div class="conta-linha"><span>Valor</span><strong>${fmtPreco({ ...a.valor, intervalo: a.ciclo })}</strong></div>` : ""}
         ${linhaVenc}
+        ${linhaAvista}
       </div>
       ${a ? `<div class="footer-actions" style="justify-content:flex-start;margin-top:18px">
         <button type="button" class="secondary" id="btnPortal">Gerenciar assinatura, forma de pagamento e notas</button>
@@ -2451,8 +2473,14 @@ async function renderConta() {
         ? `<button type="button" class="secondary" id="btnPortal2">Cancelar pelo portal</button>`
         : "";
     } else {
-      const rotulo = a ? "Mudar para este plano" : "Assinar";
+      const rotulo = a ? "Mudar para este plano" : "Assinar no cartão";
       acao = `<button type="button" class="primary" data-plano="${p.id}" data-ciclo="mensal">${rotulo}</button>`;
+      // Pagar o ano de uma vez é a única forma de usar PIX: o Stripe não aceita
+      // PIX em assinatura. Só aparece pra quem ainda não assina no cartão —
+      // quem já assina pagaria duas vezes o mesmo período.
+      if (!a && p.anual) {
+        acao += `<button type="button" class="secondary conta-avista" data-avista="${p.id}">Pagar 1 ano à vista · ${fmtValor(p.anual)}</button>`;
+      }
     }
     return `
       <div class="card conta-plano-card ${p.atual ? "atual" : ""}">
@@ -2484,6 +2512,22 @@ async function renderConta() {
   ["btnPortal", "btnPortal2"].forEach(id => {
     const b = document.getElementById(id);
     if (b) b.addEventListener("click", () => abrirPortal(b));
+  });
+
+  el.querySelectorAll("[data-avista]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const original = btn.textContent;
+      btn.disabled = true; btn.textContent = "Abrindo pagamento...";
+      try {
+        const r = await api("/api/billing/avista", { method: "POST", body: JSON.stringify({ plano: btn.dataset.avista }) });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || !j.url) throw new Error(j.error || "Não foi possível abrir o pagamento");
+        window.location.href = j.url;
+      } catch (err) {
+        toast(err.message, true);
+        btn.disabled = false; btn.textContent = original;
+      }
+    });
   });
 
   el.querySelectorAll("[data-plano]").forEach(btn => {
@@ -3219,10 +3263,41 @@ function setPath(obj, path, value) {
     const data = await res.json();
     state.user = data.user;
     await bootstrapApp();
+    if (params.get("avista") === "sucesso") aguardarAcessoAvista();
+    if (params.get("avista") === "cancelado") toast("Pagamento cancelado — nada foi cobrado.");
   } else {
     renderAuth();
   }
 })();
+
+// Volta do pagamento à vista. O plano é creditado pelo webhook, não pelo
+// redirect, então o acesso pode chegar alguns segundos depois da pessoa voltar
+// — e no PIX pode demorar um pouco mais. Em vez de mostrar "plano Grátis" pra
+// quem acabou de pagar, espera e confere.
+async function aguardarAcessoAvista() {
+  limparParametrosDaUrl();
+  toast("Pagamento recebido! Liberando seu acesso...");
+  for (let tentativa = 0; tentativa < 10; tentativa++) {
+    await new Promise(r => setTimeout(r, tentativa < 3 ? 2000 : 5000));
+    const r = await api("/api/billing/assinatura");
+    if (!r.ok) continue;
+    const d = await r.json().catch(() => null);
+    if (d && d.acessoAvulso && d.acessoAvulso.vigente) {
+      await loadTenant();
+      renderConta(); // no-op se a tela de conta não estiver montada
+      toast(`Acesso liberado até ${new Date(d.acessoAvulso.ate).toLocaleDateString("pt-BR")}!`);
+      return;
+    }
+  }
+  toast("O pagamento está sendo confirmado. Assim que compensar, seu acesso é liberado — pode recarregar a página em instantes.", true);
+}
+
+// Tira ?avista= da barra de endereço: recarregar não pode repetir o aviso.
+function limparParametrosDaUrl() {
+  const url = new URL(window.location.href);
+  ["avista", "upgrade"].forEach(k => url.searchParams.delete(k));
+  window.history.replaceState({}, "", url.pathname + (url.search || "") + url.hash);
+}
 </script>
 </body>
 </html>

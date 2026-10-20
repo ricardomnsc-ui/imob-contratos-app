@@ -13,7 +13,7 @@ const { nanoid } = require("nanoid");
 const { gerarContrato, extrairTextoDocx, checklistEmTexto } = require("./lib/generator");
 const { convertDocxToPdf } = require("./lib/pdf");
 const store = require("./lib/store");
-const { PLANOS, limitesDoPlano, precoDoPlano, mesAtual, contratosUsadosNoMes, LIMITE_IA_MENSAL, iaUsadaNoMes, planoEfetivo, DIAS_TOLERANCIA_ATRASO } = require("./lib/planos");
+const { PLANOS, limitesDoPlano, precoDoPlano, mesAtual, contratosUsadosNoMes, LIMITE_IA_MENSAL, iaUsadaNoMes, planoEfetivo, DIAS_TOLERANCIA_ATRASO, acessoAvulsoVigente, estenderAcesso, MESES_PLANO_ANUAL } = require("./lib/planos");
 const stripe = require("./lib/stripe");
 const ai = require("./lib/ai");
 // `mailer` e nao `email`: varias rotas desestruturam `const { email } = req.body`,
@@ -186,6 +186,11 @@ app.post("/api/billing/webhook", express.raw({ type: "application/json" }), asyn
           await registrarCompraDaSessao(session.id);
           break;
         }
+        // Período de plano pago à vista.
+        if (session.mode === "payment" && session.metadata && session.metadata.planoAvista) {
+          await creditarAcessoAvista(session);
+          break;
+        }
         const tenantId = session.metadata && session.metadata.tenantId;
         const planoId = session.metadata && session.metadata.plano;
         if (tenantId && planoId) {
@@ -206,9 +211,10 @@ app.post("/api/billing/webhook", express.raw({ type: "application/json" }), asyn
       // que libera o download de quem não pagou no cartão.
       case "checkout.session.async_payment_succeeded": {
         const session = event.data.object;
-        if (session.mode === "payment" && session.metadata && session.metadata.ebook) {
-          await registrarCompraDaSessao(session.id);
-        }
+        const meta = session.metadata || {};
+        if (session.mode !== "payment") break;
+        if (meta.ebook) await registrarCompraDaSessao(session.id);
+        else if (meta.planoAvista) await creditarAcessoAvista(session);
         break;
       }
       case "checkout.session.async_payment_failed": {
@@ -666,6 +672,13 @@ app.get("/api/billing/assinatura", requireAuth, async (req, res) => {
     ehDono: req.user.role === "owner",
     pagamentoDisponivel: !!stripe,
     assinatura,
+    // Período pago à vista, quando houver. É o que a tela usa pra mostrar até
+    // quando vale e pra avisar que isso NÃO renova sozinho.
+    acessoAvulso: tenant.acessoAvulso && tenant.acessoAvulso.ate ? {
+      plano: tenant.acessoAvulso.plano,
+      ate: tenant.acessoAvulso.ate,
+      vigente: !!acessoAvulsoVigente(tenant),
+    } : null,
     planos,
   });
 });
@@ -754,6 +767,79 @@ app.post("/api/billing/checkout", requireAuth, async (req, res) => {
     res.json({ url: session.url });
   } catch (err) {
     console.error("Erro ao criar checkout do Stripe:", err);
+    res.status(500).json({ error: "Não foi possível iniciar o pagamento agora" });
+  }
+});
+
+// Período fechado pago de uma vez. Existe porque PIX não entra em assinatura:
+// o Stripe recusa `pix` em `mode: subscription`. Aqui é `mode: payment`, onde
+// ele funciona — e o acesso vale por 12 meses sem renovar sozinho.
+//
+// Os métodos oferecidos saem da configuração do painel do Stripe, não daqui:
+// enquanto o PIX estiver desligado lá, esta tela cobra no cartão e passa a
+// oferecer PIX no dia em que ele for ligado, sem tocar no código.
+app.post("/api/billing/avista", requireAuth, async (req, res) => {
+  if (!stripe) return res.status(503).json({ error: "Pagamento indisponível no momento" });
+  if (req.user.role !== "owner") return res.status(403).json({ error: "Só o dono da conta pode alterar o plano" });
+
+  const planoId = (req.body || {}).plano;
+  const plano = PLANOS[planoId];
+  if (!plano || !plano.stripePriceIdAnual) {
+    return res.status(400).json({ error: "Esse plano não tem pagamento à vista disponível" });
+  }
+
+  const tenant = await store.getTenant(req.user.tenantId);
+  if (!tenant) return res.status(404).json({ error: "Imobiliária não encontrada" });
+
+  // Mesma proteção do checkout de assinatura: quem já paga no cartão pagaria
+  // duas vezes pelo mesmo período.
+  if (tenant.stripeSubscriptionId) {
+    try {
+      const atual = await stripe.subscriptions.retrieve(tenant.stripeSubscriptionId);
+      if (["active", "trialing", "past_due", "unpaid"].includes(atual.status)) {
+        return res.status(409).json({
+          error: "Você já tem uma assinatura no cartão. Cancele em 'Minha conta' antes de pagar o ano à vista — senão vira cobrança dupla.",
+        });
+      }
+    } catch (err) {
+      console.error("Assinatura anterior não encontrada, seguindo com o à vista:", err.message);
+    }
+  }
+
+  // O preço continua vindo do Stripe: é lá que ele muda. Só o formato muda,
+  // de preço recorrente pra valor avulso, porque `mode: payment` não aceita
+  // um price com recorrência.
+  const preco = await precoStripe(plano.stripePriceIdAnual);
+  if (!preco || !preco.centavos) {
+    return res.status(503).json({ error: "Não foi possível consultar o preço agora. Tente de novo." });
+  }
+
+  try {
+    const base = `${req.protocol}://${req.get("host")}`;
+    const sessao = await stripe.checkout.sessions.create({
+      mode: "payment",
+      locale: "pt-BR",
+      customer: tenant.stripeCustomerId || undefined,
+      customer_email: tenant.stripeCustomerId ? undefined : req.user.email,
+      client_reference_id: req.user.tenantId,
+      line_items: [{
+        quantity: 1,
+        price_data: {
+          currency: preco.moeda,
+          unit_amount: preco.centavos,
+          product_data: {
+            name: `Minutei ${plano.nome} — ${MESES_PLANO_ANUAL} meses`,
+            description: "Acesso por 12 meses pago de uma vez. Não renova automaticamente.",
+          },
+        },
+      }],
+      metadata: { tenantId: req.user.tenantId, planoAvista: planoId, meses: String(MESES_PLANO_ANUAL) },
+      success_url: `${base}/app.html?avista=sucesso`,
+      cancel_url: `${base}/app.html?avista=cancelado`,
+    });
+    res.json({ url: sessao.url });
+  } catch (err) {
+    console.error("Erro ao criar checkout à vista:", err.message);
     res.status(500).json({ error: "Não foi possível iniciar o pagamento agora" });
   }
 });
@@ -1682,6 +1768,45 @@ app.post("/api/ebook/:slug/checkout", async (req, res) => {
 // Stripe. E cria a compra se o webhook ainda não tiver chegado — a página de
 // obrigado abre segundos depois do pagamento, às vezes na frente do webhook, e
 // o comprador não pode ficar sem o arquivo por causa dessa corrida.
+// Credita o período comprado à vista. Chamada pelos dois eventos que podem
+// trazer o dinheiro: `completed` (cartão, que confirma na hora) e
+// `async_payment_succeeded` (PIX e boleto, que confirmam depois).
+async function creditarAcessoAvista(session) {
+  // PIX pendente cai aqui com `unpaid`: não credita agora, o
+  // async_payment_succeeded chega quando compensar.
+  if (session.payment_status !== "paid") return;
+
+  const tenantId = session.metadata && session.metadata.tenantId;
+  const planoId = session.metadata && session.metadata.planoAvista;
+  const meses = Number((session.metadata && session.metadata.meses) || MESES_PLANO_ANUAL);
+  if (!tenantId || !PLANOS[planoId]) return;
+
+  const tenant = await store.getTenant(tenantId);
+  if (!tenant) return;
+
+  const avulso = tenant.acessoAvulso || {};
+  const compras = avulso.compras || [];
+  // O Stripe reenvia webhook, e os dois eventos podem chegar pela mesma compra.
+  // Sem esta guarda, 12 meses pagos viravam 24 creditados.
+  if (compras.some(c => c.sessionId === session.id)) return;
+
+  const ate = estenderAcesso(avulso.ate, meses);
+  await store.setTenant(tenantId, {
+    ...tenant,
+    stripeCustomerId: session.customer || tenant.stripeCustomerId,
+    acessoAvulso: {
+      plano: planoId,
+      ate,
+      origem: "avista",
+      compras: [...compras, {
+        sessionId: session.id, plano: planoId, meses,
+        em: new Date().toISOString(), valorCentavos: session.amount_total,
+      }],
+    },
+  });
+  console.log(`Acesso à vista creditado: tenant ${tenantId}, plano ${planoId}, até ${ate}.`);
+}
+
 async function registrarCompraDaSessao(sessionId) {
   const sessao = await stripe.checkout.sessions.retrieve(sessionId);
   if (!sessao) return null;
