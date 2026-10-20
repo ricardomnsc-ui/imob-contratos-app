@@ -96,6 +96,13 @@
         <a href="mailto:contato@minutei.app.br">contato@minutei.app.br</a> com o e-mail da compra.</p>
     </div>
 
+    <div id="aguardando" class="sumiu">
+      <div class="olho">Aguardando compensação</div>
+      <h1>Recebemos seu pagamento</h1>
+      <p>O PIX ainda está sendo confirmado pelo banco. Costuma levar alguns segundos — deixe esta página aberta.</p>
+      <p class="depois">Assim que compensar, o link aparece aqui e também vai para o seu e-mail. Se você fechar a página, o e-mail chega do mesmo jeito.</p>
+    </div>
+
     <div id="falhou" class="sumiu">
       <div class="olho">Ops</div>
       <h1>Não conseguimos confirmar agora</h1>
@@ -122,12 +129,14 @@
   var elCarregando = document.getElementById("carregando");
   var elPronto = document.getElementById("pronto");
   var elFalhou = document.getElementById("falhou");
+  var elAguardando = document.getElementById("aguardando");
   var elErro = document.getElementById("msgErro");
 
   function mostrar(qual) {
     elCarregando.className = qual === "carregando" ? "" : "sumiu";
     elPronto.className = qual === "pronto" ? "" : "sumiu";
     elFalhou.className = qual === "falhou" ? "" : "sumiu";
+    elAguardando.className = qual === "aguardando" ? "" : "sumiu";
   }
 
   function falhar(msg) {
@@ -153,11 +162,22 @@
     mostrar("pronto");
   }
 
+  // PIX compensa depois do redirect. Em vez de dizer que não achou o
+  // pagamento, a página espera e volta a perguntar — com intervalo crescente,
+  // pra não martelar o servidor se demorar de verdade.
+  var tentativa = 0;
+
   function confirmar() {
-    mostrar("carregando");
+    if (!tentativa) mostrar("carregando");
+    tentativa++;
     fetch("/api/ebook/compra/" + encodeURIComponent(sessionId))
-      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (r) { return r.json().then(function (j) { return { status: r.status, ok: r.ok, j: j }; }); })
       .then(function (x) {
+        if (x.status === 202 || (x.j && x.j.pendente)) {
+          mostrar("aguardando");
+          setTimeout(confirmar, Math.min(4000 + tentativa * 1000, 15000));
+          return;
+        }
         if (!x.ok || !x.j.token) throw new Error(x.j.error || "Pagamento não localizado.");
         liberar(x.j);
       })
@@ -168,7 +188,7 @@
     falhar("Este endereço precisa vir da tela de pagamento. Abra o guia pela página do Educacional.");
     return;
   }
-  document.getElementById("btnTentar").addEventListener("click", confirmar);
+  document.getElementById("btnTentar").addEventListener("click", function () { tentativa = 0; confirmar(); });
   confirmar();
 })();
 </script>

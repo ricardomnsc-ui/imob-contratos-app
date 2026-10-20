@@ -201,6 +201,21 @@ app.post("/api/billing/webhook", express.raw({ type: "application/json" }), asyn
         }
         break;
       }
+      // PIX e boleto só confirmam aqui. O `completed` acima dispara com o
+      // pagamento ainda em processamento, então é este evento — e não aquele —
+      // que libera o download de quem não pagou no cartão.
+      case "checkout.session.async_payment_succeeded": {
+        const session = event.data.object;
+        if (session.mode === "payment" && session.metadata && session.metadata.ebook) {
+          await registrarCompraDaSessao(session.id);
+        }
+        break;
+      }
+      case "checkout.session.async_payment_failed": {
+        const session = event.data.object;
+        console.warn(`Pagamento assíncrono falhou na sessão ${session.id} (e-book: ${(session.metadata || {}).ebook || "-"}).`);
+        break;
+      }
       // Mudança de status da assinatura — inclusive a ida pra past_due/unpaid
       // quando o pagamento falha. Sem tratar isto, uma assinatura que parou de
       // ser paga continuava dando acesso: o "deleted" abaixo só dispara se o
@@ -1669,7 +1684,15 @@ app.post("/api/ebook/:slug/checkout", async (req, res) => {
 // o comprador não pode ficar sem o arquivo por causa dessa corrida.
 async function registrarCompraDaSessao(sessionId) {
   const sessao = await stripe.checkout.sessions.retrieve(sessionId);
-  if (!sessao || sessao.payment_status !== "paid") return null;
+  if (!sessao) return null;
+  // PIX e boleto não confirmam na hora. A sessão fica `complete` com o
+  // pagamento ainda `unpaid`, e o comprador chega na página de obrigado antes
+  // de o dinheiro cair — às vezes antes mesmo de abrir o app do banco. Tratar
+  // isso como "pagamento não localizado" manda embora quem acabou de pagar.
+  if (sessao.payment_status !== "paid") {
+    if (sessao.status === "complete") return { pendente: true };
+    return null;
+  }
   const slug = sessao.metadata && sessao.metadata.ebook;
   const ebook = EBOOKS[slug];
   if (!ebook) return null;
@@ -1713,6 +1736,9 @@ app.get("/api/ebook/compra/:sessionId", async (req, res) => {
     }
     const nova = await registrarCompraDaSessao(req.params.sessionId);
     if (!nova) return res.status(404).json({ error: "Pagamento não localizado." });
+    // 202: o pedido existe e está correto, só ainda não compensou. A página
+    // fica consultando até virar, em vez de mostrar erro a quem já pagou.
+    if (nova.pendente) return res.status(202).json({ pendente: true });
     res.json({ token: nova.token, email: nova.email, titulo: nova.ebook.titulo });
   } catch (err) {
     // Sessão que o Stripe não conhece é link inválido, não falha nossa: dizer
