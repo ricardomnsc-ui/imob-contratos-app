@@ -1,0 +1,34 @@
+name: Testes
+
+# Roda a cada push e em todo pull request. O objetivo é simples: nenhuma
+# mudança chega em produção sem os 14 documentos terem sido gerados e lidos.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  documentos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20 # mesma versão da imagem de produção (node:20-slim)
+          cache: npm
+
+      # `npm ci` instala exatamente o que está no package-lock, sem atualizar
+      # nada por conta própria — é o que faz o CI testar o mesmo conjunto de
+      # dependências que vai pro Docker.
+      - run: npm ci
+
+      - name: Gerar e conferir os 14 documentos
+        run: npm test
+
+      # Vulnerabilidade nova aparece sozinha conforme os avisos são publicados,
+      # sem ninguém ter mexido no código. Aqui ela vira aviso no CI em vez de
+      # descoberta por acaso meses depois. Não derruba o build: `|| true`
+      # mantém o foco em quebra de comportamento, que é o que impede o deploy.
+      - name: Auditoria de dependências (informativo)
+        run: npm audit --omit=dev || true
