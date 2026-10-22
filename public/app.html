@@ -39,6 +39,14 @@
     --muted: #5b6b7f;
     --border: #e4e9f0;
     --bg: #f5f5f5;
+    /* Cores de dado. O par venda/locação passou nos checks de daltonismo
+       (ΔE 21.3 protan) e de contraste contra o branco — não é escolha de
+       gosto, foi validado. Só é usado onde há duas séries; gráfico de uma
+       série só usa --c-dado, e quem carrega a identidade ali é o rótulo. */
+    --c-venda: #e05c00;
+    --c-locacao: #1b6ca8;
+    --c-dado: #e05c00;
+    --c-grade: #eef1f5;
     --paper: #ffffff;
     --shadow-sm: 0 1px 2px rgba(13, 27, 42, 0.06);
     --shadow-md: 0 6px 20px rgba(13, 27, 42, 0.08);
@@ -341,6 +349,41 @@
   .checklist-preview { white-space: pre-wrap; word-break: break-word; background: var(--bg);
     border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-top: 12px;
     font-family: inherit; font-size: 13px; line-height: 1.5; max-height: 320px; overflow: auto; }
+  /* ===== gráficos ===== */
+  .gr-topo { display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:2px; }
+  .gr-legenda { display:flex; gap:14px; font-size:12.5px; color:var(--muted); }
+  .gr-legenda span { display:inline-flex; align-items:center; gap:6px; }
+  .gr-chave { width:10px; height:10px; border-radius:3px; flex-shrink:0; }
+  .gr-svg { width:100%; height:auto; display:block; overflow:visible; }
+  .gr-svg text { font-family:var(--sans); fill:var(--muted); }
+  .gr-grupo { cursor:default; }
+  .gr-grupo rect.alvo { fill:transparent; }
+  .gr-grupo:hover rect.alvo { fill:var(--c-grade); }
+
+  /* O SVG escala pelo viewBox, então no celular o texto encolhe junto e os
+     meses viram borrão. Aqui ele volta a ter tamanho de leitura — CSS vence o
+     atributo font-size do elemento. */
+  @media (max-width: 620px) {
+    .gr-svg text { font-size: 17px; }
+  }
+
+  .gr-tip { position:fixed; z-index:60; pointer-events:none; background:var(--ink); color:#fff;
+    border-radius:8px; padding:9px 11px; font-size:12.5px; line-height:1.45; box-shadow:0 6px 20px rgba(13,27,42,.22);
+    opacity:0; transition:opacity .12s; white-space:nowrap; }
+  .gr-tip.on { opacity:1; }
+  .gr-tip b { font-weight:700; }
+  .gr-tip .l { display:flex; align-items:center; gap:6px; }
+  .gr-tip .l i { width:8px; height:8px; border-radius:2px; display:inline-block; }
+
+  .gr-barras { display:flex; flex-direction:column; gap:11px; }
+  .gr-linha { display:grid; grid-template-columns: minmax(84px, 34%) 1fr auto; align-items:center; gap:10px; font-size:13.5px; }
+  .gr-rotulo { color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  /* display:block nos dois: são <span>, e span inline ignora largura e altura —
+     a barra saía 0x0, só com o trilho aparecendo. */
+  .gr-trilho { display:block; height:9px; border-radius:5px; background:var(--c-grade); overflow:hidden; }
+  .gr-preenche { display:block; height:100%; border-radius:5px; background:var(--c-dado); }
+  .gr-valor { color:var(--muted); font-variant-numeric:tabular-nums; font-weight:600; min-width:2ch; text-align:right; }
+
   .ok-msg { color: #1c6b4a; background: #eaf6f0; border: 1px solid #bfe3d1; border-radius: 8px;
     font-size: 13px; line-height: 1.45; margin-top: 10px; padding: 10px 12px; }
 
@@ -790,6 +833,127 @@ function renderApp() {
 }
 
 // ================= DASHBOARD =================
+// ================= GRÁFICOS =================
+// SVG escrito à mão, sem biblioteca: o app.html é autocontido e puxar uma lib
+// de CDN só pra desenhar barra seria trocar isso por uma dependência externa
+// que ainda pode cair.
+
+const MESES_ABREV = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+
+function rotuloMes(chave) {
+  const [ano, mes] = String(chave).split("-");
+  const nome = MESES_ABREV[Number(mes) - 1] || "";
+  // O ano só aparece quando vira — repetir "26" doze vezes é ruído.
+  return mes === "01" ? `${nome}/${String(ano).slice(2)}` : nome;
+}
+
+// Topo arredondado só em cima: a barra nasce na linha de base, e arredondar
+// embaixo descolaria ela do eixo.
+function barraTopoRedondo(x, y, w, h, r) {
+  const raio = Math.max(0, Math.min(r, h, w / 2));
+  if (h <= 0) return "";
+  return `M${x} ${y + h} L${x} ${y + raio} Q${x} ${y} ${x + raio} ${y} L${x + w - raio} ${y} Q${x + w} ${y} ${x + w} ${y + raio} L${x + w} ${y + h} Z`;
+}
+
+// Escala "bonita": o topo do eixo vira 1, 2, 5 ou 10 vezes uma potência de dez,
+// pra linha de grade cair em número redondo em vez de 7 ou 13.
+function tetoEscala(valor) {
+  if (valor <= 4) return 4;
+  const pot = Math.pow(10, Math.floor(Math.log10(valor)));
+  for (const m of [1, 2, 2.5, 5, 10]) {
+    const t = m * pot;
+    if (t >= valor) return t;
+  }
+  return 10 * pot;
+}
+
+function graficoContratosPorMes(serie) {
+  const L = 30, R = 6, T = 10, B = 24, W = 720, H = 200;
+  const alturaPlot = H - T - B;
+  const larguraPlot = W - L - R;
+  const passo = larguraPlot / serie.length;
+  const larguraBarra = Math.min(30, passo * 0.56);
+
+  const maxTotal = Math.max(...serie.map(m => m.vendas + m.locacoes), 0);
+  const teto = tetoEscala(maxTotal);
+  const y = (v) => T + alturaPlot - (v / teto) * alturaPlot;
+
+  const marcas = [0, teto / 2, teto].filter((v, i, a) => a.indexOf(v) === i);
+  const grade = marcas.map(v => `
+    <line x1="${L}" y1="${y(v).toFixed(1)}" x2="${W - R}" y2="${y(v).toFixed(1)}" stroke="var(--c-grade)" stroke-width="1" />
+    <text x="${L - 7}" y="${(y(v) + 3.5).toFixed(1)}" text-anchor="end" font-size="10.5">${v % 1 ? v.toFixed(1) : v}</text>`).join("");
+
+  const barras = serie.map((m, i) => {
+    const cx = L + passo * i + passo / 2;
+    const x = cx - larguraBarra / 2;
+    const total = m.vendas + m.locacoes;
+    const alturaLoc = (m.locacoes / teto) * alturaPlot;
+    const alturaVen = (m.vendas / teto) * alturaPlot;
+    // 2px de respiro entre os segmentos empilhados, pra leitura não fundir os dois.
+    const baseLoc = T + alturaPlot;
+    const topoLoc = baseLoc - alturaLoc;
+    const topoVen = topoLoc - 2 - alturaVen;
+
+    const segLoc = m.locacoes
+      ? `<path d="${m.vendas ? `M${x} ${baseLoc} L${x} ${topoLoc} L${x + larguraBarra} ${topoLoc} L${x + larguraBarra} ${baseLoc} Z` : barraTopoRedondo(x, topoLoc, larguraBarra, alturaLoc, 4)}" fill="var(--c-locacao)" />`
+      : "";
+    const segVen = m.vendas
+      ? `<path d="${barraTopoRedondo(x, topoVen, larguraBarra, alturaVen, 4)}" fill="var(--c-venda)" />`
+      : "";
+
+    return `<g class="gr-grupo" data-mes="${m.mes}" data-vendas="${m.vendas}" data-locacoes="${m.locacoes}" data-comissao="${m.comissao || 0}">
+        <rect class="alvo" x="${(L + passo * i).toFixed(1)}" y="${T}" width="${passo.toFixed(1)}" height="${alturaPlot}" rx="5" />
+        ${segLoc}${segVen}
+        <text x="${cx.toFixed(1)}" y="${H - 7}" text-anchor="middle" font-size="10.5">${rotuloMes(m.mes)}</text>
+        <title>${rotuloMes(m.mes)}: ${total} contrato(s) — ${m.vendas} venda(s), ${m.locacoes} locação(ões)</title>
+      </g>`;
+  }).join("");
+
+  return `<svg class="gr-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Contratos gerados por mês nos últimos 12 meses">${grade}${barras}</svg>`;
+}
+
+// Barras horizontais de série única: a identidade está no rótulo, então não
+// precisa (nem deve) de segunda cor.
+function barrasHorizontais(itens) {
+  const max = Math.max(...itens.map(i => i.valor), 1);
+  return `<div class="gr-barras">${itens.map(i => `
+    <div class="gr-linha">
+      <span class="gr-rotulo" title="${escapeHtml(i.rotulo)}">${escapeHtml(i.rotulo)}</span>
+      <span class="gr-trilho"><span class="gr-preenche" style="width:${Math.max(2, (i.valor / max) * 100)}%"></span></span>
+      <span class="gr-valor">${i.texto !== undefined ? i.texto : i.valor}</span>
+    </div>`).join("")}</div>`;
+}
+
+// Um tooltip só, reaproveitado por todos os gráficos.
+function ligarTooltipGrafico(raiz) {
+  let tip = document.getElementById("grTip");
+  if (!tip) {
+    tip = document.createElement("div");
+    tip.id = "grTip"; tip.className = "gr-tip";
+    document.body.appendChild(tip);
+  }
+  const fmt = (n) => (n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+
+  raiz.querySelectorAll(".gr-grupo").forEach(g => {
+    const mostrar = (ev) => {
+      const v = Number(g.dataset.vendas), l = Number(g.dataset.locacoes), c = Number(g.dataset.comissao);
+      tip.innerHTML = `<b>${rotuloMes(g.dataset.mes)}</b> · ${v + l} contrato(s)`
+        + `<div class="l"><i style="background:var(--c-venda)"></i>${v} venda(s)</div>`
+        + `<div class="l"><i style="background:var(--c-locacao)"></i>${l} locação(ões)</div>`
+        + (c ? `<div style="margin-top:3px;opacity:.75">comissão ${fmt(c)}</div>` : "");
+      tip.classList.add("on");
+      const r = tip.getBoundingClientRect();
+      // Perto da borda direita o tooltip vira pra esquerda, senão sai da tela.
+      const x = Math.min(ev.clientX + 14, window.innerWidth - r.width - 10);
+      tip.style.left = Math.max(10, x) + "px";
+      tip.style.top = Math.max(10, ev.clientY - r.height - 12) + "px";
+    };
+    g.addEventListener("mouseenter", mostrar);
+    g.addEventListener("mousemove", mostrar);
+    g.addEventListener("mouseleave", () => tip.classList.remove("on"));
+  });
+}
+
 async function renderDashboard() {
   const el = document.getElementById("view-dashboard");
   el.innerHTML = `<div class="card"><div class="empty">Carregando...</div></div>`;
@@ -801,6 +965,8 @@ async function renderDashboard() {
   const totalUso = d.comercialVsResidencial.comercial + d.comercialVsResidencial.residencial;
   const pctComercial = totalUso ? Math.round((d.comercialVsResidencial.comercial / totalUso) * 100) : 0;
   const pctResidencial = 100 - pctComercial;
+  const serie = d.serieMensal || [];
+  const temSerie = serie.some(m => m.vendas + m.locacoes > 0);
   const variacaoMes = d.contratosMesPassado > 0
     ? Math.round(((d.contratosEsteMes - d.contratosMesPassado) / d.contratosMesPassado) * 100)
     : (d.contratosEsteMes > 0 ? 100 : 0);
@@ -835,33 +1001,39 @@ async function renderDashboard() {
       </div>
     </div>
 
+    <div class="card" style="margin-bottom:20px">
+      <div class="gr-topo">
+        <div>
+          <h2 style="margin-bottom:2px">Contratos por mês</h2>
+          <p class="hint" style="margin:0">Últimos 12 meses, por tipo de negócio.</p>
+        </div>
+        <div class="gr-legenda">
+          <span><i class="gr-chave" style="background:var(--c-venda)"></i>Venda</span>
+          <span><i class="gr-chave" style="background:var(--c-locacao)"></i>Locação</span>
+        </div>
+      </div>
+      ${temSerie
+        ? `<div style="margin-top:14px">${graficoContratosPorMes(d.serieMensal)}</div>`
+        : `<div class="empty" style="padding:26px 0">Ainda não há contratos nos últimos 12 meses.</div>`}
+    </div>
+
     <div class="grid" style="margin-bottom:20px">
       <div class="card" style="margin-bottom:0">
         <h2>Bairro com mais efetividade</h2>
         <p class="hint">Onde você mais fecha contrato.</p>
-        ${d.bairroRanking.length ? d.bairroRanking.map((b, i) => `
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:${i === d.bairroRanking.length - 1 ? "0" : "10px"}">
-            <span style="width:22px;height:22px;border-radius:50%;background:${i === 0 ? "var(--brand-soft)" : "var(--bg)"};color:${i === 0 ? "var(--brand-dark)" : "var(--muted)"};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">${i + 1}</span>
-            <span style="flex:1;font-size:14px">${b.bairro}</span>
-            <span style="font-size:13px;color:var(--muted);font-weight:600">${b.total} contrato${b.total > 1 ? "s" : ""}</span>
-          </div>
-        `).join("") : `<div class="empty" style="padding:12px 0">Cadastre o bairro nos próximos contratos pra ver esse ranking.</div>`}
+        ${d.bairroRanking.length
+          ? barrasHorizontais(d.bairroRanking.map(b => ({ rotulo: b.bairro, valor: b.total })))
+          : `<div class="empty" style="padding:12px 0">Cadastre o bairro nos próximos contratos pra ver esse ranking.</div>`}
       </div>
       <div class="card" style="margin-bottom:0">
         <h2>Comercial vs Residencial</h2>
         <p class="hint">Perfil dos imóveis nos seus contratos.</p>
-        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
-          <span>Residencial</span><span style="font-weight:600">${pctResidencial}%</span>
-        </div>
-        <div style="height:8px;border-radius:4px;background:var(--bg);overflow:hidden;margin-bottom:14px">
-          <div style="height:100%;width:${pctResidencial}%;background:var(--brand)"></div>
-        </div>
-        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
-          <span>Comercial</span><span style="font-weight:600">${pctComercial}%</span>
-        </div>
-        <div style="height:8px;border-radius:4px;background:var(--bg);overflow:hidden">
-          <div style="height:100%;width:${pctComercial}%;background:var(--gold)"></div>
-        </div>
+        ${totalUso
+          ? barrasHorizontais([
+              { rotulo: "Residencial", valor: d.comercialVsResidencial.residencial, texto: `${d.comercialVsResidencial.residencial} · ${pctResidencial}%` },
+              { rotulo: "Comercial", valor: d.comercialVsResidencial.comercial, texto: `${d.comercialVsResidencial.comercial} · ${pctComercial}%` },
+            ])
+          : `<div class="empty" style="padding:12px 0">Sem contratos para comparar ainda.</div>`}
         <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);font-size:13px;color:var(--muted)">
           Ticket médio de locação: <strong style="color:var(--ink)">${fmtBRL(d.ticketMedioLocacao)}/mês</strong>
         </div>
@@ -906,6 +1078,8 @@ async function renderDashboard() {
       ` : `<div class="empty">Nenhum contrato ainda.</div>`}
     </div>
   `;
+
+  ligarTooltipGrafico(el);
 
   el.querySelectorAll("[data-editar-contrato]").forEach(btn => {
     btn.addEventListener("click", () => editarContrato(btn.dataset.editarContrato));

@@ -1280,6 +1280,24 @@ app.get("/api/dashboard", requireAuth, async (req, res) => {
   const mesPassadoStr = `${mesPassado.getFullYear()}-${String(mesPassado.getMonth() + 1).padStart(2, "0")}`;
   const contarNoMes = (mesStr) => contratos.filter(c => c.criadoEm && String(c.criadoEm).slice(0, 7) === mesStr).length;
 
+  // Série dos últimos 12 meses, sempre com os 12 meses presentes — inclusive os
+  // zerados. Montar a série só com os meses que tiveram contrato produziria um
+  // gráfico que esconde justamente o que interessa ver: o mês em que não saiu
+  // nada. Vem do `criadoEm`, que todo contrato tem; `data` é a data que o
+  // corretor digitou no documento e pode ser retroativa.
+  const serieMensal = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+    const chave = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const doMes = contratos.filter(c => c.criadoEm && String(c.criadoEm).slice(0, 7) === chave);
+    serieMensal.push({
+      mes: chave,
+      vendas: doMes.filter(c => c.tipo === "compra_venda").length,
+      locacoes: doMes.filter(c => c.tipo !== "compra_venda").length,
+      comissao: doMes.reduce((a, c) => a + Number(c.comissaoValor || 0), 0),
+    });
+  }
+
   res.json({
     totalContratos: contratos.length,
     porTipo: {
@@ -1296,6 +1314,7 @@ app.get("/api/dashboard", requireAuth, async (req, res) => {
     bairroRanking,
     contratosEsteMes: contarNoMes(mesAtualStr),
     contratosMesPassado: contarNoMes(mesPassadoStr),
+    serieMensal,
     ultimosContratos: contratos.slice(0, 10).map(c => ({
       id: c.id, tipo: c.tipo, garantiaTipo: c.garantiaTipo || null, endereco: c.endereco, bairro: c.bairro, valor: c.valor, data: c.data, criadoEm: c.criadoEm,
       // Só os gerados depois da mudança guardam os dados e podem ser reabertos.
