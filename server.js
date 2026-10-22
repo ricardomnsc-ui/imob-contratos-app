@@ -298,6 +298,55 @@ app.use(session({
   saveUninitialized: false,
   cookie: { httpOnly: true, maxAge: 30 * 24 * 60 * 60 * 1000, sameSite: "lax", secure: IS_PROD },
 }));
+// ================= SAÚDE =================
+// Existe por um motivo concreto: hoje um deploy falhou e outro subiu, e não
+// havia como saber de fora qual versão estava rodando — a diferença era só de
+// dependências, invisível no HTML. Daqui pra frente, `curl /healthz` responde.
+//
+// Serve também de healthcheck de verdade pro Railway e pra qualquer monitor
+// externo: confere o banco, não só se o processo subiu. Processo de pé com
+// banco fora é exatamente a falha que passa despercebida.
+//
+// Público de propósito (monitor não faz login), então devolve só o que não é
+// sensível: versão, commit, tempo de pé e se o banco responde.
+const COMMIT = (() => {
+  if (process.env.RAILWAY_GIT_COMMIT_SHA) return process.env.RAILWAY_GIT_COMMIT_SHA.slice(0, 7);
+  // Deploy pelo CLI não injeta a variável; aí lê do .git, que vai na imagem.
+  try {
+    const head = fs.readFileSync(path.join(__dirname, ".git", "HEAD"), "utf8").trim();
+    const ref = head.startsWith("ref:") ? head.slice(5).trim() : null;
+    const sha = ref
+      ? fs.readFileSync(path.join(__dirname, ".git", ref), "utf8").trim()
+      : head;
+    return sha.slice(0, 7);
+  } catch {
+    return "desconhecido";
+  }
+})();
+
+const SUBIU_EM = new Date();
+
+app.get("/healthz", async (req, res) => {
+  let banco = "ok";
+  try {
+    await store.ping();
+  } catch (err) {
+    banco = "falhou";
+    console.error("Healthcheck: banco não respondeu:", err.message);
+  }
+  const corpo = {
+    status: banco === "ok" ? "ok" : "degradado",
+    versao: require("./package.json").version,
+    commit: COMMIT,
+    banco,
+    desde: SUBIU_EM.toISOString(),
+    segundosDePe: Math.round((Date.now() - SUBIU_EM.getTime()) / 1000),
+  };
+  // 503 quando o banco caiu: é o que faz um monitor externo (e o próprio
+  // Railway) tratar como fora do ar, em vez de "respondeu 200, está tudo bem".
+  res.status(banco === "ok" ? 200 : 503).json(corpo);
+});
+
 // ================= CAMINHOS DOS PRODUTOS =================
 // A home vende Contratos, e /contratos e o mesmo produto. Em vez de servir a
 // mesma pagina em dois enderecos (conteudo duplicado, que divide o SEO entre
@@ -1491,6 +1540,14 @@ app.post("/api/revisao/:token/identificar", revisaoLimiter, async (req, res) => 
   const hash = hashDocumento(doc);
   const parte = (share.partes || []).find(p => p.hash === hash) || null;
 
+  // Só dá pra conferir contra o que existe. Quando nenhuma das partes do
+  // contrato teve CPF/CNPJ preenchido, `partes` vem vazia e não há com o que
+  // comparar — aí o link volta a valer por si, como antes. Travar nesse caso
+  // trancaria o cliente fora do próprio contrato por um campo que o corretor
+  // deixou em branco.
+  const podeConferir = (share.partes || []).length > 0;
+  const autorizado = !podeConferir || !!parte;
+
   const acesso = {
     id: nanoid(10),
     nome,
@@ -1501,18 +1558,38 @@ app.post("/api/revisao/:token/identificar", revisaoLimiter, async (req, res) => 
     parteRotulo: parte ? parte.rotulo : null,
     parteNome: parte ? parte.nome : null,
     confere: !!parte,
+    autorizado,
     em: new Date().toISOString(),
   };
+  // A tentativa recusada também fica registrada, de propósito: é assim que o
+  // corretor enxerga que alguém tentou abrir o contrato com um documento que
+  // não é de nenhuma das partes.
   const acessos = [...(share.acessos || []), acesso].slice(-30);
   await store.updateShareMeta(req.params.token, { acessos });
+
+  if (!autorizado) {
+    return res.status(403).json({
+      error: "Esses dados não conferem com nenhuma das partes do contrato. Confira o CPF/CNPJ digitado, ou fale com quem enviou o link.",
+    });
+  }
 
   res.json({ acesso: acesso.id, nome: acesso.nome, confere: acesso.confere, parte: acesso.parteRotulo });
 });
 
-// Confere se o portador do link já se identificou nesta sessão.
+// Confere se o portador do link já se identificou E se a identificação foi
+// aceita. Ponto único de controle: as três rotas que entregam o documento,
+// recebem a resposta e respondem dúvidas passam todas por aqui.
+//
+// Antes esta função só perguntava se a identificação existia, nunca se ela
+// batia — então qualquer CPF válido em formato abria o PDF com CPF, RG e
+// endereço das duas partes.
 function acessoValido(share, id) {
   if (!id) return null;
-  return (share.acessos || []).find(a => a.id === id) || null;
+  const acesso = (share.acessos || []).find(a => a.id === id);
+  if (!acesso) return null;
+  // `autorizado` ausente é acesso criado antes desta checagem existir: quem
+  // está no meio de uma revisão não pode ser expulso por causa do deploy.
+  return acesso.autorizado === false ? null : acesso;
 }
 
 app.get("/api/revisao/:token/documento.pdf", revisaoLimiter, async (req, res) => {
