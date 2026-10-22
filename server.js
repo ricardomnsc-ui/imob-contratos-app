@@ -196,9 +196,25 @@ app.post("/api/billing/webhook", express.raw({ type: "application/json" }), asyn
         if (tenantId && planoId) {
           const tenant = await store.getTenant(tenantId);
           if (tenant) {
+            // O status real da assinatura, e não só o plano escolhido. No
+            // cartão ela já nasce `active`; no boleto nasce `incomplete` e só
+            // vira `active` quando o boleto compensa, dias depois. Sem gravar
+            // isso, planoDaAssinatura() não acharia status nenhum, trataria
+            // como assinatura antiga e liberaria o plano — ou seja, bastava
+            // escolher boleto e nunca pagar.
+            let assinaturaStatus = tenant.assinaturaStatus;
+            if (session.subscription) {
+              try {
+                const sub = await stripe.subscriptions.retrieve(session.subscription);
+                assinaturaStatus = sub.status;
+              } catch (err) {
+                console.error("Não foi possível ler o status da assinatura recém-criada:", err.message);
+              }
+            }
             await store.setTenant(tenantId, {
               ...tenant,
               plano: planoId,
+              assinaturaStatus,
               stripeCustomerId: session.customer,
               stripeSubscriptionId: session.subscription,
             });
@@ -755,6 +771,14 @@ app.post("/api/billing/checkout", requireAuth, async (req, res) => {
   try {
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
+      // Explícito de propósito. Com métodos automáticos, quem manda é a
+      // configuração de métodos do painel — e esta conta tem DUAS chamadas
+      // "Default", ambas marcadas como padrão, que discordam sobre boleto.
+      // Quando a que vale é a de boleto desligado, a opção some do checkout
+      // sem ninguém ter mexido em nada, e o cliente que ia pagar no boleto vai
+      // embora. Para assinatura esses dois são o conjunto completo: PIX não
+      // entra em `mode: subscription`.
+      payment_method_types: ["card", "boleto"],
       line_items: [{ price: priceId, quantity: 1 }],
       customer: tenant.stripeCustomerId || undefined,
       customer_email: tenant.stripeCustomerId ? undefined : req.user.email,
