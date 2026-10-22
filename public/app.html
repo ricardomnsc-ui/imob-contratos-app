@@ -954,52 +954,6 @@ async function renderDashboard() {
       await renderDashboard();
     });
   });
-
-  renderAuditoriaEncargos(el);
-}
-
-// Aviso dos contratos de locação anteriores à opção "condomínio e IPTU
-// inclusos". Até ela existir, a Cláusula Sexta afirmava sempre que o encargo
-// era do locatário; nos contratos em que nenhum valor foi informado, não dá pra
-// saber pelo documento se o acordo era de valor fechado. O card só aparece
-// quando há o que conferir, e some sozinho conforme a lista zera.
-async function renderAuditoriaEncargos(el) {
-  const res = await api("/api/contratos/auditoria-encargos");
-  if (!res.ok) return;
-  const d = await res.json();
-  if (!d.aConferir) return;
-
-  const fmt = (n) => (n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-  const dataBR = (iso) => {
-    if (!iso) return "";
-    const [a, m, dia] = String(iso).slice(0, 10).split("-");
-    return dia ? `${dia}/${m}/${a}` : "";
-  };
-  const lista = d.itens.filter(i => i.situacao === "conferir");
-
-  const card = document.createElement("div");
-  card.className = "card";
-  card.style.borderColor = "#ffd9bd";
-  card.style.background = "#fff8f2";
-  card.innerHTML = `
-    <h2>Conferir quem paga condomínio e IPTU</h2>
-    <p class="hint">A Cláusula Sexta destes ${lista.length} contrato${lista.length > 1 ? "s" : ""} de locação diz que o condomínio e o IPTU são do locatário, mas nenhum valor foi informado na época. Se algum deles foi fechado por um valor único de <strong>aluguel + taxas</strong>, o contrato está cobrando o locatário duas vezes e precisa ser refeito com a opção <strong>“já inclusos no aluguel”</strong>.</p>
-    <table style="width:100%;border-collapse:collapse;font-size:13.5px">
-      <thead><tr style="text-align:left;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em">
-        <th style="padding:6px 8px 6px 0;font-weight:700">Imóvel</th>
-        <th style="padding:6px 8px;font-weight:700">Data</th>
-        <th style="padding:6px 0 6px 8px;font-weight:700;text-align:right">Aluguel</th>
-      </tr></thead>
-      <tbody>${lista.map(i => `
-        <tr style="border-top:1px solid var(--border)">
-          <td style="padding:8px 8px 8px 0">${i.endereco || "<span style=\"color:var(--muted)\">sem endereço</span>"}</td>
-          <td style="padding:8px;color:var(--muted);white-space:nowrap">${dataBR(i.data || i.criadoEm)}</td>
-          <td style="padding:8px 0 8px 8px;text-align:right;font-variant-numeric:tabular-nums">${fmt(i.aluguel)}</td>
-        </tr>`).join("")}</tbody>
-    </table>
-    <p class="hint" style="margin-top:12px;margin-bottom:0">${d.total - lista.length > 0 ? `Os outros ${d.total - lista.length} contratos de locação têm condomínio ou IPTU discriminados — neles o documento bate com o que foi informado. Ainda assim, vale conferir se a <strong>taxa mensal</strong> do quadro-resumo é a que foi combinada: se o valor fechado já incluía as taxas, elas foram somadas por cima.` : "Nenhum outro contrato de locação tem os encargos discriminados."}</p>
-  `;
-  el.prepend(card);
 }
 
 // ================= CONFIG (marca da imobiliária) =================
