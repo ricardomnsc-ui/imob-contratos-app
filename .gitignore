@@ -6,3 +6,6 @@ uploads/
 
 .DS_Store
 .claude/
+
+# Backups do banco: contêm CPF e RG de terceiros, nunca no repositório.
+backups/

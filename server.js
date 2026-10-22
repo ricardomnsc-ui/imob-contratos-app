@@ -309,19 +309,29 @@ app.use(session({
 //
 // Público de propósito (monitor não faz login), então devolve só o que não é
 // sensível: versão, commit, tempo de pé e se o banco responde.
-const COMMIT = (() => {
-  if (process.env.RAILWAY_GIT_COMMIT_SHA) return process.env.RAILWAY_GIT_COMMIT_SHA.slice(0, 7);
-  // Deploy pelo CLI não injeta a variável; aí lê do .git, que vai na imagem.
+// Identifica a versão que está rodando. São três fontes porque nenhuma
+// sozinha cobre os dois caminhos de deploy:
+//
+//   - deploy a partir do GitHub: o Railway injeta o SHA do commit;
+//   - deploy pelo CLI (`railway up`): não injeta nada, e o `.git` nem sobe
+//     junto — foi assim que a primeira versão disto respondeu "desconhecido";
+//   - em qualquer um dos dois existe o ID do deploy, que não é o commit mas
+//     responde a pergunta que importa: "é este o deploy que eu acabei de
+//     fazer?". Basta comparar com `railway deployment list`.
+const VERSAO_DO_CODIGO = (() => {
+  if (process.env.RAILWAY_GIT_COMMIT_SHA) {
+    return { tipo: "commit", valor: process.env.RAILWAY_GIT_COMMIT_SHA.slice(0, 7) };
+  }
   try {
     const head = fs.readFileSync(path.join(__dirname, ".git", "HEAD"), "utf8").trim();
     const ref = head.startsWith("ref:") ? head.slice(5).trim() : null;
-    const sha = ref
-      ? fs.readFileSync(path.join(__dirname, ".git", ref), "utf8").trim()
-      : head;
-    return sha.slice(0, 7);
-  } catch {
-    return "desconhecido";
+    const sha = ref ? fs.readFileSync(path.join(__dirname, ".git", ref), "utf8").trim() : head;
+    return { tipo: "commit", valor: sha.slice(0, 7) };
+  } catch { /* sem .git: deploy pelo CLI ou imagem sem o repositório */ }
+  if (process.env.RAILWAY_DEPLOYMENT_ID) {
+    return { tipo: "deploy", valor: process.env.RAILWAY_DEPLOYMENT_ID.slice(0, 8) };
   }
+  return { tipo: "desconhecido", valor: "desconhecido" };
 })();
 
 const SUBIU_EM = new Date();
@@ -337,7 +347,10 @@ app.get("/healthz", async (req, res) => {
   const corpo = {
     status: banco === "ok" ? "ok" : "degradado",
     versao: require("./package.json").version,
-    commit: COMMIT,
+    // `origem` diz o que o campo ao lado significa: commit do git ou id do
+    // deploy. Sem isso, "a1b2c3d4" não diz com o que comparar.
+    origem: VERSAO_DO_CODIGO.tipo,
+    commit: VERSAO_DO_CODIGO.valor,
     banco,
     desde: SUBIU_EM.toISOString(),
     segundosDePe: Math.round((Date.now() - SUBIU_EM.getTime()) / 1000),
