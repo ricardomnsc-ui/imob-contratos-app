@@ -1317,6 +1317,26 @@ app.post("/api/ia/extrair-documento", requireAuth, uploadDocumento.single("docum
 app.get("/api/dashboard", requireAuth, async (req, res) => {
   const contratos = await store.getContractsByTenant(req.user.tenantId);
 
+  // Em que pé está cada contrato. A situação vive no link de revisão, então
+  // contrato que foi mandado por WhatsApp em .pdf não tem link e não tem
+  // situação — e é exatamente esse que some do acompanhamento hoje. Em vez de
+  // escondê-lo, ele aparece como "não enviado para revisão", que é a verdade.
+  const shares = await store.getSharesByTenant(req.user.tenantId);
+  const porContrato = {};
+  for (const sh of shares) {
+    if (!sh.contratoId) continue;
+    const atual = porContrato[sh.contratoId];
+    // Mais de um link pro mesmo contrato: vale o mais recente.
+    if (!atual || new Date(sh.criadoEm) > new Date(atual.criadoEm)) {
+      porContrato[sh.contratoId] = {
+        criadoEm: sh.criadoEm,
+        situacao: sh.situacao || "em_revisao",
+        token: sh.id,
+        partes: andamentoDasPartes(sh),
+      };
+    }
+  }
+
   const vendas = contratos.filter(c => c.tipo === "compra_venda" && c.valor > 0);
   const locacoes = contratos.filter(c => c.tipo !== "compra_venda" && c.valor > 0);
   const comercial = contratos.filter(c => c.tipoUso === "comercial").length;
@@ -1377,8 +1397,17 @@ app.get("/api/dashboard", requireAuth, async (req, res) => {
     contratosEsteMes: contarNoMes(mesAtualStr),
     contratosMesPassado: contarNoMes(mesPassadoStr),
     serieMensal,
+    // Quantos contratos estão em cada etapa — o número que responde "quantos
+    // estão parados esperando alguém".
+    porSituacao: contratos.reduce((acc, c) => {
+      const chave = (porContrato[c.id] && porContrato[c.id].situacao) || "sem_link";
+      acc[chave] = (acc[chave] || 0) + 1;
+      return acc;
+    }, {}),
     ultimosContratos: contratos.slice(0, 10).map(c => ({
       id: c.id, tipo: c.tipo, garantiaTipo: c.garantiaTipo || null, endereco: c.endereco, bairro: c.bairro, valor: c.valor, data: c.data, criadoEm: c.criadoEm,
+      // null = nunca foi mandado pra revisão.
+      acompanhamento: porContrato[c.id] || null,
       // Só os gerados depois da mudança guardam os dados e podem ser reabertos.
       // Nunca mandamos o payload em si aqui — ele tem CPF/RG das partes.
       temDados: !!c.dados,
@@ -1496,9 +1525,22 @@ const SITUACOES = ["em_revisao", "em_correcao", "aguardando_assinatura", "assina
 // Quando o cliente responde, a situação anda sozinha — mas só enquanto o
 // corretor não tiver mexido nela. Depois disso ela é dele, e o sistema não
 // desfaz o que ele marcou.
-function situacaoAposResposta(share, acao) {
+function situacaoAposResposta(share, respostas) {
   if (share.situacaoManual) return null;
-  return acao === "ajuste" ? "em_correcao" : "aguardando_assinatura";
+
+  // A regra olha o conjunto, não a última resposta. Antes, o fiador aprovando
+  // depois de o locatário pedir ajuste mandava o contrato pra "aguardando
+  // assinatura" — com um pedido de correção em aberto.
+  if (respostas.some(r => r.acao === "ajuste")) return "em_correcao";
+
+  const partes = (share.partes || []).length;
+  // Sem partes cadastradas não há placar: vale a resposta que veio.
+  if (!partes) return "aguardando_assinatura";
+
+  const responderam = new Set(respostas.map(r => r.quem)).size;
+  // Faltando alguém, o documento segue em revisão: dizer "aguardando
+  // assinatura" com duas partes ainda sem ler é promessa que não se cumpre.
+  return responderam >= partes ? "aguardando_assinatura" : "em_revisao";
 }
 
 app.get("/r/:token", revisaoLimiter, (req, res) => {
@@ -1570,6 +1612,9 @@ app.post("/api/revisao/:token/identificar", revisaoLimiter, async (req, res) => 
     ehCpf: doc.length === 11,
     parteRotulo: parte ? parte.rotulo : null,
     parteNome: parte ? parte.nome : null,
+    // O hash identifica a parte sem ambiguidade — dois locadores podem ter o
+    // mesmo rótulo, e comparar por nome quebra com um acento diferente.
+    parteHash: parte ? parte.hash : null,
     confere: !!parte,
     autorizado,
     em: new Date().toISOString(),
@@ -1624,9 +1669,21 @@ app.post("/api/revisao/:token/resposta", revisaoLimiter, async (req, res) => {
   if (!share) return res.status(404).json({ error: "Este link não existe mais ou expirou." });
   const acesso = acessoValido(share, req.body.acesso);
   if (!acesso) return res.status(403).json({ error: "Identifique-se para responder." });
-  if (share.status !== "pendente") {
+
+  // A trava era por DOCUMENTO: assim que uma parte respondia, o `status` saía
+  // de "pendente" e todas as outras levavam 409. Quem respondia primeiro
+  // fechava a porta — o locatário não conseguia pedir ajuste depois de o
+  // locador aprovar, e ninguém via por quê.
+  //
+  // Agora é por PARTE. Cada uma responde a sua; responder de novo substitui a
+  // própria resposta, que é mudar de ideia, e não mexe na dos outros.
+  // Documento antigo, de antes das respostas por parte: mantém a trava velha,
+  // senão a resposta única que existe lá seria sobrescrita sem registro.
+  const modeloAntigo = !share.respostas && share.status !== "pendente";
+  if (modeloAntigo) {
     return res.status(409).json({ error: "Este documento já foi respondido." });
   }
+
   const acao = String(req.body.acao || "");
   if (acao !== "aprovar" && acao !== "ajuste") {
     return res.status(400).json({ error: "Ação inválida." });
@@ -1635,12 +1692,35 @@ app.post("/api/revisao/:token/resposta", revisaoLimiter, async (req, res) => {
   if (acao === "ajuste" && !comentario) {
     return res.status(400).json({ error: "Descreva o que precisa ser ajustado." });
   }
-  const novaSituacao = situacaoAposResposta(share, acao);
+  const agora = new Date().toISOString();
+
+  // Uma resposta POR PARTE. Antes havia só um campo, sobrescrito: o locador
+  // aprovava, o locatário respondia depois e a aprovação do primeiro sumia —
+  // não dava pra saber quem já tinha analisado e quem faltava.
+  //
+  // A mesma parte respondendo de novo substitui a resposta dela, não a dos
+  // outros: é mudança de opinião, não resposta nova.
+  const quem = acesso.parteHash || `anonimo:${acesso.id}`;
+  const respostas = [...(share.respostas || []).filter(r => r.quem !== quem), {
+    quem,
+    parteRotulo: acesso.parteRotulo,
+    nome: acesso.nome,
+    documentoFinal: acesso.documentoFinal,
+    acao,
+    comentario,
+    em: agora,
+  }];
+
+  const novaSituacao = situacaoAposResposta(share, respostas);
+
   const patch = {
+    respostas,
+    // `status`, `comentario` e `respondidoPor` seguem refletindo a ÚLTIMA
+    // resposta: é o que as telas antigas leem, e tirar isso quebraria elas.
     status: acao === "aprovar" ? "aprovado" : "ajuste",
     ...(novaSituacao ? { situacao: novaSituacao } : {}),
     comentario,
-    respondidoEm: new Date().toISOString(),
+    respondidoEm: agora,
     respondidoPor: {
       nome: acesso.nome,
       documentoFinal: acesso.documentoFinal,
@@ -1700,6 +1780,43 @@ app.post("/api/revisao/:token/perguntar", revisaoLimiter, async (req, res) => {
 });
 
 // ---- lado do corretor: acompanhar o que foi enviado ----
+/**
+ * Em que pé está cada parte do documento: abriu? respondeu? o quê?
+ *
+ * Responde à pergunta que o corretor faz de verdade — "falta quem?" — e que
+ * antes não tinha resposta, porque só existia uma resposta guardada para o
+ * documento inteiro.
+ *
+ * Derivado aqui no servidor de propósito: o cruzamento usa o hash do CPF das
+ * partes, que não precisa sair daqui.
+ */
+function andamentoDasPartes(share) {
+  const acessos = (share.acessos || []).filter(a => a.autorizado !== false);
+  const respostas = share.respostas || [];
+
+  // Acesso antigo não tem `parteHash`; aí casa por rótulo + nome, que é o que
+  // havia. Imperfeito com dois homônimos, e é o melhor possível pro histórico.
+  const casa = (a, parte) => (a.parteHash ? a.parteHash === parte.hash
+    : a.parteRotulo === parte.rotulo && a.parteNome === parte.nome);
+
+  return (share.partes || []).map(parte => {
+    const aberturas = acessos.filter(a => casa(a, parte));
+    const resposta = respostas.find(r => r.quem === parte.hash)
+      // Resposta anterior à mudança: não tem `quem`, só o rótulo.
+      || respostas.find(r => !r.quem && r.parteRotulo === parte.rotulo)
+      || null;
+    return {
+      rotulo: parte.rotulo,
+      nome: parte.nome,
+      abriuEm: aberturas.length ? aberturas[0].em : null,
+      vezesQueAbriu: aberturas.length,
+      acao: resposta ? resposta.acao : null,
+      respondidoEm: resposta ? resposta.em : null,
+      comentario: resposta ? resposta.comentario : "",
+    };
+  });
+}
+
 app.get("/api/compartilhamentos", requireAuth, async (req, res) => {
   const shares = await store.getSharesByTenant(req.user.tenantId);
   const base = baseUrl(req);
@@ -1720,6 +1837,8 @@ app.get("/api/compartilhamentos", requireAuth, async (req, res) => {
     respondidoEm: s.respondidoEm,
     respondidoPor: s.respondidoPor || null,
     acessos: s.acessos || [],
+    // O andamento parte a parte: é daqui que a tela monta "falta o fiador".
+    partes: andamentoDasPartes(s),
     // O que o cliente perguntou ao assistente. É o retorno mais útil aqui:
     // mostra a dúvida que teria virado ligação pro corretor.
     perguntas: s.perguntas || [],

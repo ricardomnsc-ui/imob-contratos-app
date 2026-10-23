@@ -349,6 +349,25 @@
   .checklist-preview { white-space: pre-wrap; word-break: break-word; background: var(--bg);
     border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-top: 12px;
     font-family: inherit; font-size: 13px; line-height: 1.5; max-height: 320px; overflow: auto; }
+  /* ===== andamento das partes ===== */
+  .partes { display:flex; flex-direction:column; gap:5px; margin-top:10px; }
+  .parte-linha { display:flex; align-items:baseline; gap:8px; font-size:13px; }
+  .parte-sinal { width:15px; flex-shrink:0; text-align:center; font-weight:700; }
+  .parte-sinal.fez { color:#0f7a52; }
+  .parte-sinal.meio { color:var(--brand-text); }
+  .parte-sinal.nada { color:var(--muted); }
+  .parte-papel { color:var(--ink); font-weight:600; white-space:nowrap; }
+  .parte-nome { color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .parte-estado { color:var(--muted); margin-left:auto; white-space:nowrap; font-size:12.5px; }
+  .parte-estado.falta { color:var(--brand-text); font-weight:600; }
+
+  .etapas { display:flex; flex-wrap:wrap; gap:8px; }
+  .etapa { display:flex; align-items:baseline; gap:7px; padding:9px 13px; border:1px solid var(--border);
+    border-radius:10px; background:var(--paper); font-size:13px; }
+  .etapa b { font-size:17px; font-variant-numeric:tabular-nums; }
+  .etapa.ok b { color:#0f7a52; }
+  .etapa.atencao b { color:var(--brand-text); }
+
   /* ===== gráficos ===== */
   .gr-topo { display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:2px; }
   .gr-legenda { display:flex; gap:14px; font-size:12.5px; color:var(--muted); }
@@ -833,6 +852,40 @@ function renderApp() {
 }
 
 // ================= DASHBOARD =================
+// Situação do contrato na listagem. Contrato sem link de revisão não tem
+// situação — dizer isso é mais útil do que deixar a célula vazia, porque é
+// justamente o contrato que sai do acompanhamento sem ninguém perceber.
+function situacaoDoContrato(c) {
+  const a = c.acompanhamento;
+  if (!a) return `<span class="hint-inline" title="Gerado em .pdf ou .docx e enviado por fora — não há como acompanhar a resposta">não enviado p/ revisão</span>`;
+  const sit = situacaoPorId(a.situacao);
+  const faltam = (a.partes || []).filter(p => !p.acao).map(p => p.rotulo);
+  const titulo = faltam.length ? `Falta responder: ${faltam.join(", ")}` : "Todas as partes já responderam";
+  return `<span class="sel-situacao ${sit.cor}" style="padding:3px 9px;border-radius:20px;font-size:12px" title="${titulo}">${sit.nome}</span>`
+    + (faltam.length ? `<div class="hint" style="margin:3px 0 0;font-size:11.5px">falta ${faltam.join(", ")}</div>` : "");
+}
+
+// Em que pé está cada parte. Responde "falta quem?" sem o corretor ter que
+// abrir o link e deduzir pelo histórico de acessos.
+function andamentoPartesHTML(partes) {
+  if (!partes || !partes.length) {
+    return `<p class="hint" style="margin:10px 0 0">Nenhuma parte com CPF cadastrado neste documento — não dá pra acompanhar quem já analisou.</p>`;
+  }
+  const data = (iso) => iso ? new Date(iso).toLocaleDateString("pt-BR") : "";
+  return `<div class="partes">${partes.map(p => {
+    let sinal = "○", classe = "nada", estado = "não abriu", destaque = "falta";
+    if (p.acao === "aprovar") { sinal = "✓"; classe = "fez"; estado = `aprovou em ${data(p.respondidoEm)}`; destaque = ""; }
+    else if (p.acao === "ajuste") { sinal = "!"; classe = "meio"; estado = `pediu ajuste em ${data(p.respondidoEm)}`; destaque = ""; }
+    else if (p.abriuEm) { sinal = "◐"; classe = "meio"; estado = `abriu em ${data(p.abriuEm)}, sem resposta`; }
+    return `<div class="parte-linha">
+        <span class="parte-sinal ${classe}">${sinal}</span>
+        <span class="parte-papel">${escapeHtml(p.rotulo)}</span>
+        <span class="parte-nome">${escapeHtml(p.nome || "")}</span>
+        <span class="parte-estado ${destaque}">${estado}</span>
+      </div>`;
+  }).join("")}</div>`;
+}
+
 // ================= GRÁFICOS =================
 // SVG escrito à mão, sem biblioteca: o app.html é autocontido e puxar uma lib
 // de CDN só pra desenhar barra seria trocar isso por uma dependência externa
@@ -1002,6 +1055,16 @@ async function renderDashboard() {
     </div>
 
     <div class="card" style="margin-bottom:20px">
+      <h2>Em que pé estão</h2>
+      <p class="hint">Onde cada contrato parou. Quem não foi enviado para revisão não tem acompanhamento.</p>
+      <div class="etapas" style="margin-top:14px">
+        ${[...SITUACOES, { id: "sem_link", nome: "Não enviado p/ revisão", cor: "" }]
+          .filter(sit => (d.porSituacao || {})[sit.id])
+          .map(sit => `<span class="etapa ${sit.cor || ""}"><b>${d.porSituacao[sit.id]}</b> ${sit.nome}</span>`).join("")}
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:20px">
       <div class="gr-topo">
         <div>
           <h2 style="margin-bottom:2px">Contratos por mês</h2>
@@ -1051,6 +1114,7 @@ async function renderDashboard() {
                 <th style="padding:8px 10px 8px 0;font-weight:600">Tipo</th>
                 <th style="padding:8px 10px;font-weight:600">Endereço</th>
                 <th style="padding:8px 10px;font-weight:600">Bairro</th>
+                <th style="padding:8px 10px;font-weight:600">Situação</th>
                 <th style="padding:8px 0 8px 10px;font-weight:600;text-align:right">Valor</th>
                 <th style="padding:8px 0 8px 10px;font-weight:600;width:1%"></th>
               </tr>
@@ -1061,6 +1125,7 @@ async function renderDashboard() {
                   <td style="padding:10px 10px 10px 0">${rotuloContrato(c)}</td>
                   <td style="padding:10px">${c.endereco || "—"}</td>
                   <td style="padding:10px">${c.bairro || "—"}</td>
+                  <td style="padding:10px">${situacaoDoContrato(c)}</td>
                   <td style="padding:10px 0 10px 10px;text-align:right;font-weight:600">${fmtBRL(c.valor)}</td>
                   <td style="padding:10px 0 10px 10px;text-align:right;white-space:nowrap">
                     ${c.temDados ? `
@@ -2848,8 +2913,10 @@ async function renderRevisoes() {
         <strong>${escapeHtml(s.titulo)}</strong>
         ${s.endereco ? `<span class="revisao-end">${escapeHtml(s.endereco)}</span>` : ""}
         <span class="revisao-data">enviado em ${new Date(s.criadoEm).toLocaleDateString("pt-BR")}</span>
-        ${leitores(s)}
-        ${autoria(s)}
+        ${/* O andamento por parte já diz quem abriu e quem respondeu. As linhas
+              antigas de leitores e autoria repetiam isso — ficam só para
+              documento sem partes cadastradas, onde não há o que cruzar. */""}
+        ${s.partes && s.partes.length ? andamentoPartesHTML(s.partes) : leitores(s) + autoria(s)}
         ${perguntasFeitas(s)}
         ${s.status === "ajuste" && s.comentario
           ? `<blockquote class="revisao-comentario">${escapeHtml(s.comentario)}</blockquote>` : ""}
@@ -2862,7 +2929,20 @@ async function renderRevisoes() {
       </div>
       <div class="revisao-acoes">
         ${seletorSituacao(s)}
-        <span class="revisao-status ${s.status}" title="Resposta do cliente na página de revisão">${rotulo[s.status]}</span>
+        ${/* Com várias partes, "CLIENTE APROVOU" é meia-verdade: pode ser uma
+              de três. O placar diz a verdade e é o que o corretor precisa. */""}
+        ${s.partes && s.partes.length
+          ? (() => {
+              const responderam = s.partes.filter(p => p.acao).length;
+              const pediuAjuste = s.partes.some(p => p.acao === "ajuste");
+              const todas = responderam === s.partes.length;
+              const classe = pediuAjuste ? "ajuste" : todas ? "aprovado" : "pendente";
+              const texto = pediuAjuste
+                ? `${responderam}/${s.partes.length} · PEDIU AJUSTE`
+                : `${responderam} DE ${s.partes.length} RESPONDERAM`;
+              return `<span class="revisao-status ${classe}" title="Quantas partes já responderam">${texto}</span>`;
+            })()
+          : `<span class="revisao-status ${s.status}" title="Resposta do cliente na página de revisão">${rotulo[s.status]}</span>`}
         ${s.contratoId ? `<button type="button" class="${s.status === "ajuste" ? "primary" : "secondary"} btn-editar" data-contrato="${s.contratoId}">Editar contrato</button>` : ""}
         <button type="button" class="secondary btn-copiar" data-url="${s.url}">Copiar link</button>
         <button type="button" class="secondary btn-excluir" data-token="${s.token}">Excluir</button>
