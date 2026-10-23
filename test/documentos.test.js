@@ -122,6 +122,32 @@ describe("comissão na compra e venda", () => {
   });
 });
 
+describe("quem escolheu o locatário", () => {
+  // Protege a imobiliária: sem este registro assinado pelo locador, a
+  // inadimplência do inquilino vira "vocês indicaram, vocês respondem".
+  test("com administradora: a escolha é declarada como do locador", async () => {
+    const { texto } = await gerar("locacao_caucao", { administracao: { ativa: true, taxaPercentual: 10 } });
+    const t = simples(texto);
+    assert.match(t, /DA ADMINISTRACAO E DA ESCOLHA DO\(A\) LOCATARIO\(A\)/, "falta a cláusula");
+    assert.match(t, /COMPETEM AO\(A\) LOCADOR\(A\)/, "não diz que a escolha é do locador");
+    assert.match(t, /NAO FIGURA NESTE CONTRATO COMO FIADORA/, "não afasta a condição de fiadora");
+  });
+
+  test("a ressalva de culpa própria continua lá", async () => {
+    // Sem ela a cláusula vira isenção total, e isenção total de quem presta o
+    // serviço costuma ser anulada — derrubando junto a parte que protege.
+    const { texto } = await gerar("locacao_caucao", { administracao: { ativa: true } });
+    assert.match(simples(texto), /NAO AFASTA A RESPONSABILIDADE DA ADMINISTRADORA POR CULPA PROPRIA/,
+      "a ressalva de culpa própria sumiu — a cláusula fica frágil sem ela");
+  });
+
+  test("sem administradora: a cláusula não aparece", async () => {
+    const { texto } = await gerar("locacao_caucao", { administracao: { ativa: false } });
+    assert.ok(!/DA ADMINISTRACAO E DA ESCOLHA/.test(simples(texto)),
+      "locação sem imobiliária não deveria falar de administradora");
+  });
+});
+
 describe("folha de assinaturas", () => {
   const comAssinatura = ["compra_venda", "locacao_caucao", "locacao_fiador", "distrato_locacao"];
 
