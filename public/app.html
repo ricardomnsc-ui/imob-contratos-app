@@ -256,6 +256,7 @@
   .conta-avista { font-size: 13.5px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
   .avista-selo { background: var(--brand-soft); color: var(--brand-text); font-weight:700;
     font-size:11.5px; padding:2px 7px; border-radius:20px; flex-shrink:0; }
+  .conta-avista[disabled] { opacity:.55; cursor:not-allowed; }
   .conta-tag-atual { font-size: 12.5px; font-weight: 600; color: var(--brand-text); }
 
   /* ---- Revisão por link ---- */
@@ -2660,9 +2661,29 @@ async function renderConta() {
     const anual = fmtPreco(p.anual);
     const limite = p.contratosPorMes === null ? "Contratos ilimitados" : `${p.contratosPorMes} contrato(s) por mês`;
     const usuarios = p.maxUsuarios === null ? "Usuários ilimitados" : `Até ${p.maxUsuarios} usuário(s)`;
+    // O bloco de pagamento adiantado serve tanto ao plano atual quanto aos
+    // outros. Ficava só no ramo "outros planos", e o resultado era que quem
+    // assinava o Imobiliária via a opção no Autônomo (um downgrade) e não via
+    // no próprio plano — exatamente o que ele quereria pagar adiantado.
+    const blocoAvista = () => {
+      if (!(p.avista || []).length || !d.ehDono || !d.pagamentoDisponivel) return "";
+      const botoes = p.avista.map(op => `
+        <button type="button" class="secondary conta-avista" data-avista="${p.id}" data-meses="${op.meses}"
+          ${a ? "disabled" : ""}
+          title="${a ? "Cancele a assinatura no cartão para migrar" : (op.economiaCentavos ? `Economia de ${fmtValor({ centavos: op.economiaCentavos, moeda: op.moeda })} em relação a pagar mês a mês` : "")}">
+          <span>${op.nome} · <strong>${fmtValor(op)}</strong></span>
+          ${op.desconto ? `<span class="avista-selo">−${op.desconto}%</span>` : ""}
+        </button>`).join("");
+      return `<div class="avista-bloco">
+        <span class="avista-titulo">Pagar adiantado e economizar</span>
+        ${botoes}
+        ${a ? `<p class="hint" style="margin:2px 0 0;font-size:11.5px">Para migrar, cancele a assinatura no cartão primeiro — seu acesso segue até o fim do período já pago.</p>` : ""}
+      </div>`;
+    };
+
     let acao = "";
     if (p.atual) {
-      acao = `<span class="conta-tag-atual">Seu plano atual</span>`;
+      acao = `<span class="conta-tag-atual">Seu plano atual</span>` + blocoAvista();
     } else if (!d.ehDono) {
       acao = `<span class="hint">Só o dono da conta muda o plano</span>`;
     } else if (!d.pagamentoDisponivel) {
@@ -2675,19 +2696,8 @@ async function renderConta() {
       const rotulo = a ? "Mudar para este plano" : "Assinar no cartão";
       acao = `<button type="button" class="primary" data-plano="${p.id}" data-ciclo="mensal">${rotulo}</button>`;
       // Pagar adiantado é a única forma de usar PIX: o Stripe não aceita PIX em
-      // assinatura. Só aparece pra quem ainda não assina no cartão — quem já
-      // assina pagaria duas vezes o mesmo período.
-      if (!a && (p.avista || []).length) {
-        acao += `<div class="avista-bloco">
-          <span class="avista-titulo">Pagar adiantado e economizar</span>
-          ${p.avista.map(op => `
-            <button type="button" class="secondary conta-avista" data-avista="${p.id}" data-meses="${op.meses}"
-              title="${op.economiaCentavos ? `Economia de ${fmtValor({ centavos: op.economiaCentavos, moeda: op.moeda })} em relação a pagar mês a mês` : ""}">
-              <span>${op.nome} · <strong>${fmtValor(op)}</strong></span>
-              ${op.desconto ? `<span class="avista-selo">−${op.desconto}%</span>` : ""}
-            </button>`).join("")}
-        </div>`;
-      }
+      // assinatura.
+      acao += blocoAvista();
     }
     return `
       <div class="card conta-plano-card ${p.atual ? "atual" : ""}">
