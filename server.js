@@ -921,15 +921,22 @@ app.post("/api/billing/avista", requireAuth, async (req, res) => {
   const tenant = await store.getTenant(req.user.tenantId);
   if (!tenant) return res.status(404).json({ error: "Imobiliária não encontrada" });
 
-  // Mesma proteção do checkout de assinatura: quem já paga no cartão pagaria
-  // duas vezes pelo mesmo período.
+  // Quem já paga no cartão pagaria duas vezes pelo mesmo período — a menos
+  // que esteja MIGRANDO, que é pedido explícito e tem tratamento próprio: a
+  // assinatura é cancelada no fim do período já pago, e o período comprado
+  // começa a contar de lá, sem sobreposição e sem buraco.
+  const querMigrar = !!(req.body || {}).migrar;
+  let assinaturaParaMigrar = null;
   if (tenant.stripeSubscriptionId) {
     try {
       const atual = await stripe.subscriptions.retrieve(tenant.stripeSubscriptionId);
       if (["active", "trialing", "past_due", "unpaid"].includes(atual.status)) {
-        return res.status(409).json({
-          error: "Você já tem uma assinatura no cartão. Cancele em 'Minha conta' antes de pagar o ano à vista — senão vira cobrança dupla.",
-        });
+        if (!querMigrar) {
+          return res.status(409).json({
+            error: "Você já tem uma assinatura no cartão. Cancele em 'Minha conta' antes de pagar adiantado — senão vira cobrança dupla.",
+          });
+        }
+        assinaturaParaMigrar = atual.id;
       }
     } catch (err) {
       console.error("Assinatura anterior não encontrada, seguindo com o à vista:", err.message);
@@ -966,7 +973,15 @@ app.post("/api/billing/avista", requireAuth, async (req, res) => {
           },
         },
       }],
-      metadata: { tenantId: req.user.tenantId, planoAvista: planoId, meses: String(periodo.meses) },
+      metadata: {
+        tenantId: req.user.tenantId,
+        planoAvista: planoId,
+        meses: String(periodo.meses),
+        // Só cancela a assinatura DEPOIS que o pagamento confirmar. Cancelar
+        // antes deixaria quem desiste no meio do caminho sem assinatura e sem
+        // o período comprado.
+        ...(assinaturaParaMigrar ? { migrarDeAssinatura: assinaturaParaMigrar } : {}),
+      },
       success_url: `${base}/app.html?avista=sucesso`,
       cancel_url: `${base}/app.html?avista=cancelado`,
     });
@@ -2054,7 +2069,32 @@ async function creditarAcessoAvista(session) {
   // Sem esta guarda, 12 meses pagos viravam 24 creditados.
   if (compras.some(c => c.sessionId === session.id)) return;
 
-  const ate = estenderAcesso(avulso.ate, meses);
+  // Migrando de assinatura: o período comprado começa a contar do FIM do que
+  // já foi pago no cartão, não de hoje. Sem isso o cliente pagaria de novo os
+  // dias que já tinha — e são justamente os dias que ele pagou por último.
+  let baseDaContagem = avulso.ate || null;
+  const subMigrada = session.metadata && session.metadata.migrarDeAssinatura;
+  if (subMigrada) {
+    try {
+      const sub = await stripe.subscriptions.retrieve(subMigrada);
+      const fim = fimDoPeriodo(sub);
+      if (fim) {
+        const fimIso = new Date(fim * 1000).toISOString();
+        if (!baseDaContagem || new Date(fimIso) > new Date(baseDaContagem)) baseDaContagem = fimIso;
+      }
+      // Cancela no fim do período, não agora: o cliente fica com o que pagou.
+      if (!sub.cancel_at_period_end && sub.status !== "canceled") {
+        await stripe.subscriptions.update(subMigrada, { cancel_at_period_end: true });
+        console.log(`Migração para adiantado: assinatura ${subMigrada} marcada pra cancelar no fim do período.`);
+      }
+    } catch (err) {
+      // Falhar aqui não pode travar o crédito: o cliente pagou. Fica o registro
+      // pra resolver na mão, e o acesso dele é liberado do mesmo jeito.
+      console.error(`Migração para adiantado: não consegui tratar a assinatura ${subMigrada}:`, err.message);
+    }
+  }
+
+  const ate = estenderAcesso(baseDaContagem, meses);
   await store.setTenant(tenantId, {
     ...tenant,
     stripeCustomerId: session.customer || tenant.stripeCustomerId,
@@ -2065,6 +2105,7 @@ async function creditarAcessoAvista(session) {
       compras: [...compras, {
         sessionId: session.id, plano: planoId, meses,
         em: new Date().toISOString(), valorCentavos: session.amount_total,
+        ...(subMigrada ? { migrouDe: subMigrada } : {}),
       }],
     },
   });

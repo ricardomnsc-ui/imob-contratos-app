@@ -2667,17 +2667,27 @@ async function renderConta() {
     // no próprio plano — exatamente o que ele quereria pagar adiantado.
     const blocoAvista = () => {
       if (!(p.avista || []).length || !d.ehDono || !d.pagamentoDisponivel) return "";
+      // Com assinatura ativa, o botão migra em vez de só comprar: cancela o
+      // cartão no fim do período já pago e emenda o período comprado a partir
+      // dali. Antes o caminho era cancelar na mão e lembrar de voltar pra
+      // pagar — dois passos, e o segundo é fácil de esquecer.
+      const migrando = !!a;
+      const ateQuando = a && a.proximoVencimento
+        ? new Date(a.proximoVencimento).toLocaleDateString("pt-BR") : null;
+
       const botoes = p.avista.map(op => `
         <button type="button" class="secondary conta-avista" data-avista="${p.id}" data-meses="${op.meses}"
-          ${a ? "disabled" : ""}
-          title="${a ? "Cancele a assinatura no cartão para migrar" : (op.economiaCentavos ? `Economia de ${fmtValor({ centavos: op.economiaCentavos, moeda: op.moeda })} em relação a pagar mês a mês` : "")}">
-          <span>${op.nome} · <strong>${fmtValor(op)}</strong></span>
+          ${migrando ? 'data-migrar="1"' : ""}
+          data-rotulo="${op.nome}" data-valor="${fmtValor(op)}"
+          title="${op.economiaCentavos ? `Economia de ${fmtValor({ centavos: op.economiaCentavos, moeda: op.moeda })} em relação a pagar mês a mês` : ""}">
+          <span>${migrando ? "Migrar · " : ""}${op.nome} · <strong>${fmtValor(op)}</strong></span>
           ${op.desconto ? `<span class="avista-selo">−${op.desconto}%</span>` : ""}
         </button>`).join("");
+
       return `<div class="avista-bloco">
         <span class="avista-titulo">Pagar adiantado e economizar</span>
         ${botoes}
-        ${a ? `<p class="hint" style="margin:2px 0 0;font-size:11.5px">Para migrar, cancele a assinatura no cartão primeiro — seu acesso segue até o fim do período já pago.</p>` : ""}
+        ${migrando ? `<p class="hint" style="margin:2px 0 0;font-size:11.5px">Sua assinatura no cartão é cancelada ao fim do período já pago${ateQuando ? ` (${ateQuando})` : ""}, e o novo período começa a contar de lá — você não perde dias pagos.</p>` : ""}
       </div>`;
     };
 
@@ -2731,8 +2741,23 @@ async function renderConta() {
     if (b) b.addEventListener("click", () => abrirPortal(b));
   });
 
+  const vencimentoAssinatura = a && a.proximoVencimento
+    ? new Date(a.proximoVencimento).toLocaleDateString("pt-BR") : null;
+
   el.querySelectorAll("[data-avista]").forEach(btn => {
     btn.addEventListener("click", async () => {
+      // Migração mexe na assinatura: o cliente confirma vendo o que acontece,
+      // com data e valor, não depois de descobrir na fatura.
+      if (btn.dataset.migrar) {
+        const ok = confirm(
+          `Migrar para pagamento adiantado de ${btn.dataset.rotulo} por ${btn.dataset.valor}?\n\n`
+          + `• Sua assinatura no cartão será cancelada ao fim do período já pago${vencimentoAssinatura ? ` (${vencimentoAssinatura})` : ""}.\n`
+          + `• O período de ${btn.dataset.rotulo} começa a contar a partir dessa data — você não perde dias já pagos.\n`
+          + `• O cancelamento só acontece depois que o pagamento for confirmado.\n`
+          + `• Não renova automaticamente: no fim, você escolhe de novo.`
+        );
+        if (!ok) return;
+      }
       // innerHTML e não textContent: o botão tem <span>/<strong> dentro, e
       // restaurar por texto comeria a marcação no primeiro erro.
       const original = btn.innerHTML;
@@ -2740,7 +2765,11 @@ async function renderConta() {
       try {
         const r = await api("/api/billing/avista", {
           method: "POST",
-          body: JSON.stringify({ plano: btn.dataset.avista, meses: Number(btn.dataset.meses) }),
+          body: JSON.stringify({
+            plano: btn.dataset.avista,
+            meses: Number(btn.dataset.meses),
+            migrar: !!btn.dataset.migrar,
+          }),
         });
         const j = await r.json().catch(() => ({}));
         if (!r.ok || !j.url) throw new Error(j.error || "Não foi possível abrir o pagamento");
