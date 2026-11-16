@@ -13,7 +13,7 @@ const { nanoid } = require("nanoid");
 const { gerarContrato, extrairTextoDocx, checklistEmTexto } = require("./lib/generator");
 const { convertDocxToPdf } = require("./lib/pdf");
 const store = require("./lib/store");
-const { PLANOS, limitesDoPlano, precoDoPlano, mesAtual, contratosUsadosNoMes, LIMITE_IA_MENSAL, iaUsadaNoMes, planoEfetivo, DIAS_TOLERANCIA_ATRASO, acessoAvulsoVigente, estenderAcesso, MESES_PLANO_ANUAL } = require("./lib/planos");
+const { PLANOS, limitesDoPlano, precoDoPlano, mesAtual, contratosUsadosNoMes, LIMITE_IA_MENSAL, iaUsadaNoMes, planoEfetivo, DIAS_TOLERANCIA_ATRASO, acessoAvulsoVigente, estenderAcesso, MESES_PLANO_ANUAL, PERIODOS_AVISTA, periodoAvista, precoAvistaCentavos } = require("./lib/planos");
 const stripe = require("./lib/stripe");
 const ai = require("./lib/ai");
 // `mailer` e nao `email`: varias rotas desestruturam `const { email } = req.body`,
@@ -692,6 +692,29 @@ async function precoStripe(priceId) {
   }
 }
 
+/**
+ * Preço de um período pago adiantado.
+ *
+ * Base: o preço MENSAL do Stripe, multiplicado pelos meses e com o desconto do
+ * período. Exceção: havendo um preço anual cadastrado no Stripe, ele vence nos
+ * 12 meses — cadastro à mão é decisão explícita e deve prevalecer sobre a
+ * conta automática.
+ */
+async function precoAvistaDoPlano(plano, periodo) {
+  if (periodo.meses === MESES_PLANO_ANUAL && plano.stripePriceIdAnual) {
+    const anual = await precoStripe(plano.stripePriceIdAnual);
+    if (anual && anual.centavos) return { centavos: anual.centavos, moeda: anual.moeda, origem: "stripe" };
+  }
+  const mensal = await precoStripe(plano.stripePriceId);
+  if (!mensal || !mensal.centavos) return null;
+  return {
+    centavos: precoAvistaCentavos(mensal.centavos, periodo.meses, periodo.desconto),
+    cheioCentavos: mensal.centavos * periodo.meses,
+    moeda: mensal.moeda,
+    origem: "calculado",
+  };
+}
+
 // A data de renovação mudou de lugar entre versões da API do Stripe: era campo
 // da assinatura e passou a viver no item. Lê dos dois.
 function fimDoPeriodo(sub) {
@@ -718,6 +741,23 @@ app.get("/api/billing/assinatura", requireAuth, async (req, res) => {
       maxUsuarios: p.maxUsuarios === Infinity ? null : p.maxUsuarios,
       mensal: await precoStripe(p.stripePriceId),
       anual: await precoStripe(p.stripePriceIdAnual),
+      // Opções de pagamento adiantado, já com desconto aplicado e com a
+      // economia calculada — a tela só exibe, não faz conta de dinheiro.
+      avista: p.stripePriceId
+        ? (await Promise.all(PERIODOS_AVISTA.map(async (periodo) => {
+            const preco = await precoAvistaDoPlano(p, periodo);
+            if (!preco || !preco.centavos) return null;
+            return {
+              meses: periodo.meses,
+              nome: periodo.nome,
+              desconto: periodo.desconto,
+              centavos: preco.centavos,
+              moeda: preco.moeda,
+              cheioCentavos: preco.cheioCentavos || null,
+              economiaCentavos: preco.cheioCentavos ? preco.cheioCentavos - preco.centavos : null,
+            };
+          }))).filter(Boolean)
+        : [],
     });
   }
 
@@ -870,8 +910,12 @@ app.post("/api/billing/avista", requireAuth, async (req, res) => {
 
   const planoId = (req.body || {}).plano;
   const plano = PLANOS[planoId];
-  if (!plano || !plano.stripePriceIdAnual) {
+  if (!plano || !plano.stripePriceId) {
     return res.status(400).json({ error: "Esse plano não tem pagamento à vista disponível" });
+  }
+  const periodo = periodoAvista((req.body || {}).meses);
+  if (!periodo) {
+    return res.status(400).json({ error: "Período inválido para pagamento adiantado" });
   }
 
   const tenant = await store.getTenant(req.user.tenantId);
@@ -892,10 +936,13 @@ app.post("/api/billing/avista", requireAuth, async (req, res) => {
     }
   }
 
-  // O preço continua vindo do Stripe: é lá que ele muda. Só o formato muda,
-  // de preço recorrente pra valor avulso, porque `mode: payment` não aceita
-  // um price com recorrência.
-  const preco = await precoStripe(plano.stripePriceIdAnual);
+  // O preço-base continua vindo do Stripe — é lá que ele muda. O que o código
+  // faz é multiplicar pelos meses e aplicar o desconto, porque `mode: payment`
+  // não aceita um price com recorrência de qualquer forma.
+  //
+  // Se existir um preço anual cadastrado no Stripe, ele vence nos 12 meses:
+  // preço cadastrado à mão é decisão explícita e deve mandar no cálculo.
+  const preco = await precoAvistaDoPlano(plano, periodo);
   if (!preco || !preco.centavos) {
     return res.status(503).json({ error: "Não foi possível consultar o preço agora. Tente de novo." });
   }
@@ -914,12 +961,12 @@ app.post("/api/billing/avista", requireAuth, async (req, res) => {
           currency: preco.moeda,
           unit_amount: preco.centavos,
           product_data: {
-            name: `Minutei ${plano.nome} — ${MESES_PLANO_ANUAL} meses`,
-            description: "Acesso por 12 meses pago de uma vez. Não renova automaticamente.",
+            name: `Minutei ${plano.nome} — ${periodo.nome}`,
+            description: `Acesso por ${periodo.nome} pago de uma vez. Não renova automaticamente.`,
           },
         },
       }],
-      metadata: { tenantId: req.user.tenantId, planoAvista: planoId, meses: String(MESES_PLANO_ANUAL) },
+      metadata: { tenantId: req.user.tenantId, planoAvista: planoId, meses: String(periodo.meses) },
       success_url: `${base}/app.html?avista=sucesso`,
       cancel_url: `${base}/app.html?avista=cancelado`,
     });

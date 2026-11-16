@@ -249,7 +249,13 @@
   .conta-lista li::before { content: "✓ "; color: var(--brand-text); font-weight: 700; }
   .conta-acao { margin-top: auto; padding-top: 16px; display: flex; flex-direction: column; gap: 8px; }
   .conta-acao button { width: 100%; }
-  .conta-avista { font-size: 13.5px; }
+  .avista-bloco { display:flex; flex-direction:column; gap:6px; margin-top:4px;
+    padding-top:10px; border-top:1px dashed var(--border); }
+  .avista-titulo { font-size:11.5px; text-transform:uppercase; letter-spacing:.06em;
+    color:var(--brand-text); font-weight:700; }
+  .conta-avista { font-size: 13.5px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .avista-selo { background: var(--brand-soft); color: var(--brand-text); font-weight:700;
+    font-size:11.5px; padding:2px 7px; border-radius:20px; flex-shrink:0; }
   .conta-tag-atual { font-size: 12.5px; font-weight: 600; color: var(--brand-text); }
 
   /* ---- Revisão por link ---- */
@@ -2668,11 +2674,19 @@ async function renderConta() {
     } else {
       const rotulo = a ? "Mudar para este plano" : "Assinar no cartão";
       acao = `<button type="button" class="primary" data-plano="${p.id}" data-ciclo="mensal">${rotulo}</button>`;
-      // Pagar o ano de uma vez é a única forma de usar PIX: o Stripe não aceita
-      // PIX em assinatura. Só aparece pra quem ainda não assina no cartão —
-      // quem já assina pagaria duas vezes o mesmo período.
-      if (!a && p.anual) {
-        acao += `<button type="button" class="secondary conta-avista" data-avista="${p.id}">Pagar 1 ano à vista · ${fmtValor(p.anual)}</button>`;
+      // Pagar adiantado é a única forma de usar PIX: o Stripe não aceita PIX em
+      // assinatura. Só aparece pra quem ainda não assina no cartão — quem já
+      // assina pagaria duas vezes o mesmo período.
+      if (!a && (p.avista || []).length) {
+        acao += `<div class="avista-bloco">
+          <span class="avista-titulo">Pagar adiantado e economizar</span>
+          ${p.avista.map(op => `
+            <button type="button" class="secondary conta-avista" data-avista="${p.id}" data-meses="${op.meses}"
+              title="${op.economiaCentavos ? `Economia de ${fmtValor({ centavos: op.economiaCentavos, moeda: op.moeda })} em relação a pagar mês a mês` : ""}">
+              <span>${op.nome} · <strong>${fmtValor(op)}</strong></span>
+              ${op.desconto ? `<span class="avista-selo">−${op.desconto}%</span>` : ""}
+            </button>`).join("")}
+        </div>`;
       }
     }
     return `
@@ -2709,16 +2723,21 @@ async function renderConta() {
 
   el.querySelectorAll("[data-avista]").forEach(btn => {
     btn.addEventListener("click", async () => {
-      const original = btn.textContent;
+      // innerHTML e não textContent: o botão tem <span>/<strong> dentro, e
+      // restaurar por texto comeria a marcação no primeiro erro.
+      const original = btn.innerHTML;
       btn.disabled = true; btn.textContent = "Abrindo pagamento...";
       try {
-        const r = await api("/api/billing/avista", { method: "POST", body: JSON.stringify({ plano: btn.dataset.avista }) });
+        const r = await api("/api/billing/avista", {
+          method: "POST",
+          body: JSON.stringify({ plano: btn.dataset.avista, meses: Number(btn.dataset.meses) }),
+        });
         const j = await r.json().catch(() => ({}));
         if (!r.ok || !j.url) throw new Error(j.error || "Não foi possível abrir o pagamento");
         window.location.href = j.url;
       } catch (err) {
         toast(err.message, true);
-        btn.disabled = false; btn.textContent = original;
+        btn.disabled = false; btn.innerHTML = original;
       }
     });
   });
