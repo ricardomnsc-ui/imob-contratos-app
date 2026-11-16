@@ -756,11 +756,18 @@ const ICONES = {
 
 // As três telas de administração viraram sub-abas de uma só. Antes eram três
 // itens no topo, competindo com o trabalho do dia a dia.
-const SUBABAS_CONFIG = [
+const SUBABAS_TODAS = [
   { id: "imobiliaria", nome: "Imobiliária", render: () => renderConfig() },
   { id: "equipe", nome: "Equipe", render: () => renderEquipe() },
-  { id: "plano", nome: "Plano e cobrança", render: () => renderConta() },
+  { id: "plano", nome: "Plano e cobrança", render: () => renderConta(), soDono: true },
 ];
+
+// Cobrança é só do dono da conta. O corretor da equipe usa o sistema; quanto a
+// imobiliária paga, quando renova e se está em atraso não são assunto dele.
+// O servidor também recusa — isto aqui é pra não oferecer o que não abre.
+const subabasVisiveis = () =>
+  SUBABAS_TODAS.filter(s => !s.soDono || state.user?.role === "owner");
+
 let subabaAtiva = "imobiliaria";
 
 function renderConfiguracoes() {
@@ -771,12 +778,12 @@ function renderConfiguracoes() {
       <p>Marca da imobiliária, quem tem acesso e sua assinatura.</p>
     </div>
     <div class="subabas" role="tablist">
-      ${SUBABAS_CONFIG.map(s => `
+      ${subabasVisiveis().map(s => `
         <button type="button" role="tab" data-subaba="${s.id}"
           class="${s.id === subabaAtiva ? "ativa" : ""}"
           aria-selected="${s.id === subabaAtiva}">${s.nome}</button>`).join("")}
     </div>
-    ${SUBABAS_CONFIG.map(s => `<div id="sub-${s.id}" ${s.id === subabaAtiva ? "" : 'style="display:none"'}></div>`).join("")}
+    ${subabasVisiveis().map(s => `<div id="sub-${s.id}" ${s.id === subabaAtiva ? "" : 'style="display:none"'}></div>`).join("")}
   `;
 
   el.querySelectorAll("[data-subaba]").forEach(btn => {
@@ -787,15 +794,15 @@ function renderConfiguracoes() {
         b.classList.toggle("ativa", ativa);
         b.setAttribute("aria-selected", String(ativa));
       });
-      SUBABAS_CONFIG.forEach(s => {
+      subabasVisiveis().forEach(s => {
         document.getElementById("sub-" + s.id).style.display = s.id === subabaAtiva ? "" : "none";
       });
-      const alvo = SUBABAS_CONFIG.find(s => s.id === subabaAtiva);
+      const alvo = subabasVisiveis().find(s => s.id === subabaAtiva);
       if (alvo) alvo.render();
     });
   });
 
-  const inicial = SUBABAS_CONFIG.find(s => s.id === subabaAtiva) || SUBABAS_CONFIG[0];
+  const inicial = subabasVisiveis().find(s => s.id === subabaAtiva) || subabasVisiveis()[0];
   inicial.render();
 }
 
@@ -1668,7 +1675,19 @@ function collectParcelas() {
 // dele — cortar o acesso sem dizer o porquê é pior do que não cortar.
 function bannerPagamento() {
   const t = state.tenant;
-  if (!t || !t.planoContratado || t.planoContratado === "gratis") return "";
+  if (!t) return "";
+
+  // Corretor não vê valor, prazo nem status — só o suficiente pra entender que
+  // um recurso parou e a quem recorrer. Sem isso ele acha que é defeito.
+  if (state.user?.role !== "owner") {
+    if (!t.acessoReduzido) return "";
+    return `<div class="card banner-pagamento">
+      <strong>Alguns recursos estão indisponíveis</strong>
+      <p>A conta está no plano Grátis no momento. Fale com o responsável pela conta da imobiliária.</p>
+    </div>`;
+  }
+
+  if (!t.planoContratado || t.planoContratado === "gratis") return "";
 
   const st = t.assinaturaStatus;
   const caiuPraGratis = t.plano === "gratis" && t.planoContratado !== "gratis";

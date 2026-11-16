@@ -612,7 +612,9 @@ app.get("/api/tenant", requireAuth, async (req, res) => {
   if (!tenant) return res.json(null);
   tenant = await assinaturaAtualizada(req.user.tenantId, tenant);
   const limites = limitesDoPlano(planoEfetivo(tenant));
-  res.json({
+  const ehDono = req.user.role === "owner";
+
+  const corpo = {
     ...tenant,
     plano: tenant.plano || "gratis",
     usoContratosNoMes: contratosUsadosNoMes(tenant),
@@ -621,13 +623,31 @@ app.get("/api/tenant", requireAuth, async (req, res) => {
     limiteIaPorMes: LIMITE_IA_MENSAL,
     limiteUsuarios: limites.maxUsuarios === Infinity ? null : limites.maxUsuarios,
     temAssinaturaAtiva: !!tenant.stripeCustomerId,
+    ehDono,
+  };
+
+  if (ehDono) {
     // Estado do pagamento, pra tela avisar antes/depois do corte. Sem isso o
-    // usuário perde acesso sem entender o motivo.
-    assinaturaStatus: tenant.assinaturaStatus || null,
-    planoContratado: tenant.plano || "gratis",
-    pagamentoEmAtraso: !!tenant.assinaturaAtrasadaDesde,
-    diasDeTolerancia: DIAS_TOLERANCIA_ATRASO,
-  });
+    // dono perde acesso sem entender o motivo.
+    corpo.assinaturaStatus = tenant.assinaturaStatus || null;
+    corpo.planoContratado = tenant.plano || "gratis";
+    corpo.pagamentoEmAtraso = !!tenant.assinaturaAtrasadaDesde;
+    corpo.diasDeTolerancia = DIAS_TOLERANCIA_ATRASO;
+  } else {
+    // O `...tenant` acima derrama o registro inteiro. Pro corretor isso
+    // incluía IDs do Stripe, o histórico de compras com valores e a data em
+    // que a conta entrou em atraso. Ele precisa da marca da imobiliária, que
+    // vai no documento — não da vida financeira dela.
+    for (const campo of ["stripeCustomerId", "stripeSubscriptionId", "assinaturaStatus",
+      "assinaturaAtrasadaDesde", "assinaturaVerificadaEm", "acessoAvulso", "usoMensal", "usoIaMensal"]) {
+      delete corpo[campo];
+    }
+    // Só o suficiente pra ele entender por que um recurso parou de funcionar,
+    // sem saber quanto a imobiliária paga nem se está devendo.
+    corpo.acessoReduzido = planoEfetivo(tenant) === "gratis" && (tenant.plano || "gratis") !== "gratis";
+  }
+
+  res.json(corpo);
 });
 
 // Campos que o formulário da imobiliária pode gravar. O resto do tenant —
@@ -724,6 +744,12 @@ function fimDoPeriodo(sub) {
 }
 
 app.get("/api/billing/assinatura", requireAuth, async (req, res) => {
+  // As rotas que MUDAM o plano já exigiam dono; a que LÊ não exigia nada, e
+  // entregava a qualquer corretor da equipe o valor pago, o status e a data da
+  // próxima cobrança. Dinheiro da imobiliária não é assunto de quem usa.
+  if (req.user.role !== "owner") {
+    return res.status(403).json({ error: "Só o dono da conta vê o plano e a cobrança." });
+  }
   const tenant = await store.getTenant(req.user.tenantId);
   if (!tenant) return res.status(404).json({ error: "Imobiliária não encontrada" });
 
