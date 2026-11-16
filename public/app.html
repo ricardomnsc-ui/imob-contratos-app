@@ -1248,6 +1248,7 @@ function renderConfig() {
           ${t.logoPath ? `<img src="${t.logoPath}" class="logo-preview" style="margin-top:8px" />` : ""}
         </div>
 
+        ${!isOwner ? "" : `
         <div class="section-title">Conta para receber a comissão</div>
         <p class="hint">Entra na cláusula de corretagem dos contratos de compra e venda. Com os dados no
         contrato assinado, o vendedor tem onde conferir para quem está pagando — em vez de receber a conta
@@ -1266,12 +1267,20 @@ function renderConfig() {
           <div class="field"><label>Titular da conta</label><input name="bancoTitular" value="${t.bancoTitular || ""}" placeholder="vazio = nome da ${t.tipoConta === "corretor" ? "conta" : "imobiliária"}" /></div>
         </div>
 
-        <div class="footer-actions">
+        `}
+        ${isOwner ? `<div class="footer-actions">
           <button type="submit" class="primary">Salvar</button>
-        </div>
+        </div>` : `<p class="hint" style="margin-top:18px">Só o dono da conta altera o cadastro da imobiliária. Estes dados aparecem nos documentos que você gera.</p>`}
       </form>
     </div>
   `;
+
+  // Corretor vê a marca que sai nos documentos dele, mas não altera: o
+  // servidor recusa, e campo editável que não salva é pior que campo travado.
+  if (!isOwner) {
+    el.querySelectorAll("#tenantForm input, #tenantForm select, #tenantForm textarea, [data-tipo-conta]")
+      .forEach(c => { c.disabled = true; });
+  }
 
   el.querySelectorAll("[data-tipo-conta]").forEach(btn => {
     btn.addEventListener("click", async () => {

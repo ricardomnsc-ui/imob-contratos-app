@@ -639,7 +639,11 @@ app.get("/api/tenant", requireAuth, async (req, res) => {
     // que a conta entrou em atraso. Ele precisa da marca da imobiliária, que
     // vai no documento — não da vida financeira dela.
     for (const campo of ["stripeCustomerId", "stripeSubscriptionId", "assinaturaStatus",
-      "assinaturaAtrasadaDesde", "assinaturaVerificadaEm", "acessoAvulso", "usoMensal", "usoIaMensal"]) {
+      "assinaturaAtrasadaDesde", "assinaturaVerificadaEm", "acessoAvulso", "usoMensal", "usoIaMensal",
+      // Conta que recebe a comissão. O contrato gerado mostra esses dados — e
+      // é o servidor que os coloca lá, então o corretor não precisa deles no
+      // navegador pra trabalhar.
+      "pixChave", "bancoNome", "bancoAgencia", "bancoConta", "bancoTipoConta", "bancoTitular"]) {
       delete corpo[campo];
     }
     // Só o suficiente pra ele entender por que um recurso parou de funcionar,
@@ -671,6 +675,14 @@ const CAMPOS_IMOBILIARIA = [
 const PADRAO_IMOBILIARIA = { cidade: "Natal", foroPadrao: "Natal/RN", corPrimaria: "0D1B2A", tipoConta: "imobiliaria" };
 
 app.post("/api/tenant", requireAuth, upload.single("logo"), async (req, res) => {
+  // Aqui moram PIX, banco, agência e conta da imobiliária — a conta que entra
+  // na cláusula de corretagem de todo contrato de venda. Qualquer corretor da
+  // equipe podia trocá-la, o que derruba a própria razão de ela existir: o
+  // campo foi criado pra evitar o golpe da conta trocada, e deixá-lo aberto
+  // transformava o sistema no caminho mais fácil pro golpe.
+  if (req.user.role !== "owner") {
+    return res.status(403).json({ error: "Só o dono da conta altera o cadastro da imobiliária." });
+  }
   const existing = (await store.getTenant(req.user.tenantId)) || {};
   const branding = { ...existing };
 
