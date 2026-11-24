@@ -176,6 +176,15 @@ describe("concordância na compra e venda", () => {
     assert.match(t, /a PROMISSÁRIA COMPRADORA assumirá/);
   });
 
+  test("duas vendedoras: legítimas proprietárias", async () => {
+    // Pego pela prévia: o plural saía fixo no masculino ("As PROMITENTES
+    // VENDEDORAS são legítimos proprietários").
+    const t = await texto("compra_venda", {
+      vendedores: [comGenero(BASE.vendedores[0], "f"), { ...BASE.vendedores[0], nome: "Paula Souza", genero: "f" }],
+    });
+    assert.match(t, /As PROMITENTES VENDEDORAS são legítimas proprietárias/);
+  });
+
   test("duas compradoras: artigo e verbo no feminino plural", async () => {
     const t = await texto("compra_venda", {
       compradores: [comGenero(BASE.compradores[0], "f"), { ...BASE.compradores[0], nome: "Bia Lima", genero: "f" }],

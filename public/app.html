@@ -22,23 +22,42 @@
 <meta name="twitter:image" content="https://minutei.app.br/brand/og-image.png" />
 <link rel="icon" type="image/png" sizes="32x32" href="/brand/favicon-32.png" />
 <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png" />
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!-- Tema antes da primeira pintura, como no CRM: claro por padrão, escuro
+     opcional. Sem isso a tela pisca branca antes de escurecer. -->
+<script>(function(){var t="claro";try{t=localStorage.getItem("tema")||"claro"}catch(e){}document.documentElement.setAttribute("data-theme",t==="escuro"?"dark":"light")})()</script>
+<link rel="preconnect" href="https://fonts.cdnfonts.com" crossorigin>
+<link href="https://fonts.cdnfonts.com/css/metropolis-2" rel="stylesheet">
 <style>
+  /* Paleta do Minutei CRM — mesma identidade nos dois produtos.
+     Laranja é AÇÃO (botão primário, CTA); azul é FLUXO (navegação ativa,
+     etapas, status). Trocar um pelo outro faz o produto parecer outra marca. */
   :root {
-    /* Identidade Minutei — Navy Deep + Blaze Orange */
-    --navy: #0d1b2a;
-    --navy-mid: #1e3a5f;
-    --brand: #ff6b00;
-    --brand-dark: #e05c00;
-    --brand-soft: #fff2e8;
-    --brand-text: #a84300; /* laranja escurecido: legível como texto sobre fundo claro */
-    --gold: #ff6b00;
-    --ink: #0d1b2a;
-    --muted: #5b6b7f;
-    --border: #e4e9f0;
-    --bg: #f5f5f5;
+    --navy: #0A1628;
+    --navy-mid: #17304F;
+    --brand: #FF6B2B;
+    --brand-dark: #E75216;
+    --brand-soft: #FFF1EA;
+    --brand-soft-forte: #FFE3D3;
+    --brand-text: #B3471A; /* laranja escurecido: legível como texto sobre fundo claro */
+    --gold: var(--brand);
+    --info: #3B9CFF;
+    --info-dark: #1978DC;
+    --info-soft: #EAF4FF;
+    --ink: #10203A;
+    --muted: #52637A;
+    --label: #40506A;
+    --border: #E2E8F0;
+    --borda-forte: #C5D0DE;
+    --bg: #F7F9FC;
+    --paper: #FFFFFF;
+    --campo-bg: #FBFCFE;
+    --neutro-bg: #F1F4F8;
+    --ok-bg: #E7F6EE; --ok-text: #0F7A52; --ok-borda: #BFE3D1;
+    --erro-bg: #FDEEEE; --erro-text: #A3282A; --erro-borda: #E8B4B4; --erro-solido: #B42318;
+    --alerta-bg: #FFF1E3; --alerta-text: #A84A00;
+    --toast-bg: #10203A; --toast-text: #FFFFFF;
+    --sidebar-bg: #0A1628; --sidebar-text: #C9D6E8; --sidebar-faint: #7F93AC;
+    --sidebar-hover: #ffffff12; --sidebar-border: #ffffff14;
     /* Cores de dado. O par venda/locação passou nos checks de daltonismo
        (ΔE 21.3 protan) e de contraste contra o branco — não é escolha de
        gosto, foi validado. Só é usado onde há duas séries; gráfico de uma
@@ -47,12 +66,45 @@
     --c-locacao: #1b6ca8;
     --c-dado: #e05c00;
     --c-grade: #eef1f5;
-    --paper: #ffffff;
-    --shadow-sm: 0 1px 2px rgba(13, 27, 42, 0.06);
-    --shadow-md: 0 6px 20px rgba(13, 27, 42, 0.08);
-    --shadow-lg: 0 20px 50px rgba(13, 27, 42, 0.16);
-    --serif: "Manrope", -apple-system, "Segoe UI", Roboto, sans-serif;
-    --sans: "Manrope", -apple-system, "Segoe UI", Roboto, sans-serif;
+    --shadow-sm: 0 1px 2px rgba(10, 22, 40, 0.05);
+    --shadow-md: 0 6px 20px rgba(10, 22, 40, 0.08);
+    --shadow-lg: 0 20px 50px rgba(10, 22, 40, 0.16);
+    --serif: "Metropolis", "Segoe UI", system-ui, sans-serif;
+    --sans: "Metropolis", "Segoe UI", system-ui, sans-serif;
+    color-scheme: light;
+  }
+  /* Tema escuro — os mesmos valores do CRM. */
+  :root[data-theme="dark"] {
+    --navy: #222C3B;
+    --navy-mid: #2A3547;
+    --brand: #FF6B2B;
+    --brand-dark: #FF8550;
+    --brand-soft: rgba(255,107,43,.14);
+    --brand-soft-forte: rgba(255,107,43,.22);
+    --brand-text: #FF9A66;
+    --info: #3B9CFF;
+    --info-dark: #8CC4FF;
+    --info-soft: rgba(59,156,255,.14);
+    --ink: #DCE3EC;
+    --muted: #93A0B2;
+    --label: #AAB5C4;
+    --border: #232A35;
+    --borda-forte: #344052;
+    --bg: #0D1015;
+    --paper: #14181F;
+    --campo-bg: #171C24;
+    --neutro-bg: #1C222C;
+    --ok-bg: rgba(34,197,94,.10); --ok-text: #4ADE80; --ok-borda: rgba(34,197,94,.28);
+    --erro-bg: rgba(240,82,82,.10); --erro-text: #F87171; --erro-borda: rgba(240,82,82,.30); --erro-solido: #B42318;
+    --alerta-bg: rgba(245,165,36,.10); --alerta-text: #F7B955;
+    --toast-bg: #E6ECF3; --toast-text: #0D1015;
+    --sidebar-bg: #090B0F; --sidebar-text: #C9D6E8; --sidebar-faint: #6C788A;
+    --sidebar-hover: #ffffff0d; --sidebar-border: #ffffff0f;
+    --c-grade: #262E3A;
+    --shadow-sm: none;
+    --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.35);
+    --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.5);
+    color-scheme: dark;
   }
   * { box-sizing: border-box; }
   body { font-family: var(--sans); margin: 0; background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; }
@@ -66,37 +118,55 @@
   .auth-card .brand-mark { width: 38px; height: 38px; }
   .auth-card .brand-word { font-size: 23px; }
 
-  header { background: var(--paper); border-bottom: 1px solid var(--border); padding: 16px 28px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-  header .tenant-badge { font-size: 13px; color: var(--muted); display: flex; align-items: center; justify-content: flex-end; gap: 16px; min-width: 0; flex: 1; }
-  header .tenant-badge span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-  header .tenant-badge button { background: none; border: none; color: var(--muted); text-decoration: none; cursor: pointer; font-size: 13px; padding: 6px 12px; border-radius: 6px; transition: background .15s, color .15s; flex-shrink: 0; }
-  header .tenant-badge button:hover { background: var(--bg); color: var(--ink); }
-
-  /* Menu na lateral esquerda. A lista vertical cabe sem disputa de espaço —
-     era a origem das abas que sumiam quando o menu era horizontal. */
-  .shell { display: flex; align-items: flex-start; }
-  nav {
-    width: 236px; flex-shrink: 0; align-self: stretch;
-    display: flex; flex-direction: column; gap: 2px;
-    padding: 20px 14px; background: var(--paper);
-    border-right: 1px solid var(--border); min-height: calc(100vh - 69px);
-    position: sticky; top: 0;
+  /* Esqueleto igual ao do CRM: lateral escura fixa à esquerda, com a marca no
+     topo e a conta + tema no rodapé. A lista vertical cabe sem disputa de
+     espaço — era a origem das abas que sumiam quando o menu era horizontal. */
+  .layout { display: grid; grid-template-columns: 232px minmax(0, 1fr); min-height: 100vh; }
+  .sidebar {
+    background: var(--sidebar-bg); border-right: 1px solid var(--sidebar-border);
+    display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow-y: auto; z-index: 50;
   }
+  .sidebar-logo { padding: 18px 16px 16px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--sidebar-border); }
+  .sidebar-logo img { width: 28px; height: 28px; border-radius: 7px; }
+  .nlogo-text { color: #fff; font-weight: 700; font-size: 17px; letter-spacing: -.3px; }
+  .nlogo-text span { color: var(--brand); }
+  nav { flex: 1; display: flex; flex-direction: column; gap: 1px; padding: 10px 8px; }
   .nav-grupo {
-    font-size: 10.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase;
-    color: var(--muted); padding: 14px 12px 6px; opacity: .75;
+    font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+    color: var(--sidebar-faint); padding: 14px 12px 6px;
   }
-  .nav-grupo:first-child { padding-top: 2px; }
+  .nav-grupo:first-child { padding-top: 6px; }
   nav button {
-    display: flex; align-items: center; gap: 11px; width: 100%; text-align: left;
-    border: none; background: none; padding: 10px 12px; border-radius: 9px; cursor: pointer;
-    font-size: 14px; font-weight: 500; color: var(--muted);
+    display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+    border: none; background: none; padding: 9px 12px; border-radius: 8px; cursor: pointer;
+    font-size: 13.5px; font-weight: 600; color: var(--sidebar-text);
     transition: background .15s, color .15s;
   }
-  nav button svg { width: 18px; height: 18px; flex-shrink: 0; opacity: .85; }
-  nav button:hover { color: var(--ink); background: var(--bg); }
-  nav button.active { background: var(--brand-soft); color: var(--brand-text); font-weight: 600; }
-  nav button.active svg { opacity: 1; }
+  nav button svg { width: 17px; height: 17px; flex-shrink: 0; opacity: .9; }
+  nav button:hover { color: #fff; background: var(--sidebar-hover); }
+  nav button.active { background: var(--info); color: #fff; }
+  nav button:focus-visible, .sidebar-footer button:focus-visible { outline: 2px solid var(--info); outline-offset: 2px; }
+  .sidebar-footer { padding: 10px 8px 14px; border-top: 1px solid var(--sidebar-border); display: flex; flex-direction: column; gap: 6px; }
+  .tema-btn {
+    display: flex; align-items: center; gap: 10px; width: 100%; border: none; background: none; cursor: pointer;
+    color: var(--sidebar-text); font-size: 12.5px; font-weight: 600; padding: 8px 12px; border-radius: 8px;
+  }
+  .tema-btn:hover { background: var(--sidebar-hover); color: #fff; }
+  .tema-btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .tema-sw { margin-left: auto; width: 28px; height: 16px; border-radius: 10px; background: #ffffff26; position: relative; transition: background .2s; flex-shrink: 0; }
+  .tema-sw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; transition: transform .2s; }
+  [data-theme="dark"] .tema-sw { background: var(--info); }
+  [data-theme="dark"] .tema-sw::after { transform: translateX(12px); }
+  .conta-mini { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--sidebar-border); background: #ffffff0d; }
+  .conta-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--navy-mid); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 800; letter-spacing: .5px; flex-shrink: 0; }
+  .conta-info { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; flex: 1; }
+  .conta-info strong { color: #fff; font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .conta-info span { color: var(--sidebar-faint); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sair-btn { border: none; background: none; color: var(--sidebar-faint); font-size: 12px; font-weight: 600; cursor: pointer; padding: 6px 4px; border-radius: 6px; flex-shrink: 0; }
+  .sair-btn:hover { color: #fff; }
+  .topbar { display: none; }
+  .sidebar-overlay { display: none; }
+  [data-theme="dark"] .brand-logo { filter: brightness(0) invert(1); }
 
   /* Cabeçalho de página e sub-abas de Configurações */
   .pagina-titulo { margin-bottom: 22px; }
@@ -109,9 +179,11 @@
     border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color .15s, border-color .15s;
   }
   .subabas button:hover { color: var(--ink); }
-  .subabas button.ativa { color: var(--brand-text); border-bottom-color: var(--brand); font-weight: 600; }
+  .subabas button.ativa { color: var(--info-dark); border-bottom-color: var(--info); font-weight: 600; }
 
-  main { flex: 1; min-width: 0; max-width: 960px; margin: 32px auto; padding: 0 28px 70px; }
+  main { min-width: 0; width: 100%; max-width: 1000px; margin: 0 auto; padding: 32px 28px 70px; }
+  /* A tela de gerar contrato usa a largura toda: formulário e prévia lado a lado. */
+  main.largo { max-width: 1520px; }
   .card { background: var(--paper); border: 1px solid var(--border); border-radius: 14px; padding: 28px; margin-bottom: 22px; box-shadow: var(--shadow-sm); }
   /* Microinteração: cards de métrica do dashboard reagem ao passar o mouse. */
   #view-dashboard .grid .card { transition: transform .18s ease, box-shadow .18s ease; }
@@ -121,31 +193,31 @@
   .card .hint { font-size: 13.5px; color: var(--muted); margin: 0 0 20px; line-height: 1.5; }
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   .grid.cols3 { grid-template-columns: 1fr 1fr 1fr; }
-  label { display: block; font-size: 12px; font-weight: 600; color: #4a5765; margin-bottom: 6px; letter-spacing: 0.01em; }
+  label { display: block; font-size: 12px; font-weight: 600; color: var(--label); margin-bottom: 6px; letter-spacing: 0.01em; }
   input, select, textarea {
     width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
     font-size: 14px; font-family: inherit; background: var(--paper); color: var(--ink);
     transition: border-color .15s, box-shadow .15s;
   }
-  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgba(255,107,0, 0.12); }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--info); box-shadow: 0 0 0 3px var(--info-soft); }
   textarea { resize: vertical; min-height: 50px; }
   .field { margin-bottom: 15px; }
 
   button { font-family: inherit; }
   button.primary {
     background: var(--brand); color: #fff; border: none; padding: 11px 24px; border-radius: 9px;
-    font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 8px rgba(255,107,0, 0.25);
+    font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 8px rgba(255,107,43, 0.25);
     transition: background .15s, box-shadow .15s, transform .1s;
   }
-  button.primary:hover { background: var(--brand-dark); box-shadow: 0 3px 10px rgba(255,107,0, 0.32); }
+  button.primary:hover { background: var(--brand-dark); box-shadow: 0 3px 10px rgba(255,107,43, 0.32); }
   button.primary:active { transform: translateY(1px); }
   button.primary:disabled { opacity: .55; cursor: default; box-shadow: none; }
   button.secondary {
     background: var(--paper); border: 1px solid var(--border); padding: 10px 18px; border-radius: 9px;
     font-size: 13.5px; cursor: pointer; color: var(--ink); font-weight: 500; transition: border-color .15s, background .15s;
   }
-  button.secondary:hover { border-color: #c3ccd8; background: var(--bg); }
-  button.link { background: none; border: none; color: #a13a3a; font-size: 13px; cursor: pointer; text-decoration: underline; padding: 0; }
+  button.secondary:hover { border-color: var(--borda-forte); background: var(--bg); }
+  button.link { background: none; border: none; color: var(--erro-text); font-size: 13px; cursor: pointer; text-decoration: underline; padding: 0; }
   /* Ações não destrutivas na mesma linha do "excluir" — o vermelho acima é
      reservado pra exclusão. */
   button.link.acao { color: var(--brand-text); margin-right: 10px; }
@@ -158,16 +230,16 @@
     border: 1px dashed var(--brand); color: var(--brand-text); background: var(--brand-soft);
     font-size: 12.5px; font-weight: 600; cursor: pointer; transition: background .15s;
   }
-  .cnh-upload-btn:hover { background: #ffe0c9; }
+  .cnh-upload-btn:hover { background: var(--brand-soft-forte); }
   .cnh-upload-btn.loading { opacity: .6; cursor: default; }
   .cnh-upload-btn.locked { border-style: solid; border-color: var(--border); color: var(--muted); background: var(--bg); cursor: not-allowed; }
   .cnh-upload-btn.locked:hover { background: var(--bg); }
   .cnh-status { font-size: 12px; color: var(--muted); }
-  .cnh-status.error { color: #a13a3a; }
+  .cnh-status.error { color: var(--erro-text); }
   .cnh-status.success { color: var(--brand-text); }
 
   .row-list { display: flex; flex-direction: column; gap: 16px; }
-  .person-card, .parcela-card { border: 1px dashed var(--border); border-radius: 10px; padding: 18px; position: relative; background: #fcfcfd; }
+  .person-card, .parcela-card { border: 1px dashed var(--border); border-radius: 10px; padding: 18px; position: relative; background: var(--campo-bg); }
   .row-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
 
   .tabs-tipo { display: flex; gap: 10px; margin-bottom: 22px; }
@@ -179,24 +251,24 @@
 
   .ciclo-toggle { display: inline-flex; gap: 4px; padding: 4px; background: var(--bg); border: 1px solid var(--border); border-radius: 999px; margin-bottom: 16px; }
   .ciclo-toggle button { border: none; background: transparent; padding: 8px 18px; border-radius: 999px; cursor: pointer; font-size: 13.5px; font-weight: 600; color: var(--muted); display: inline-flex; align-items: center; gap: 8px; transition: all .15s; }
-  .ciclo-toggle button.active { background: var(--paper); color: var(--ink); box-shadow: 0 1px 3px rgba(13, 27, 42,0.1); }
+  .ciclo-toggle button.active { background: var(--paper); color: var(--ink); box-shadow: 0 1px 3px rgba(10, 22, 40, 0.1); }
   .ciclo-badge { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--brand-text); background: var(--brand-soft); padding: 2px 7px; border-radius: 999px; }
 
   .doc-picker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 4px; }
   .doc-pick { text-align: left; padding: 13px 15px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--paper); cursor: pointer; display: flex; flex-direction: column; gap: 3px; transition: all .15s; font-family: inherit; }
   .doc-pick strong { font-size: 14px; color: var(--ink); }
   .doc-pick span { font-size: 12px; color: var(--muted); line-height: 1.4; }
-  .doc-pick:hover { border-color: #c3ccd8; }
-  .doc-pick.active { border-color: var(--brand); background: var(--brand-soft); }
-  .doc-pick.active strong { color: var(--brand-text); }
+  .doc-pick:hover { border-color: var(--borda-forte); }
+  .doc-pick.active { border-color: var(--info); background: var(--info-soft); }
+  .doc-pick.active strong { color: var(--info-dark); }
   @media (max-width: 760px) { .doc-picker { grid-template-columns: 1fr 1fr; } }
   @media (max-width: 480px) { .doc-picker { grid-template-columns: 1fr; } }
 
   .risk-badge { display: inline-flex; align-items: center; gap: 7px; padding: 6px 14px; border-radius: 999px; font-size: 12.5px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
   .risk-badge::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
-  .risk-badge.risk-baixo { background: #fff2e8; color: #a84300; }
-  .risk-badge.risk-medio { background: #ffe9d8; color: #a84a00; }
-  .risk-badge.risk-alto { background: #fbe9e7; color: #b43d2f; }
+  .risk-badge.risk-baixo { background: var(--ok-bg); color: var(--ok-text); }
+  .risk-badge.risk-medio { background: var(--alerta-bg); color: var(--alerta-text); }
+  .risk-badge.risk-alto { background: var(--erro-bg); color: var(--erro-text); }
   .ia-resultado { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); }
   .ia-resultado h3 { font-size: 14px; margin: 18px 0 8px; }
   .ia-justificativa { font-size: 14px; line-height: 1.55; color: var(--ink); }
@@ -208,20 +280,20 @@
     position: relative; text-align: left; padding: 13px 14px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--paper);
     cursor: pointer; transition: all .15s;
   }
-  .layout-picker button.active { border-color: var(--brand); background: var(--brand-soft); }
+  .layout-picker button.active { border-color: var(--info); background: var(--info-soft); }
   .layout-picker .lp-name { font-size: 13.5px; font-weight: 700; color: var(--ink); }
-  .layout-picker button.active .lp-name { color: var(--brand-text); }
+  .layout-picker button.active .lp-name { color: var(--info-dark); }
   .layout-picker .lp-desc { font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.35; }
   .layout-picker button.locked { cursor: not-allowed; opacity: .7; }
   .layout-picker button.locked:hover { border-color: var(--border); background: var(--paper); }
-  .lock-badge { position: absolute; top: 10px; right: 10px; font-size: 9.5px; font-weight: 700; letter-spacing: .02em; background: #fff2e8; color: #a84a00; padding: 3px 7px; border-radius: 999px; white-space: nowrap; }
+  .lock-badge { position: absolute; top: 10px; right: 10px; font-size: 9.5px; font-weight: 700; letter-spacing: .02em; background: var(--alerta-bg); color: var(--alerta-text); padding: 3px 7px; border-radius: 999px; white-space: nowrap; }
   @media (max-width: 640px) { .layout-picker { grid-template-columns: 1fr; } }
 
   .section-title {
     font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
-    color: var(--gold); margin: 26px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border);
+    color: var(--info-dark); margin: 26px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border);
   }
-  .logo-preview { width: 64px; height: 64px; object-fit: contain; border: 1px solid var(--border); border-radius: 10px; padding: 6px; background: #fafbfc; }
+  .logo-preview { width: 64px; height: 64px; object-fit: contain; border: 1px solid var(--border); border-radius: 10px; padding: 6px; background: var(--campo-bg); }
   .team-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; background: var(--paper); }
   .empty { color: var(--muted); font-size: 14px; padding: 24px; text-align: center; }
 
@@ -231,9 +303,9 @@
   .conta-nome { font-family: var(--serif); font-size: 24px; font-weight: 800; letter-spacing: -.01em; }
   .conta-status { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
     padding: 4px 10px; border-radius: 999px; }
-  .conta-status.ok { background: #e7f4ee; color: #0f7a52; }
-  .conta-status.alerta { background: #fdeeee; color: #a3282a; }
-  .conta-status.neutro { background: #f1f3f5; color: var(--muted); }
+  .conta-status.ok { background: var(--ok-bg); color: var(--ok-text); }
+  .conta-status.alerta { background: var(--erro-bg); color: var(--erro-text); }
+  .conta-status.neutro { background: var(--neutro-bg); color: var(--muted); }
   .conta-linha { display: flex; justify-content: space-between; gap: 16px; padding: 11px 0;
     border-bottom: 1px solid var(--border); font-size: 14.5px; flex-wrap: wrap; }
   .conta-linha:last-child { border-bottom: none; }
@@ -261,7 +333,7 @@
 
   /* ---- Revisão por link ---- */
   .modal-overlay {
-    position: fixed; inset: 0; background: rgba(13,27,42,.55); z-index: 60;
+    position: fixed; inset: 0; background: rgba(10,22,40,.55); z-index: 60;
     display: flex; align-items: center; justify-content: center; padding: 20px;
   }
   .modal {
@@ -274,7 +346,7 @@
   .link-box input {
     flex: 1; min-width: 0; font-size: 14px; padding: 11px 13px; border: 1px solid var(--border);
     border-radius: 9px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink);
-    background: #fafbfc;
+    background: var(--campo-bg);
   }
 
   .revisao-row {
@@ -287,17 +359,17 @@
   .revisao-end { font-size: 13.5px; color: var(--muted); }
   .revisao-data { font-size: 12.5px; color: var(--muted); }
   .revisao-comentario {
-    margin: 9px 0 0; padding: 10px 13px; background: #fdf6f6; border-left: 3px solid #d99; border-radius: 0 7px 7px 0;
+    margin: 9px 0 0; padding: 10px 13px; background: var(--erro-bg); border-left: 3px solid var(--erro-borda); border-radius: 0 7px 7px 0;
     font-size: 13.5px; white-space: pre-wrap; color: var(--ink);
   }
   .revisao-autor { font-size: 13px; color: var(--ink); margin-top: 5px; line-height: 1.5; }
   .revisao-autor strong { font-weight: 650; }
   .confere { font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 5px;
     white-space: nowrap; display: inline-block; }
-  .confere.ok { background: #e7f4ee; color: #0f7a52; }
-  .confere.na { background: #f1f3f5; color: var(--muted); }
-  .banner-pagamento { border-color: #d33; background: #fff5f5; }
-  .banner-pagamento strong { display: block; font-size: 16px; margin-bottom: 5px; color: #a3282a; }
+  .confere.ok { background: var(--ok-bg); color: var(--ok-text); }
+  .confere.na { background: var(--neutro-bg); color: var(--muted); }
+  .banner-pagamento { border-color: var(--erro-text); background: var(--erro-bg); }
+  .banner-pagamento strong { display: block; font-size: 16px; margin-bottom: 5px; color: var(--erro-text); }
   .banner-pagamento p { font-size: 14px; color: var(--ink); margin: 0 0 14px; max-width: 70ch; }
 
   /* Situação do negócio (esteira) — controlada pelo corretor */
@@ -308,7 +380,7 @@
     transition: border-color .15s, color .15s, background .15s;
   }
   .filtros-situacao button:hover { color: var(--ink); border-color: var(--muted); }
-  .filtros-situacao button.ativo { background: var(--brand-soft); border-color: var(--brand); color: var(--brand-text); font-weight: 600; }
+  .filtros-situacao button.ativo { background: var(--info-soft); border-color: var(--info); color: var(--info-dark); font-weight: 600; }
 
   /* O próprio seletor é o indicador: colorido pra bater o olho e é onde se
      muda. Um selo separado repetiria a mesma informação ao lado. */
@@ -316,21 +388,21 @@
     font-size: 13px; font-weight: 600; padding: 7px 10px; border-radius: 7px;
     border: 1px solid transparent; cursor: pointer; width: auto;
   }
-  .sel-situacao.aguardando { background: #eef1f4; color: #46566b; }
+  .sel-situacao.aguardando { background: var(--neutro-bg); color: var(--muted); }
   .sel-situacao.atencao { background: var(--brand-soft); color: var(--brand-text); }
-  .sel-situacao.ok { background: #e7f4ee; color: #0f7a52; }
-  .sel-situacao.ruim { background: #fdeeee; color: #a3282a; }
-  .sel-situacao:focus { outline: 2px solid var(--brand); outline-offset: 1px; }
+  .sel-situacao.ok { background: var(--ok-bg); color: var(--ok-text); }
+  .sel-situacao.ruim { background: var(--erro-bg); color: var(--erro-text); }
+  .sel-situacao:focus { outline: 2px solid var(--info); outline-offset: 1px; }
 
   .obs-linha { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
   .obs-linha input {
     flex: 1; min-width: 0; font-size: 13px; padding: 7px 11px;
     border: 1px solid var(--border); border-radius: 7px; background: var(--paper); color: var(--ink);
   }
-  .obs-linha input:focus { border-color: var(--brand); outline: none; }
+  .obs-linha input:focus { border-color: var(--info); outline: none; }
 
   .revisao-perguntas { margin-top: 9px; }
-  .pergunta-item { margin-top: 6px; border: 1px solid var(--border); border-radius: 8px; background: #fafbfc; }
+  .pergunta-item { margin-top: 6px; border: 1px solid var(--border); border-radius: 8px; background: var(--campo-bg); }
   .pergunta-item summary { cursor: pointer; padding: 8px 12px; font-size: 13.5px; font-weight: 600; }
   .pergunta-item summary::marker { color: var(--brand); }
   .pergunta-resposta { padding: 0 12px 10px; font-size: 13.5px; color: var(--muted); line-height: 1.55; white-space: pre-wrap; }
@@ -341,18 +413,18 @@
     padding: 5px 10px; border-radius: 6px; white-space: nowrap;
   }
   .revisao-status.pendente { background: var(--brand-soft); color: var(--brand-text); }
-  .revisao-status.aprovado { background: #e7f4ee; color: #0f7a52; }
-  .revisao-status.ajuste { background: #fdeeee; color: #a3282a; }
+  .revisao-status.aprovado { background: var(--ok-bg); color: var(--ok-text); }
+  .revisao-status.ajuste { background: var(--erro-bg); color: var(--erro-text); }
 
   .toast {
-    position: fixed; bottom: 24px; right: 24px; background: var(--ink); color: #fff; padding: 13px 20px;
+    position: fixed; bottom: 24px; right: 24px; background: var(--toast-bg); color: var(--toast-text); padding: 13px 20px;
     border-radius: 10px; font-size: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.22); opacity: 0;
     transform: translateY(10px); transition: all .25s; pointer-events: none; z-index: 50;
   }
   .toast.show { opacity: 1; transform: translateY(0); }
-  .toast.error { background: #942d2d; }
+  .toast.error { background: var(--erro-solido); color: #fff; }
   .footer-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-top: 6px; }
-  .error-msg { color: #a13a3a; font-size: 13px; margin-top: 8px; min-height: 16px; }
+  .error-msg { color: var(--erro-text); font-size: 13px; margin-top: 8px; min-height: 16px; }
   .checklist-preview { white-space: pre-wrap; word-break: break-word; background: var(--bg);
     border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-top: 12px;
     font-family: inherit; font-size: 13px; line-height: 1.5; max-height: 320px; overflow: auto; }
@@ -360,7 +432,7 @@
   .partes { display:flex; flex-direction:column; gap:5px; margin-top:10px; }
   .parte-linha { display:flex; align-items:baseline; gap:8px; font-size:13px; }
   .parte-sinal { width:15px; flex-shrink:0; text-align:center; font-weight:700; }
-  .parte-sinal.fez { color:#0f7a52; }
+  .parte-sinal.fez { color:var(--ok-text); }
   .parte-sinal.meio { color:var(--brand-text); }
   .parte-sinal.nada { color:var(--muted); }
   .parte-papel { color:var(--ink); font-weight:600; white-space:nowrap; }
@@ -372,7 +444,7 @@
   .etapa { display:flex; align-items:baseline; gap:7px; padding:9px 13px; border:1px solid var(--border);
     border-radius:10px; background:var(--paper); font-size:13px; }
   .etapa b { font-size:17px; font-variant-numeric:tabular-nums; }
-  .etapa.ok b { color:#0f7a52; }
+  .etapa.ok b { color:var(--ok-text); }
   .etapa.atencao b { color:var(--brand-text); }
 
   /* ===== gráficos ===== */
@@ -393,7 +465,7 @@
     .gr-svg text { font-size: 17px; }
   }
 
-  .gr-tip { position:fixed; z-index:60; pointer-events:none; background:var(--ink); color:#fff;
+  .gr-tip { position:fixed; z-index:60; pointer-events:none; background:var(--toast-bg); color:var(--toast-text);
     border-radius:8px; padding:9px 11px; font-size:12.5px; line-height:1.45; box-shadow:0 6px 20px rgba(13,27,42,.22);
     opacity:0; transition:opacity .12s; white-space:nowrap; }
   .gr-tip.on { opacity:1; }
@@ -410,14 +482,14 @@
   .gr-preenche { display:block; height:100%; border-radius:5px; background:var(--c-dado); }
   .gr-valor { color:var(--muted); font-variant-numeric:tabular-nums; font-weight:600; min-width:2ch; text-align:right; }
 
-  .ok-msg { color: #1c6b4a; background: #eaf6f0; border: 1px solid #bfe3d1; border-radius: 8px;
+  .ok-msg { color: var(--ok-text); background: var(--ok-bg); border: 1px solid var(--ok-borda); border-radius: 8px;
     font-size: 13px; line-height: 1.45; margin-top: 10px; padding: 10px 12px; }
 
   .auth-wrap {
     min-height: 100vh; display: flex; align-items: center; justify-content: center;
     background:
-      radial-gradient(circle at 15% 20%, rgba(255,107,0,0.06), transparent 45%),
-      radial-gradient(circle at 85% 80%, rgba(255,107,0,0.07), transparent 45%),
+      radial-gradient(circle at 15% 20%, rgba(255,107,43,0.06), transparent 45%),
+      radial-gradient(circle at 85% 80%, rgba(59,156,255,0.06), transparent 45%),
       var(--bg);
   }
   .auth-card { width: 400px; background: var(--paper); border: 1px solid var(--border); border-radius: 16px; padding: 36px; box-shadow: var(--shadow-md); }
@@ -427,6 +499,136 @@
   .auth-switch { text-align: center; font-size: 13.5px; color: var(--muted); margin-top: 18px; }
   .auth-switch button { background: none; border: none; color: var(--brand); font-weight: 600; cursor: pointer; font-size: 13.5px; }
   .badge-role { font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; background: var(--brand-soft); color: var(--brand-text); border-radius: 5px; padding: 3px 8px; font-weight: 600; }
+
+  /* ================= GERAR CONTRATO: ETAPAS + PRÉVIA ================= */
+  .gerar-grade { display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; align-items: start; }
+  .gerar-col { min-width: 0; }
+  .card-tipo { padding-bottom: 8px; }
+  .tabs-tipo { flex-wrap: wrap; }
+  .tabs-tipo button { flex: 1 1 150px; }
+  .tabs-tipo button.active { border-color: var(--info); color: var(--info-dark); background: var(--info-soft); }
+
+  .wiz { scroll-margin-top: 16px; }
+  @media (max-width: 860px) { .wiz { scroll-margin-top: 70px; } }
+  .wiz-enter { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); border: 0; }
+  .wiz-trilha { list-style: none; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin: 0 0 24px; padding: 0; }
+  .wiz-passo {
+    width: 100%; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 9px 4px 8px; min-height: 44px;
+    border: 1px solid var(--border); border-radius: 10px; background: var(--paper); cursor: pointer;
+    font: inherit; font-size: 12px; font-weight: 600; color: var(--muted); text-align: center;
+    transition: border-color .15s, background .15s, color .15s;
+  }
+  .wiz-passo:hover { border-color: var(--borda-forte); color: var(--ink); }
+  .wiz-passo:focus-visible { outline: 2px solid var(--info); outline-offset: 2px; }
+  .wiz-num {
+    width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; background: var(--neutro-bg); color: var(--muted); font-variant-numeric: tabular-nums;
+  }
+  .wiz-nome { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .wiz-passo.atual { border-color: var(--info); background: var(--info-soft); color: var(--info-dark); }
+  .wiz-passo.atual .wiz-num { background: var(--info); color: #fff; }
+  .wiz-passo.feito .wiz-num { background: var(--ok-bg); color: var(--ok-text); font-size: 0; }
+  .wiz-passo.feito .wiz-num::after { content: "✓"; font-size: 13px; }
+  .wiz-passo.erro { border-color: var(--erro-borda); }
+  .wiz-passo.erro .wiz-num { background: var(--erro-bg); color: var(--erro-text); font-size: 12px; }
+  .wiz-passo.erro .wiz-num::after { content: none; }
+  .card .wiz-titulo { font-size: 20px; margin: 0 0 4px; letter-spacing: -.01em; }
+  .wiz-painel > .hint { margin-bottom: 6px; }
+  .wiz-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--border); }
+  .wiz-contagem { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .wiz-gerar { margin-top: 18px; }
+
+  .rev-alerta { border: 1px solid var(--erro-borda); background: var(--erro-bg); color: var(--ink); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; font-size: 13.5px; }
+  .rev-alerta strong { color: var(--erro-text); }
+  .rev-alerta ul { margin: 6px 0 0; padding-left: 18px; }
+  .rev-grade { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .rev-bloco { border: 1px solid var(--border); border-radius: 10px; padding: 13px 15px; background: var(--campo-bg); font-size: 13.5px; min-width: 0; }
+  .rev-bloco p { margin: 0; }
+  .rev-topo { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 7px; }
+  .rev-topo h3 { margin: 0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); }
+  .rev-topo .link.acao { margin: 0; font-size: 12.5px; }
+  .rev-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+  .rev-papel { display: inline-block; min-width: 84px; color: var(--muted); font-size: 12.5px; }
+  .rev-falta { color: var(--erro-text); font-size: 12.5px; font-weight: 600; }
+
+  .previa { display: none; }
+  .previa-abrir { position: fixed; right: 18px; bottom: 18px; z-index: 40; box-shadow: var(--shadow-lg); }
+  .previa-topo { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--paper); }
+  .previa-titulo { display: flex; flex-direction: column; line-height: 1.35; margin-right: auto; min-width: 0; }
+  .previa-titulo strong { font-size: 14px; }
+  .previa-titulo span { font-size: 12px; color: var(--muted); }
+  .previa-chip { border: 1px solid transparent; background: var(--alerta-bg); color: var(--alerta-text); font: inherit; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 999px; cursor: pointer; white-space: nowrap; }
+  .previa-chip:hover { border-color: var(--alerta-text); }
+  .previa-fechar { border: none; background: none; font-size: 26px; line-height: 1; color: var(--muted); cursor: pointer; padding: 2px 8px; }
+  .previa-papel { flex: 1; overflow: auto; background: var(--neutro-bg); padding: 22px; }
+  @media (min-width: 1280px) {
+    .gerar-grade { grid-template-columns: minmax(0, 1fr) minmax(440px, .95fr); }
+    .previa { display: flex; flex-direction: column; position: sticky; top: 16px; height: calc(100vh - 32px); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow-sm); }
+    .previa-abrir, .previa-fechar { display: none; }
+  }
+  @media (max-width: 1279px) {
+    .previa.aberta { display: flex; flex-direction: column; position: fixed; inset: 0; z-index: 70; }
+  }
+
+  /* A folha é papel: fica branca também no tema escuro, como vai sair impressa. */
+  .previa-folha {
+    background-color: #fff; color: #262626; max-width: 760px; margin: 0 auto; padding: 40px 46px 56px; border-radius: 3px;
+    box-shadow: 0 1px 3px rgba(10,22,40,.14), 0 10px 30px rgba(10,22,40,.08);
+    font-family: Calibri, Carlito, "Segoe UI", Arial, sans-serif; font-size: 12.5px; line-height: 1.55;
+    /* prévia, não cópia: o texto final sai no .docx/.pdf */
+    user-select: none; -webkit-user-select: none;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='260'%3E%3Ctext x='180' y='140' transform='rotate(-28 180 130)' text-anchor='middle' font-family='Arial' font-size='46' font-weight='700' fill='%23000' fill-opacity='0.035'%3EPR%C3%89VIA%3C/text%3E%3C/svg%3E");
+  }
+  .previa-folha[data-layout="profissional"] { font-family: "Times New Roman", Times, serif; font-size: 13px; }
+  .previa-folha[data-layout="elegante"] { font-family: Garamond, "EB Garamond", Georgia, serif; font-size: 13.5px; line-height: 1.65; }
+  .previa-folha p { margin: 0 0 7px; }
+  .previa-folha .j { text-align: justify; }
+  .previa-folha .c { text-align: center; }
+  .previa-folha .d { text-align: right; }
+  .previa-folha .vazio { margin: 0; height: 6px; }
+  .previa-folha .titulo { font-size: 16px; font-weight: 700; letter-spacing: .02em; margin: 4px 0 2px; }
+  .previa-folha .clausula { font-weight: 700; margin-top: 18px; padding-bottom: 3px; border-bottom: 2px solid var(--previa-cor); }
+  .previa-folha[data-layout="profissional"] .clausula { text-align: center; border-top: 1px solid #1a1a1a; border-bottom: 1px solid #1a1a1a; padding: 4px 0; }
+  .previa-folha[data-layout="elegante"] .clausula { text-align: center; border-bottom: 1px solid #cfc6b0; }
+  .previa-folha .rotulo { font-weight: 700; margin: 9px 0 2px 18px; }
+  .previa-folha .recuo { margin-left: 18px; padding-left: 10px; border-left: 2px solid #ddd; }
+  .previa-folha .sobrelinha { border-top: 1px solid #555; padding-top: 3px; margin-top: 28px; }
+  .previa-folha table { width: 100%; border-collapse: collapse; margin: 4px 0 10px; }
+  .previa-folha td { border: none; border-bottom: 1px solid #e6e6e6; padding: 6px 9px; vertical-align: top; }
+  .previa-folha .suave { color: #7a7a7a; }
+  .previa-folha td p { margin: 0 0 3px; }
+  .previa-folha td.sombra { background: #f6f6f6; }
+  .previa-folha td.faixa { background: var(--previa-cor); color: #fff; }
+  .previa-folha .cab { display: flex; align-items: center; gap: 16px; padding-bottom: 10px; margin-bottom: 18px; border-bottom: 2px solid var(--previa-cor); }
+  .previa-folha .cab .logo { max-height: 44px; max-width: 140px; }
+  .previa-folha .cab-texto { flex: 1; font-size: 10.5px; color: #777; }
+  .previa-folha .cab-texto p { margin: 0; }
+  .previa-folha .cab-texto table, .previa-folha .cab-texto td { border: none; margin: 0; padding: 0; }
+  .previa-folha .rod { margin-top: 30px; padding-top: 12px; border-top: 1px dashed #c9c9c9; font-size: 10.5px; color: #777; }
+  .previa-folha .rod-rotulo { display: block; font: 600 9.5px Arial, sans-serif; letter-spacing: .08em; text-transform: uppercase; color: #aaa; margin-bottom: 8px; }
+  .previa-folha .rod table, .previa-folha .rod td { border: none; margin: 0; padding: 0 5px; vertical-align: bottom; }
+  .previa-folha .rod p { margin: 0; }
+  .previa-folha .rod .linha { height: 20px; border-bottom: 1px solid #999; margin-bottom: 2px; }
+  .previa-folha mark.pendente { background: #FFE9A6; color: #5A4300; padding: 0 3px; border-radius: 3px; }
+  .previa-folha mark.piscar { animation: previaPiscar 1.3s ease; }
+  @keyframes previaPiscar { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,184,0,0); } 30% { box-shadow: 0 0 0 5px rgba(255,184,0,.55); } }
+  @media (prefers-reduced-motion: reduce) { .previa-folha mark.piscar { animation: none; outline: 2px solid #E0A800; } }
+  .previa-folha .quebra { border-top: 1px dashed #c9c9c9; margin: 22px -46px; position: relative; }
+  .previa-folha .quebra::after { content: "nova página"; position: absolute; right: 14px; top: -8px; background: #fff; padding: 0 6px; font: 10px Arial, sans-serif; color: #999; }
+  .previa-aviso { background: #FFF6D6; color: #5A4300; padding: 12px 14px; border-radius: 8px; font-family: var(--sans); }
+
+  @media (max-width: 760px) {
+    .wiz-trilha { display: flex; }
+    .wiz-trilha li { flex: 0 0 auto; }
+    .wiz-trilha li:has(.atual) { flex: 1 1 auto; }
+    .wiz-passo { flex-direction: row; padding: 9px 10px; }
+    .wiz-passo .wiz-nome { display: none; }
+    .wiz-passo.atual .wiz-nome { display: inline; font-size: 13px; }
+    .rev-grade { grid-template-columns: 1fr; }
+    .previa-papel { padding: 10px; }
+    .previa-folha { padding: 24px 18px 36px; }
+    .previa-folha .quebra { margin: 18px -18px; }
+  }
 
   /* ================= CELULAR =================
      Precisa ficar no FIM da folha. Este bloco vivia lá em cima, antes das
@@ -438,22 +640,23 @@
      horizontal no topo, que quebra em linhas. Nunca rolagem lateral — é o que
      escondia abas antes. */
   @media (max-width: 860px) {
-    .shell { display: block; }
-    nav {
-      width: auto; min-height: 0; position: static; align-self: auto;
-      flex-direction: row; flex-wrap: wrap; row-gap: 6px; gap: 5px;
-      padding: 10px 16px; border-right: none; border-bottom: 1px solid var(--border);
+    .layout { display: block; }
+    .topbar {
+      display: flex; align-items: center; gap: 12px; height: 54px; padding: 0 14px;
+      background: var(--sidebar-bg); border-bottom: 1px solid var(--sidebar-border); position: sticky; top: 0; z-index: 48;
     }
-    nav button { width: auto; padding: 8px 13px; border-radius: 999px; font-size: 13.5px; }
-    .nav-grupo { display: none; }
-    main { margin: 24px auto; padding: 0 18px 60px; }
+    .topbar .sidebar-logo { border: none; padding: 0; }
+    .hamburger { background: none; border: none; cursor: pointer; padding: 8px; display: flex; flex-direction: column; gap: 5px; }
+    .hamburger span { display: block; width: 20px; height: 2px; background: #fff; border-radius: 2px; }
+    .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 260px; height: auto; transform: translateX(-100%); transition: transform .25s; }
+    .sidebar.aberta { transform: none; }
+    .sidebar-overlay.aberta { display: block; position: fixed; inset: 0; background: rgba(10,22,40,.55); z-index: 49; }
+    main { padding: 24px 18px 60px; }
   }
+  @media (max-width: 860px) and (prefers-reduced-motion: reduce) { .sidebar { transition: none; } }
 
   @media (max-width: 640px) {
-    header { padding: 14px 16px; }
-    header .tenant-badge { font-size: 12px; max-width: 100%; }
-    nav { padding: 8px 12px; }
-    main { margin: 20px auto; padding: 0 14px 50px; }
+    main { padding: 20px 14px 50px; }
     .card { padding: 20px; border-radius: 12px; }
     .grid, .grid.cols3 { grid-template-columns: 1fr; }
     .auth-card { width: 100%; padding: 28px 24px; }
@@ -654,7 +857,7 @@ function renderAuth() {
       <div class="auth-card">
         <div class="brand"><img src="/brand/minutei-logo-dark.png" alt="Minutei" class="brand-logo" /></div>
         <p class="hint">${isSignup ? "Crie a conta da sua imobiliária" : "Entre na sua conta"}</p>
-        ${plano ? `<p class="hint" style="background:var(--brand-soft, #fff2e8);color:var(--brand,#ff6b00);padding:8px 12px;border-radius:8px;font-weight:600">Plano ${plano.nome} — ${state.pendingCiclo === "anual" ? plano.precoAnual : plano.preco}. Depois de criar a conta, você vai para o pagamento.</p>` : ""}
+        ${plano ? `<p class="hint" style="background:var(--brand-soft);color:var(--brand-text);padding:8px 12px;border-radius:8px;font-weight:600">Plano ${plano.nome} — ${state.pendingCiclo === "anual" ? plano.precoAnual : plano.preco}. Depois de criar a conta, você vai para o pagamento.</p>` : ""}
         <form id="authForm">
           ${isSignup ? `
             <div class="field"><label>Nome da imobiliária *</label><input name="imobiliariaNome" required placeholder="Ex.: Imob Gest Imobiliária LTDA" /></div>
@@ -745,7 +948,15 @@ async function loadTeam() {
 // Ícones da barra lateral. Traço fino, herdam a cor do botão — com a lista na
 // vertical, o texto sozinho vira um bloco cinza difícil de varrer.
 const ico = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+// Iniciais da imobiliária para o avatar do rodapé da lateral.
+function iniciaisConta() {
+  const partes = String(state.tenant?.nome || state.user?.email || "?").replace(/[^\p{L}\s]/gu, " ").trim().split(/\s+/)
+    .filter(w => !/^(de|da|do|das|dos|e|ltda|me|imobiliaria|imobiliária)$/i.test(w));
+  return ((partes[0] || "?")[0] + (partes[1] ? partes[1][0] : "")).toUpperCase();
+}
+
 const ICONES = {
+  lua: ico('<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>'),
   dashboard: ico('<path d="M3 13h6V3H3zM15 21h6V11h-6zM3 21h6v-4H3zM15 7h6V3h-6z"/>'),
   gerar: ico('<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 12v5M9.5 14.5h5"/>'),
   documentos: ico('<path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-2"/><path d="M12 3h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/>'),
@@ -808,15 +1019,16 @@ function renderConfiguracoes() {
 
 function renderApp() {
   const app = document.getElementById("app");
+  const logo = `<div class="sidebar-logo"><img src="/brand/minutei-icon-512.png" alt="" /><span class="nlogo-text">Minutei<span> Contratos</span></span></div>`;
   app.innerHTML = `
-    <header>
-      <div class="brand"><img src="/brand/minutei-logo-dark.png" alt="Minutei" class="brand-logo" /></div>
-      <div class="tenant-badge">
-        <span>${state.tenant?.nome || ""} · ${state.user?.email || ""}</span>
-        <button id="btnLogout">sair</button>
-      </div>
-    </header>
-    <div class="shell">
+    <div class="topbar">
+      <button class="hamburger" id="btnMenu" aria-label="Abrir menu" aria-expanded="false"><span></span><span></span><span></span></button>
+      ${logo}
+    </div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <div class="layout">
+      <aside class="sidebar" id="sidebar">
+      ${logo}
       <nav aria-label="Seções do sistema">
         <span class="nav-grupo">Contratos</span>
         <button data-view="dashboard" class="active">${ICONES.dashboard}Dashboard</button>
@@ -827,6 +1039,15 @@ function renderApp() {
         <span class="nav-grupo">Conta</span>
         <button data-view="config">${ICONES.config}Configurações</button>
       </nav>
+      <div class="sidebar-footer">
+        <button type="button" class="tema-btn" id="btnTema" aria-pressed="false">${ICONES.lua}<span>Tema escuro</span><span class="tema-sw" aria-hidden="true"></span></button>
+        <div class="conta-mini">
+          <span class="conta-avatar" id="contaAvatar">${iniciaisConta()}</span>
+          <div class="conta-info"><strong id="contaNome">${escapeHtml(state.tenant?.nome || "")}</strong><span>${escapeHtml(state.user?.email || "")}</span></div>
+          <button class="sair-btn" id="btnLogout">Sair</button>
+        </div>
+      </div>
+      </aside>
       <main>
         <div id="avisoPagamento">${bannerPagamento()}</div>
         <div id="view-dashboard"></div>
@@ -839,6 +1060,29 @@ function renderApp() {
     </div>
   `;
 
+  // Gaveta do celular
+  const sidebar = document.getElementById("sidebar");
+  const overlay = document.getElementById("sidebarOverlay");
+  const btnMenu = document.getElementById("btnMenu");
+  const gaveta = (abrir) => {
+    sidebar.classList.toggle("aberta", abrir);
+    overlay.classList.toggle("aberta", abrir);
+    btnMenu.setAttribute("aria-expanded", String(abrir));
+  };
+  btnMenu.addEventListener("click", () => gaveta(!sidebar.classList.contains("aberta")));
+  overlay.addEventListener("click", () => gaveta(false));
+
+  // Tema: mesma chave e mesmos valores do CRM ("claro" | "escuro").
+  const btnTema = document.getElementById("btnTema");
+  const sincronizarTema = () => btnTema.setAttribute("aria-pressed", String(document.documentElement.dataset.theme === "dark"));
+  btnTema.addEventListener("click", () => {
+    const escuro = document.documentElement.dataset.theme !== "dark";
+    document.documentElement.dataset.theme = escuro ? "dark" : "light";
+    try { localStorage.setItem("tema", escuro ? "escuro" : "claro"); } catch (e) { /* aba anônima: vale só nesta sessão */ }
+    sincronizarTema();
+  });
+  sincronizarTema();
+
   const VIEWS = ["dashboard", "gerar", "documentos", "revisoes", "ia", "config"];
   document.querySelectorAll("nav button").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -846,6 +1090,8 @@ function renderApp() {
       btn.classList.add("active");
       const view = btn.dataset.view;
       VIEWS.forEach(v => { document.getElementById("view-" + v).style.display = view === v ? "" : "none"; });
+      document.querySelector("main").classList.toggle("largo", view === "gerar");
+      gaveta(false);
       if (view === "dashboard") renderDashboard();
       if (view === "gerar") renderGerar();
       if (view === "documentos") renderDocumentos();
@@ -1303,7 +1549,8 @@ function renderConfig() {
     if (!res.ok) { const d = await res.json().catch(() => ({})); toast(d.error || "Erro ao salvar", true); return; }
     state.tenant = await res.json();
     renderConfig();
-    document.querySelector(".tenant-badge span").textContent = `${state.tenant.nome} · ${state.user.email}`;
+    document.getElementById("contaNome").textContent = state.tenant.nome;
+    document.getElementById("contaAvatar").textContent = iniciaisConta();
     toast("Salvo!");
   });
 }
@@ -1796,16 +2043,28 @@ function planoUsageBanner() {
         </div>
         ${esgotado ? `<a class="btn secondary" href="/#planos" style="text-decoration:none;padding:9px 16px;border:1px solid var(--border);border-radius:9px;font-weight:600;font-size:13.5px">Fazer upgrade</a>` : ""}
       </div>
-      ${esgotado ? `<p style="color:#a13a3a;font-size:13.5px;margin:10px 0 0">Você atingiu o limite do plano grátis. Faça upgrade pra continuar gerando contratos este mês.</p>` : ""}
+      ${esgotado ? `<p style="color:var(--erro-text);font-size:13.5px;margin:10px 0 0">Você atingiu o limite do plano grátis. Faça upgrade pra continuar gerando contratos este mês.</p>` : ""}
     </div>
   `;
 }
 
 function renderGerar() {
   const el = document.getElementById("view-gerar");
+  // Cinco etapas, na ordem em que o corretor recebe as informações do negócio.
+  // O formulário continua sendo UM só (os dados saem de montarDadosContrato);
+  // as etapas só mostram um pedaço por vez.
+  const ETAPAS = [
+    { nome: "Partes", dica: "Quem assina. O gênero de cada pessoa define a concordância do contrato inteiro: \"a LOCATÁRIA\", \"os VENDEDORES\"." },
+    { nome: "Imóvel", dica: "O endereço sai no quadro-resumo e na cláusula do objeto." },
+    { nome: "Valores", dica: "Preço, pagamento e garantia." },
+    { nome: "Cláusulas", dica: "Condições do negócio que mudam a redação do contrato." },
+    { nome: "Revisão", dica: "Confira o resumo, escolha o visual do documento e gere." },
+  ];
   el.innerHTML = `
     ${planoUsageBanner()}
-    <div class="card">
+    <div class="gerar-grade">
+    <div class="gerar-col">
+    <div class="card card-tipo">
       <h2>Tipo de contrato</h2>
       <div class="tabs-tipo">
         <button data-tipo="compra_venda" class="${state.tipo === "compra_venda" ? "active" : ""}">Compra e Venda</button>
@@ -1814,43 +2073,19 @@ function renderGerar() {
         <button data-tipo="locacao_seguro_fianca" class="${state.tipo === "locacao_seguro_fianca" ? "active" : ""}">Locação (Seguro Fiança)</button>
         <button data-tipo="locacao_sem_garantia" class="${state.tipo === "locacao_sem_garantia" ? "active" : ""}">Locação (Sem Garantia)</button>
       </div>
+    </div>
 
-      <h2>Layout do documento</h2>
-      <div class="layout-picker">
-        ${LAYOUTS_CONTRATO.map(l => {
-          const bloqueado = isPlanoGratis() && l.id !== "padrao";
-          return `
-          <button type="button" data-layout="${l.id}" class="${state.layout === l.id ? "active" : ""}${bloqueado ? " locked" : ""}" ${bloqueado ? 'data-locked="1"' : ""}>
-            ${bloqueado ? '<span class="lock-badge">🔒 Plano pago</span>' : ""}
-            <div class="lp-name">${l.label}</div>
-            <div class="lp-desc">${l.desc}</div>
-          </button>
-        `;
-        }).join("")}
-      </div>
+    <form id="contratoForm" class="card wiz" novalidate>
+      <!-- Enter num campo submete o formulário pelo primeiro botão de envio. Este
+           botão invisível é esse primeiro: Enter avança de etapa em vez de gerar. -->
+      <button type="submit" class="wiz-enter" tabindex="-1" aria-hidden="true"></button>
+      <ol class="wiz-trilha" aria-label="Etapas do contrato">
+        ${ETAPAS.map((e, i) => `<li><button type="button" class="wiz-passo" data-ir="${i + 1}"><span class="wiz-num">${i + 1}</span><span class="wiz-nome">${e.nome}</span></button></li>`).join("")}
+      </ol>
 
-      <form id="contratoForm">
-        <div class="section-title">Imóvel</div>
-        <div class="grid">
-          <div class="field"><label>Endereço completo *</label><input name="imovel.endereco" required placeholder="Rua, nº, complemento, bairro, cidade/UF" /></div>
-          <div class="field"><label>Matrícula (opcional)</label><input name="imovel.matricula" /></div>
-        </div>
-        <div class="grid">
-          <div class="field"><label>Bairro (opcional, alimenta o dashboard)</label><input name="imovel.bairro" placeholder="Ex.: Candelária" /></div>
-          <div class="field"><label>Tipo de imóvel</label>
-            <select name="imovel.tipoUso">
-              <option value="residencial">Residencial</option>
-              <option value="comercial">Comercial</option>
-            </select>
-          </div>
-        </div>
-        <div class="field"><label>Características (opcional)</label><input name="imovel.caracteristicas" placeholder="Ex.: 3 quartos, 2 vagas, 120m²" /></div>
-        <div class="field" id="descricaoRegistroField">
-          <label>Descrição do imóvel conforme inteiro teor (opcional)</label>
-          <textarea name="imovel.descricaoRegistro" rows="4" placeholder="Cole aqui a descrição completa do imóvel copiada da matrícula/documento de inteiro teor (medidas, confrontações, benfeitorias etc.)."></textarea>
-        </div>
-
-        <div class="section-title" id="labelVendedores">Vendedor(es)</div>
+      <section class="wiz-painel" data-passo="1">
+        <h2 class="wiz-titulo">${ETAPAS[0].nome}</h2><p class="hint">${ETAPAS[0].dica}</p>
+        <div class="section-title" id="labelVendedores" style="margin-top:6px">Vendedor(es)</div>
         <div class="row-list" id="vendedores"></div>
         <button type="button" class="secondary" id="btnAddVendedor" style="margin-top:10px">+ adicionar</button>
 
@@ -1871,18 +2106,33 @@ function renderGerar() {
           <button type="button" class="secondary" id="btnAddAnuente" style="margin-top:10px">+ adicionar anuente</button>
         </div>
 
-        <div class="section-title">Dados bancários (opcional)</div>
-        <p class="hint" style="margin-top:-8px;margin-bottom:10px">Usados no recebimento de valores por PIX/transferência — em compra e venda, ou em locação sem administração pela imobiliária.</p>
+      </section>
+
+      <section class="wiz-painel" data-passo="2" hidden>
+        <h2 class="wiz-titulo">${ETAPAS[1].nome}</h2><p class="hint">${ETAPAS[1].dica}</p>
         <div class="grid">
-          <div class="field"><label>Titular</label><input name="pagamento.dadosBancarios.titular" /></div>
-          <div class="field"><label>CPF/CNPJ</label><input name="pagamento.dadosBancarios.cpf" /></div>
-          <div class="field"><label>Banco</label><input name="pagamento.dadosBancarios.banco" /></div>
-          <div class="field"><label>Tipo de conta</label><input name="pagamento.dadosBancarios.tipo" /></div>
-          <div class="field"><label>Agência</label><input name="pagamento.dadosBancarios.agencia" /></div>
-          <div class="field"><label>Conta</label><input name="pagamento.dadosBancarios.conta" /></div>
-          <div class="field"><label>Chave PIX</label><input name="pagamento.dadosBancarios.pix" /></div>
+          <div class="field"><label>Endereço completo *</label><input name="imovel.endereco" required placeholder="Rua, nº, complemento, bairro, cidade/UF" /></div>
+          <div class="field"><label>Matrícula (opcional)</label><input name="imovel.matricula" /></div>
+        </div>
+        <div class="grid">
+          <div class="field"><label>Bairro (opcional, alimenta o dashboard)</label><input name="imovel.bairro" placeholder="Ex.: Candelária" /></div>
+          <div class="field"><label>Tipo de imóvel</label>
+            <select name="imovel.tipoUso">
+              <option value="residencial">Residencial</option>
+              <option value="comercial">Comercial</option>
+            </select>
+          </div>
+        </div>
+        <div class="field"><label>Características (opcional)</label><input name="imovel.caracteristicas" placeholder="Ex.: 3 quartos, 2 vagas, 120m²" /></div>
+        <div class="field" id="descricaoRegistroField">
+          <label>Descrição do imóvel conforme inteiro teor (opcional)</label>
+          <textarea name="imovel.descricaoRegistro" rows="4" placeholder="Cole aqui a descrição completa do imóvel copiada da matrícula/documento de inteiro teor (medidas, confrontações, benfeitorias etc.)."></textarea>
         </div>
 
+      </section>
+
+      <section class="wiz-painel" data-passo="3" hidden>
+        <h2 class="wiz-titulo">${ETAPAS[2].nome}</h2><p class="hint">${ETAPAS[2].dica}</p>
         <div id="compraVendaFields">
           <div class="section-title">Valor e pagamento</div>
           <div class="grid">
@@ -1981,34 +2231,6 @@ function renderGerar() {
             <p class="hint" style="margin-top:4px">Aparece no quadro-resumo da 1ª página. Use para indicar se as concessionárias são individualizadas.</p>
           </div>
 
-          <div class="section-title">Administração</div>
-          <div class="field">
-            <label style="display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer">
-              <input type="checkbox" name="administracao.ativa" id="chkAdministracao" style="width:auto" />
-              Imobiliária administra o imóvel (recebe aluguel, repassa ao locador e presta contas)
-            </label>
-          </div>
-          <div class="grid" id="administracaoFields" style="display:none">
-            <div class="field"><label>Taxa de administração (%)</label><input name="administracao.taxaPercentual" type="number" step="0.1" value="10" /></div>
-          </div>
-
-          <div class="section-title">Seguro incêndio</div>
-          <div class="field">
-            <label style="display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer">
-              <input type="checkbox" name="seguroIncendio.incluir" id="chkSeguroIncendio" style="width:auto" checked />
-              Incluir cláusula de seguro complementar contra incêndio
-            </label>
-          </div>
-          <div class="grid" id="seguroIncendioFields">
-            <div class="field">
-              <label>Responsável pelo custeio</label>
-              <select name="seguroIncendio.responsavel">
-                <option value="locatario" selected>Locatário</option>
-                <option value="locador">Locador (regra padrão da lei)</option>
-              </select>
-            </div>
-          </div>
-
           <div class="section-title" id="garantiaTitle">Tipo de garantia</div>
           <div class="grid" id="garantiaTipoField">
             <div class="field">
@@ -2058,6 +2280,52 @@ function renderGerar() {
 
         </div>
 
+        <div class="section-title">Dados bancários (opcional)</div>
+        <p class="hint" style="margin-top:-8px;margin-bottom:10px">Usados no recebimento de valores por PIX/transferência — em compra e venda, ou em locação sem administração pela imobiliária.</p>
+        <div class="grid">
+          <div class="field"><label>Titular</label><input name="pagamento.dadosBancarios.titular" /></div>
+          <div class="field"><label>CPF/CNPJ</label><input name="pagamento.dadosBancarios.cpf" /></div>
+          <div class="field"><label>Banco</label><input name="pagamento.dadosBancarios.banco" /></div>
+          <div class="field"><label>Tipo de conta</label><input name="pagamento.dadosBancarios.tipo" /></div>
+          <div class="field"><label>Agência</label><input name="pagamento.dadosBancarios.agencia" /></div>
+          <div class="field"><label>Conta</label><input name="pagamento.dadosBancarios.conta" /></div>
+          <div class="field"><label>Chave PIX</label><input name="pagamento.dadosBancarios.pix" /></div>
+        </div>
+
+      </section>
+
+      <section class="wiz-painel" data-passo="4" hidden>
+        <h2 class="wiz-titulo">${ETAPAS[3].nome}</h2><p class="hint">${ETAPAS[3].dica}</p>
+        <div id="locacaoClausulas" style="display:none">
+          <div class="section-title">Administração</div>
+          <div class="field">
+            <label style="display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer">
+              <input type="checkbox" name="administracao.ativa" id="chkAdministracao" style="width:auto" />
+              Imobiliária administra o imóvel (recebe aluguel, repassa ao locador e presta contas)
+            </label>
+          </div>
+          <div class="grid" id="administracaoFields" style="display:none">
+            <div class="field"><label>Taxa de administração (%)</label><input name="administracao.taxaPercentual" type="number" step="0.1" value="10" /></div>
+          </div>
+
+          <div class="section-title">Seguro incêndio</div>
+          <div class="field">
+            <label style="display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer">
+              <input type="checkbox" name="seguroIncendio.incluir" id="chkSeguroIncendio" style="width:auto" checked />
+              Incluir cláusula de seguro complementar contra incêndio
+            </label>
+          </div>
+          <div class="grid" id="seguroIncendioFields">
+            <div class="field">
+              <label>Responsável pelo custeio</label>
+              <select name="seguroIncendio.responsavel">
+                <option value="locatario" selected>Locatário</option>
+                <option value="locador">Locador (regra padrão da lei)</option>
+              </select>
+            </div>
+          </div>
+
+        </div>
         <div class="section-title">Entrega de chaves</div>
         <div class="grid cols3">
           <div class="field"><label>Quando as chaves são entregues</label>
@@ -2094,23 +2362,62 @@ function renderGerar() {
           <div class="field"><label>Foro (opcional, usa o padrão se vazio)</label><input name="foro" /></div>
         </div>
 
-        <div class="footer-actions" style="margin-top:20px">
+      </section>
+
+      <section class="wiz-painel" data-passo="5" hidden>
+        <h2 class="wiz-titulo">${ETAPAS[4].nome}</h2><p class="hint">${ETAPAS[4].dica}</p>
+        <div id="revisaoResumo" class="rev-resumo"></div>
+        <div class="section-title">Visual do documento</div>
+      <div class="layout-picker">
+        ${LAYOUTS_CONTRATO.map(l => {
+          const bloqueado = isPlanoGratis() && l.id !== "padrao";
+          return `
+          <button type="button" data-layout="${l.id}" class="${state.layout === l.id ? "active" : ""}${bloqueado ? " locked" : ""}" ${bloqueado ? 'data-locked="1"' : ""}>
+            ${bloqueado ? '<span class="lock-badge">🔒 Plano pago</span>' : ""}
+            <div class="lp-name">${l.label}</div>
+            <div class="lp-desc">${l.desc}</div>
+          </button>
+        `;
+        }).join("")}
+      </div>
+        <div class="footer-actions wiz-gerar">
           <button type="submit" class="secondary" data-formato="docx">Gerar .docx (editável)</button>
           <button type="submit" class="secondary" data-formato="link">Enviar p/ revisão</button>
           <button type="submit" class="primary" data-formato="pdf">Gerar .pdf (pronto p/ assinatura)</button>
         </div>
-      </form>
+      </section>
+
+      <div class="wiz-nav">
+        <button type="button" class="secondary" id="wizVoltar">Voltar</button>
+        <span class="wiz-contagem" id="wizContagem" aria-live="polite"></span>
+        <button type="button" class="primary" id="wizAvancar">Continuar</button>
+      </div>
+    </form>
     </div>
+
+    <aside class="previa" id="previa" aria-label="Prévia do contrato">
+      <div class="previa-topo">
+        <div class="previa-titulo"><strong>Prévia do contrato</strong><span id="previaEstado">Montando…</span></div>
+        <button type="button" class="previa-chip" id="previaPend" hidden></button>
+        <button type="button" class="previa-fechar" id="previaFechar" aria-label="Fechar prévia">×</button>
+      </div>
+      <div class="previa-papel" id="previaPapel"><div class="previa-folha" id="previaFolha"></div></div>
+    </aside>
+    </div>
+    <button type="button" class="primary previa-abrir" id="previaAbrir">Ver prévia do contrato</button>
   `;
 
   document.querySelectorAll("[data-tipo]").forEach(b => b.addEventListener("click", () => {
     state.tipo = b.dataset.tipo;
     renderGerar();
   }));
-  document.querySelectorAll("[data-layout]").forEach(b => b.addEventListener("click", () => {
+  // O visual agora é escolhido na última etapa, com tudo já preenchido: trocar
+  // não pode redesenhar a tela (perderia o formulário). Só marca e atualiza a prévia.
+  el.querySelectorAll("[data-layout]").forEach(b => b.addEventListener("click", () => {
     if (b.dataset.locked) { toast("Esse layout é exclusivo dos planos pagos. Faça upgrade para usar.", true); return; }
     state.layout = b.dataset.layout;
-    renderGerar();
+    el.querySelectorAll("[data-layout]").forEach(x => x.classList.toggle("active", x === b));
+    agendarPrevia(0);
   }));
 
   // Entrega de chaves: prazo só faz sentido depois de um evento; data fixa e
@@ -2143,7 +2450,7 @@ function renderGerar() {
       const resto = Math.round((100 - soma) * 100) / 100;
       if (!cards.length) { resumo.textContent = ""; return; }
       if (soma > 100) {
-        resumo.innerHTML = `<strong style="color:#a13a3a">As fatias somam ${String(soma).replace(".", ",")}% — passa de 100%.</strong> Ajuste antes de gerar.`;
+        resumo.innerHTML = `<strong style="color:var(--erro-text)">As fatias somam ${String(soma).replace(".", ",")}% — passa de 100%.</strong> Ajuste antes de gerar.`;
       } else {
         resumo.innerHTML = `Fica para <strong>${escapeHtml(nomeImob)}</strong>: ${String(resto).replace(".", ",")}% da comissão.`;
       }
@@ -2186,6 +2493,7 @@ function renderGerar() {
   const isLocacao = state.tipo !== "compra_venda";
   el.querySelector("#compraVendaFields").style.display = isLocacao ? "none" : "";
   el.querySelector("#locacaoFields").style.display = isLocacao ? "" : "none";
+  el.querySelector("#locacaoClausulas").style.display = isLocacao ? "" : "none";
   el.querySelector("#descricaoRegistroField").style.display = isLocacao ? "none" : "";
   el.querySelector("#fiadorSection").style.display = state.tipo === "locacao_fiador" ? "" : "none";
   // Só compra e venda: as cláusulas de anuência que o gerador monta são
@@ -2253,7 +2561,237 @@ function renderGerar() {
   const btnAddParcela = el.querySelector("#btnAddParcela");
   if (btnAddParcela) btnAddParcela.addEventListener("click", addParcelaRow);
 
-  el.querySelector("#contratoForm").addEventListener("submit", handleSubmit);
+  ligarEtapas(el);
+  ligarPrevia(el);
+}
+
+// ================= ETAPAS DO FORMULÁRIO =================
+let etapaAtual = 1;
+const TOTAL_ETAPAS = 5;
+
+// Campo escondido por uma condição (ex.: dados de caução num contrato com
+// fiador) não conta: só o que está à mostra dentro da própria etapa.
+function campoRelevante(campo, painel) {
+  if (campo.disabled || campo.type === "hidden" || campo.closest(".wiz-enter")) return false;
+  for (let n = campo; n && n !== painel; n = n.parentElement) {
+    if (n.style && n.style.display === "none") return false;
+  }
+  return true;
+}
+function invalidosDaEtapa(n) {
+  const painel = document.querySelector(`.wiz-painel[data-passo="${n}"]`);
+  if (!painel) return [];
+  return [...painel.querySelectorAll("input, select, textarea")].filter(c => campoRelevante(c, painel) && !c.checkValidity());
+}
+
+function irParaEtapa(n, { rolar = true } = {}) {
+  const form = document.getElementById("contratoForm");
+  if (!form) return;
+  etapaAtual = Math.min(Math.max(1, n), TOTAL_ETAPAS);
+  form.querySelectorAll(".wiz-painel").forEach(p => { p.hidden = Number(p.dataset.passo) !== etapaAtual; });
+  form.querySelectorAll(".wiz-passo").forEach(b => {
+    const k = Number(b.dataset.ir);
+    b.classList.toggle("atual", k === etapaAtual);
+    b.classList.toggle("feito", k < etapaAtual && !b.classList.contains("erro"));
+    if (k === etapaAtual) b.setAttribute("aria-current", "step"); else b.removeAttribute("aria-current");
+  });
+  document.getElementById("wizVoltar").style.visibility = etapaAtual === 1 ? "hidden" : "";
+  document.getElementById("wizAvancar").style.display = etapaAtual === TOTAL_ETAPAS ? "none" : "";
+  document.getElementById("wizContagem").textContent = `Etapa ${etapaAtual} de ${TOTAL_ETAPAS}`;
+  if (etapaAtual === TOTAL_ETAPAS) montarRevisao();
+  if (rolar) form.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+}
+
+function marcarErroEtapa(n, temErro) {
+  const b = document.querySelector(`.wiz-passo[data-ir="${n}"]`);
+  if (b) b.classList.toggle("erro", temErro);
+}
+
+function avancarEtapa() {
+  const invalidos = invalidosDaEtapa(etapaAtual);
+  marcarErroEtapa(etapaAtual, invalidos.length > 0);
+  if (invalidos.length) { invalidos[0].reportValidity(); return; }
+  irParaEtapa(etapaAtual + 1);
+}
+
+function ligarEtapas(el) {
+  const form = el.querySelector("#contratoForm");
+  etapaAtual = 1;
+  el.querySelectorAll(".wiz-passo").forEach(b => b.addEventListener("click", () => {
+    // Voltar é livre; pular para frente passa pela conferência de cada etapa
+    // no caminho, como o botão Continuar.
+    const alvo = Number(b.dataset.ir);
+    if (alvo > etapaAtual) {
+      for (let n = etapaAtual; n < alvo; n++) {
+        const inv = invalidosDaEtapa(n);
+        marcarErroEtapa(n, inv.length > 0);
+        if (inv.length) { irParaEtapa(n); setTimeout(() => inv[0].reportValidity(), 50); return; }
+      }
+    }
+    irParaEtapa(alvo);
+  }));
+  el.querySelector("#wizAvancar").addEventListener("click", avancarEtapa);
+  el.querySelector("#wizVoltar").addEventListener("click", () => irParaEtapa(etapaAtual - 1));
+  // Corrigiu o campo, some o alerta da etapa.
+  form.addEventListener("input", () => { if (!invalidosDaEtapa(etapaAtual).length) marcarErroEtapa(etapaAtual, false); });
+
+  // O formulário é novalidate: a validação nativa trava em campo de etapa
+  // escondida ("não focável") sem dizer nada. Aqui cada etapa é conferida e o
+  // corretor é levado até a que tem pendência.
+  form.addEventListener("submit", (e) => {
+    const formato = e.submitter && e.submitter.dataset.formato;
+    if (!formato) { e.preventDefault(); if (etapaAtual < TOTAL_ETAPAS) avancarEtapa(); return; }
+    for (let n = 1; n <= TOTAL_ETAPAS; n++) {
+      const inv = invalidosDaEtapa(n);
+      marcarErroEtapa(n, inv.length > 0);
+      if (inv.length) {
+        e.preventDefault();
+        irParaEtapa(n);
+        setTimeout(() => inv[0].reportValidity(), 50);
+        toast(`Falta preencher a etapa ${n} — ${document.querySelector(`.wiz-passo[data-ir="${n}"] .wiz-nome`).textContent}.`, true);
+        return;
+      }
+    }
+    handleSubmit(e);
+  });
+  irParaEtapa(1, { rolar: false });
+}
+
+// Papel de cada pessoa já com a concordância que o contrato vai usar.
+function papelDaPessoa(base, p) {
+  const fem = (p.tipoPessoa === "juridica") || p.genero === "f";
+  const F = { Vendedor: "Vendedora", Comprador: "Compradora", Locador: "Locadora", "Locatário": "Locatária", Fiador: "Fiadora", Anuente: "Anuente" };
+  return fem ? (F[base] || base) : base;
+}
+
+function montarRevisao() {
+  const alvo = document.getElementById("revisaoResumo");
+  const form = document.getElementById("contratoForm");
+  if (!alvo || !form) return;
+  const d = montarDadosContrato(form);
+  const loc = state.tipo !== "compra_venda";
+  const brl = (v) => Number(v) ? Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "";
+  const dataBR = (iso) => iso ? iso.split("-").reverse().join("/") : "";
+  const pessoas = (lista, base) => (lista || []).filter(p => (p.nome || "").trim())
+    .map(p => `<li><span class="rev-papel">${papelDaPessoa(base, p)}</span> ${escapeHtml(p.nome)}${p.tipoPessoa !== "juridica" && !p.genero ? ` <span class="rev-falta">sem gênero</span>` : ""}</li>`).join("");
+  const partes = loc
+    ? pessoas(d.locadores, "Locador") + pessoas(d.locatarios, "Locatário") + pessoas(d.fiadores, "Fiador")
+    : pessoas(d.vendedores, "Vendedor") + pessoas(d.compradores, "Comprador") + pessoas(d.anuentes, "Anuente");
+  const valores = loc
+    ? [
+        d.aluguel && d.aluguel.valor ? `Aluguel de <strong>${brl(d.aluguel.valor)}</strong>, vence todo dia ${escapeHtml(d.aluguel.diaVencimento || "—")}` : `<span class="rev-falta">aluguel não informado</span>`,
+        d.vigencia && (d.vigencia.inicio || d.vigencia.meses) ? `${escapeHtml(d.vigencia.meses || "")} meses${d.vigencia.inicio ? `, a partir de ${dataBR(d.vigencia.inicio)}` : ""}` : "",
+        ({ caucao: "Garantia: caução", fiador: "Garantia: fiador", seguro_fianca: "Garantia: seguro fiança", sem_garantia: "Sem garantia", titulo_capitalizacao: "Garantia: título de capitalização", personalizada: "Garantia específica" })[d.garantiaTipo] || "",
+      ]
+    : [
+        d.valor && d.valor.total ? `Preço de <strong>${brl(d.valor.total)}</strong>` : `<span class="rev-falta">preço não informado</span>`,
+        (d.pagamento && d.pagamento.parcelas || []).length > 1 ? `${d.pagamento.parcelas.length} parcelas` : "",
+        d.corretagem ? (d.corretagem.modo === "valor" ? `Comissão de ${brl(d.corretagem.valorFixo)}` : `Comissão de ${String(d.corretagem.percentual).replace(".", ",")}%`) : "",
+      ];
+  const pendentes = [];
+  for (let n = 1; n < TOTAL_ETAPAS; n++) {
+    const qtd = invalidosDaEtapa(n).length;
+    if (qtd) pendentes.push(`<li><button type="button" class="link acao" data-ir-etapa="${n}">Etapa ${n} — ${document.querySelector(`.wiz-passo[data-ir="${n}"] .wiz-nome`).textContent}</button>: ${qtd} campo(s) obrigatório(s)</li>`);
+  }
+  const bloco = (titulo, n, corpo) => `<div class="rev-bloco"><div class="rev-topo"><h3>${titulo}</h3><button type="button" class="link acao" data-ir-etapa="${n}">Editar</button></div>${corpo}</div>`;
+  alvo.innerHTML = `
+    ${pendentes.length ? `<div class="rev-alerta"><strong>Antes de gerar</strong><ul>${pendentes.join("")}</ul></div>` : ""}
+    <div class="rev-grade">
+      ${bloco("Partes", 1, partes ? `<ul class="rev-lista">${partes}</ul>` : `<p class="rev-falta">Nenhuma parte preenchida</p>`)}
+      ${bloco("Imóvel", 2, `<p>${escapeHtml(d.imovel.endereco) || `<span class="rev-falta">endereço não informado</span>`}</p>${d.imovel.matricula ? `<p class="hint" style="margin:4px 0 0">Matrícula ${escapeHtml(d.imovel.matricula)}</p>` : ""}`)}
+      ${bloco("Valores", 3, `<ul class="rev-lista">${valores.filter(Boolean).map(v => `<li>${v}</li>`).join("")}</ul>`)}
+      ${bloco("Cláusulas", 4, `<ul class="rev-lista">${[
+        d.data ? `Assinatura em ${dataBR(d.data)}` : "Data do contrato em branco",
+        d.clausulaEspecial ? "Com cláusula especial" : "",
+        loc && d.administracao && d.administracao.ativa ? `Administrado pela imobiliária (${String(d.administracao.taxaPercentual).replace(".", ",")}%)` : "",
+      ].filter(Boolean).map(v => `<li>${v}</li>`).join("")}</ul>`)}
+    </div>`;
+  alvo.querySelectorAll("[data-ir-etapa]").forEach(b => b.addEventListener("click", () => irParaEtapa(Number(b.dataset.irEtapa))));
+}
+
+// ================= PRÉVIA AO VIVO =================
+// O texto vem do servidor, gerado pelo mesmo código do download: o que o
+// corretor lê aqui é o que vai assinar. Espera a pessoa parar de digitar
+// antes de pedir, e descarta a resposta antiga se uma nova já saiu.
+const previa = { timer: null, ctrl: null, sujo: true, idx: 0 };
+const previaLarga = () => matchMedia("(min-width: 1280px)").matches;
+function previaVisivel() {
+  const painel = document.getElementById("previa");
+  return !!painel && (previaLarga() || painel.classList.contains("aberta"));
+}
+function agendarPrevia(ms = 700) {
+  clearTimeout(previa.timer);
+  previa.sujo = true;
+  previa.timer = setTimeout(atualizarPrevia, ms);
+}
+async function atualizarPrevia() {
+  const form = document.getElementById("contratoForm");
+  const folha = document.getElementById("previaFolha");
+  const estado = document.getElementById("previaEstado");
+  if (!form || !folha) return;
+  if (!previaVisivel()) return; // abre depois, pelo botão; aí atualiza
+  previa.sujo = false;
+  if (previa.ctrl) previa.ctrl.abort();
+  const ctrl = previa.ctrl = new AbortController();
+  estado.textContent = "Atualizando…";
+  try {
+    const res = await api("/api/previa", { method: "POST", body: JSON.stringify({ dados: montarDadosContrato(form) }), signal: ctrl.signal });
+    const r = await res.json().catch(() => ({}));
+    if (ctrl !== previa.ctrl) return;
+    if (!res.ok) {
+      folha.innerHTML = `<p class="previa-aviso">${escapeHtml(r.error || "Não foi possível montar a prévia agora.")}</p>`;
+      estado.textContent = "Indisponível";
+      document.getElementById("previaPend").hidden = true;
+      return;
+    }
+    const papel = document.getElementById("previaPapel");
+    const topo = papel.scrollTop;
+    folha.dataset.layout = r.layout || "padrao";
+    folha.innerHTML = r.html;
+    papel.scrollTop = topo;
+    const agora = new Date();
+    estado.textContent = `Atualizada às ${agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+    const chip = document.getElementById("previaPend");
+    chip.hidden = !r.pendencias;
+    chip.textContent = r.pendencias === 1 ? "1 ponto a confirmar" : `${r.pendencias} pontos a confirmar`;
+    previa.idx = 0;
+  } catch (err) {
+    if (err.name === "AbortError") return;
+    estado.textContent = "Sem conexão — tentando de novo ao editar";
+  }
+}
+
+function ligarPrevia(el) {
+  const form = el.querySelector("#contratoForm");
+  const painel = el.querySelector("#previa");
+  const cor = (state.tenant && state.tenant.corPrimaria) ? `#${String(state.tenant.corPrimaria).replace("#", "")}` : "#0D1B2A";
+  painel.style.setProperty("--previa-cor", cor);
+  form.addEventListener("input", () => agendarPrevia());
+  form.addEventListener("change", () => agendarPrevia(300));
+  // Adicionar ou remover uma pessoa/parcela muda o contrato sem disparar input.
+  new MutationObserver((muts) => {
+    if (muts.some(m => !m.target.closest || !m.target.closest("#revisaoResumo"))) agendarPrevia(300);
+  }).observe(form, { childList: true, subtree: true });
+
+  // "N pontos a confirmar": cada clique leva ao próximo "(a confirmar)" da prévia.
+  el.querySelector("#previaPend").addEventListener("click", () => {
+    const marcas = [...document.querySelectorAll("#previaFolha mark.pendente")];
+    if (!marcas.length) return;
+    const m = marcas[previa.idx % marcas.length];
+    previa.idx++;
+    m.scrollIntoView({ block: "center", behavior: "smooth" });
+    m.classList.remove("piscar"); void m.offsetWidth; m.classList.add("piscar");
+  });
+  el.querySelector("#previaAbrir").addEventListener("click", () => {
+    painel.classList.add("aberta");
+    document.body.style.overflow = "hidden";
+    if (previa.sujo) atualizarPrevia();
+  });
+  el.querySelector("#previaFechar").addEventListener("click", () => {
+    painel.classList.remove("aberta");
+    document.body.style.overflow = "";
+  });
+  agendarPrevia(0);
 }
 
 // ================= AJUDANTE IA DE CLÁUSULAS =================
@@ -2350,7 +2888,7 @@ async function handleIaSubmit(e) {
       toast("Texto copiado!");
     });
   } catch (err) {
-    resultadoEl.innerHTML = `<div class="ia-resultado"><p class="ia-justificativa" style="color:#b43d2f">${err.message}</p></div>`;
+    resultadoEl.innerHTML = `<div class="ia-resultado"><p class="ia-justificativa" style="color:var(--erro-text)">${err.message}</p></div>`;
   } finally {
     btn.disabled = false;
     btn.textContent = "Analisar com IA";
@@ -2361,9 +2899,9 @@ function getByPath(fd, name) {
   return fd.get(name) || "";
 }
 
-async function handleSubmit(e) {
-  e.preventDefault();
-  const form = e.target;
+// Lê o formulário de contrato e monta o payload. Usado pelo botão de gerar e
+// pela prévia ao vivo — os dois precisam ver exatamente os mesmos dados.
+function montarDadosContrato(form) {
   const fd = new FormData(form);
 
   const dados = { tipo: state.tipo, layout: state.layout, generoConfirmado: true };
@@ -2466,7 +3004,13 @@ async function handleSubmit(e) {
     dados.corretagem.multaPercentual = num(getByPath(fd, "corretagem.multaPercentual"), 2);
     dados.corretagem.jurosMensal = num(getByPath(fd, "corretagem.jurosMensal"), 1);
   }
+  return dados;
+}
 
+async function handleSubmit(e) {
+  e.preventDefault();
+  const form = e.target;
+  const dados = montarDadosContrato(form);
   const formato = (e.submitter && e.submitter.dataset.formato) || "docx";
   const buttons = form.querySelectorAll('button[type="submit"]');
   await gerarEBaixar(dados, formato, e.submitter, buttons, {
@@ -2636,18 +3180,35 @@ async function editarContrato(contratoId) {
   }
   const { dados } = await res.json();
 
+  // Contrato salvo pelo formulário antigo: ele vinha com "Masculino" marcado
+  // de fábrica, então um "m" salvo pode ser de uma mulher que ninguém
+  // corrigiu. Agora o contrato concorda com esse campo — descarta o "m" e
+  // deixa a sugestão pelo nome (ou o corretor) decidir. "f" foi escolha
+  // consciente e fica.
+  const legado = dados.generoConfirmado !== true;
+  if (legado) {
+    ["vendedores", "compradores", "locadores", "locatarios", "fiadores", "anuentes"].forEach(k =>
+      (dados[k] || []).forEach(p => { if (p && p.genero === "m") delete p.genero; }));
+  }
+
   state.tipo = dados.tipo || "compra_venda";
   state.layout = dados.layout || state.layout;
   document.querySelector('nav button[data-view="gerar"]').click();
   // renderGerar reconstrói o formulário; preencher só depois disso.
   setTimeout(() => {
     const naoRestaurados = preencherFormulario(dados);
+    // Gênero em branco recebe a sugestão pelo nome, como se tivesse sido digitado agora.
+    document.querySelectorAll('#view-gerar .person-card [data-f="nome"]').forEach(n => n.dispatchEvent(new Event("input", { bubbles: true })));
+    // Abre na revisão: tudo já está preenchido, e é ela que aponta o que falta.
+    irParaEtapa(TOTAL_ETAPAS, { rolar: false });
     const topo = document.getElementById("view-gerar");
     if (topo) topo.scrollIntoView({ block: "start" });
     if (naoRestaurados.length) {
       // Melhor avisar do que deixar o corretor gerar de novo sem perceber que
       // um campo se perdeu no caminho.
       toast(`Confira estes campos, não deu para restaurar: ${naoRestaurados.slice(0, 3).join(", ")}`, true);
+    } else if (legado) {
+      toast("Contrato aberto para edição. Confira o gênero de cada parte: agora o texto concorda com ele.");
     } else {
       toast("Contrato aberto para edição. Ajuste e gere de novo.");
     }

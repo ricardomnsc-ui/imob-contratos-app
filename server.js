@@ -11,6 +11,7 @@ const bcrypt = require("bcryptjs");
 const multer = require("multer");
 const { nanoid } = require("nanoid");
 const { gerarContrato, extrairTextoDocx, checklistEmTexto } = require("./lib/generator");
+const { docxParaHtml } = require("./lib/previa");
 const { convertDocxToPdf } = require("./lib/pdf");
 const store = require("./lib/store");
 const { PLANOS, limitesDoPlano, precoDoPlano, mesAtual, contratosUsadosNoMes, LIMITE_IA_MENSAL, iaUsadaNoMes, planoEfetivo, DIAS_TOLERANCIA_ATRASO, acessoAvulsoVigente, estenderAcesso, MESES_PLANO_ANUAL, PERIODOS_AVISTA, periodoAvista, precoAvistaCentavos } = require("./lib/planos");
@@ -1195,6 +1196,46 @@ function resumoContrato(dados) {
 }
 
 // ================= GERAÇÃO DE CONTRATO =================
+// Prévia ao vivo do formulário de contrato. Gera o mesmo .docx do download e
+// devolve em HTML: o corretor confere o texto real, com a concordância e as
+// cláusulas condicionais já aplicadas, antes de gastar a cota do mês.
+// Não grava nada, não entra no dashboard e não consome cota.
+const previaLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 300, // ~1 por segundo de digitação contínua; o app espera a pessoa parar
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Muitas atualizações seguidas da prévia. Aguarde um instante." },
+});
+const TIPOS_COM_PREVIA = new Set(["compra_venda", "locacao_caucao", "locacao_fiador", "locacao_seguro_fianca", "locacao_sem_garantia"]);
+
+app.post("/api/previa", requireAuth, previaLimiter, async (req, res) => {
+  try {
+    const { dados } = req.body || {};
+    if (!dados || !TIPOS_COM_PREVIA.has(dados.tipo)) return res.status(400).json({ error: "Tipo de contrato sem prévia." });
+    const tenant = await store.getTenant(req.user.tenantId);
+    if (!tenant) return res.status(404).json({ error: "Imobiliária não encontrada" });
+
+    // A prévia mostra o contrato inteiro. No plano Grátis com a cota do mês
+    // usada, ela viraria um jeito de copiar o texto sem gerar — então para
+    // junto com a geração.
+    const plano = planoEfetivo(tenant);
+    const limites = limitesDoPlano(plano);
+    if (contratosUsadosNoMes(tenant) >= limites.contratosPorMes) {
+      return res.status(402).json({ error: `A prévia volta junto com a cota de contratos do seu plano (${limites.nome}).` });
+    }
+    const payload = { ...dados };
+    if (plano === "gratis" && payload.layout !== "padrao") payload.layout = "padrao";
+
+    const buffer = await gerarContrato(payload, brandingDoTenant(tenant));
+    const { html, pendencias } = await docxParaHtml(buffer);
+    res.json({ html, pendencias, layout: payload.layout || "padrao" });
+  } catch (err) {
+    console.error("Falha na prévia:", err.message);
+    res.status(500).json({ error: "Não foi possível montar a prévia agora." });
+  }
+});
+
 app.post("/api/gerar", requireAuth, async (req, res) => {
   try {
     const { dados, formato, destinatario } = req.body;
