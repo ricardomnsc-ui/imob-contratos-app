@@ -166,7 +166,10 @@
   .sair-btn:hover { color: #fff; }
   .topbar { display: none; }
   .sidebar-overlay { display: none; }
-  [data-theme="dark"] .brand-logo { filter: brightness(0) invert(1); }
+  /* Cada tema com o seu logotipo: filtro de inverter cor apagaria o ícone. */
+  .so-escuro { display: none; }
+  [data-theme="dark"] .so-claro { display: none; }
+  [data-theme="dark"] .so-escuro { display: block; }
 
   /* Cabeçalho de página e sub-abas de Configurações */
   .pagina-titulo { margin-bottom: 22px; }
@@ -762,7 +765,7 @@ function renderEsqueci() {
   app.innerHTML = `
     <div class="auth-wrap">
       <div class="auth-card">
-        <div class="brand"><img src="/brand/minutei-logo-dark.png" alt="Minutei" class="brand-logo" /></div>
+        <div class="brand"><img src="/brand/minutei-logo-dark.png" alt="Minutei" class="brand-logo so-claro" /><img src="/brand/minutei-logo-light.png" alt="Minutei" class="brand-logo so-escuro" /></div>
         <p class="hint">Informe o e-mail da conta e enviamos um link para você criar uma nova senha.</p>
         <form id="esqueciForm">
           <div class="field"><label>E-mail *</label><input name="email" type="email" required autocomplete="email" /></div>
@@ -802,7 +805,7 @@ function renderRedefinir() {
   app.innerHTML = `
     <div class="auth-wrap">
       <div class="auth-card">
-        <div class="brand"><img src="/brand/minutei-logo-dark.png" alt="Minutei" class="brand-logo" /></div>
+        <div class="brand"><img src="/brand/minutei-logo-dark.png" alt="Minutei" class="brand-logo so-claro" /><img src="/brand/minutei-logo-light.png" alt="Minutei" class="brand-logo so-escuro" /></div>
         <p class="hint">Escolha uma nova senha para a sua conta.</p>
         <form id="redefinirForm">
           <div class="field"><label>Nova senha *</label><input name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="mínimo 8 caracteres" /></div>
@@ -855,7 +858,7 @@ function renderAuth() {
   app.innerHTML = `
     <div class="auth-wrap">
       <div class="auth-card">
-        <div class="brand"><img src="/brand/minutei-logo-dark.png" alt="Minutei" class="brand-logo" /></div>
+        <div class="brand"><img src="/brand/minutei-logo-dark.png" alt="Minutei" class="brand-logo so-claro" /><img src="/brand/minutei-logo-light.png" alt="Minutei" class="brand-logo so-escuro" /></div>
         <p class="hint">${isSignup ? "Crie a conta da sua imobiliária" : "Entre na sua conta"}</p>
         ${plano ? `<p class="hint" style="background:var(--brand-soft);color:var(--brand-text);padding:8px 12px;border-radius:8px;font-weight:600">Plano ${plano.nome} — ${state.pendingCiclo === "anual" ? plano.precoAnual : plano.preco}. Depois de criar a conta, você vai para o pagamento.</p>` : ""}
         <form id="authForm">
