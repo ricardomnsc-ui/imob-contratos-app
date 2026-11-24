@@ -1425,7 +1425,7 @@ function pessoaFields(prefix, idx, tipoLabel) {
         </div>
         <div class="field"><label data-label-nome>Nome completo *</label><input data-f="nome" required /></div>
         <!-- Campos exclusivos de pessoa física -->
-        <div class="field" data-pf><label>Gênero</label><select data-f="genero"><option value="m">Masculino</option><option value="f">Feminino</option></select></div>
+        <div class="field" data-pf><label>Gênero *</label><select data-f="genero" data-genero required title="Define a concordância no contrato: o LOCADOR / a LOCADORA"><option value="">Selecione</option><option value="m">Masculino</option><option value="f">Feminino</option></select></div>
         <div class="field" data-pf><label>CPF *</label><input data-f="cpf" placeholder="000.000.000-00" required /></div>
         <div class="field" data-pf><label>RG (opcional)</label><input data-f="rg" placeholder="1.234.567 SSP/RN" /></div>
         <div class="field" data-pf><label>Estado civil</label>
@@ -1501,6 +1501,7 @@ function addPersonRow(containerId, prefix, tipoLabel) {
   wireCnhUploads(container);
   wireConjugeToggle(container);
   wireTipoPessoa(container);
+  wirePalpiteGenero(container);
   wireAnuenciaTipo(container);
 }
 
@@ -1517,6 +1518,55 @@ function wireAnuenciaTipo(container) {
     const sincronizar = () => { campo.style.display = sel.value === "outro" ? "" : "none"; };
     sel.addEventListener("change", sincronizar);
     sincronizar();
+  });
+}
+
+/**
+ * Sugere o gênero pelo primeiro nome. O contrato agora concorda de verdade
+ * ("a LOCATÁRIA"), então o gênero errado passou a aparecer no texto — e o
+ * campo vinha marcado "Masculino" de fábrica, que ninguém lembrava de trocar.
+ * A sugestão só cobre os casos seguros; nome ambíguo (Darci, Jaci, Ariel)
+ * fica em branco e o formulário pede a escolha.
+ */
+const NOMES_FEM = new Set(("raquel isabel mabel maribel rachel beatriz ester esther ruth rute carmen lourdes ines dolores mercedes " +
+  "ingrid astrid miriam mirian edith judite judith elizabeth elisabeth lais thais tais iris doris agnes gladys ellen helen karen kellen " +
+  "lilian vivian evelyn evelin marilyn yasmin yasmim jasmim jasmin kelly nelly shirley suely sueli marly marli neli rosi " +
+  "socorro rosario amparo consuelo nicole alice denise simone aline jaqueline jacqueline michele michelle gisele daniele danielle " +
+  "gabriele gabrielle ivone cleide neide irene elaine viviane juliane liliane rose noemi solange joyce jane janete ivete claudete " +
+  "bernadete lizete marise caroline emanuelle francine adelaide").split(" "));
+const NOMES_MASC = new Set(("luca joshua nicola juca zeca davi levi iuri yuri ravi henri jose andre moises jorge felipe filipe henrique " +
+  "alexandre vicente duarte dante jaime guilherme anderson cleber wellington everton jefferson emerson ewerton").split(" "));
+function palpiteGenero(nomeCompleto, aceitaEmpresa) {
+  const nome = String(nomeCompleto || "").trim();
+  // Fronteira com \p{L}, não \b: o \b do JavaScript não reconhece letra
+  // acentuada, e o "cia" de "Patrícia" passava por "Cia." (companhia).
+  if (aceitaEmpresa && /(?<!\p{L})(ltda|s\.?\/?a\.?|eireli|epp|me|imobili[aá]ria|construtora|incorporadora|empreendimentos|holding|cia)(?!\p{L})/iu.test(nome)) return "pj";
+  const primeiro = nome.split(/\s+/)[0].normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  if (primeiro.length < 3) return "";
+  if (NOMES_FEM.has(primeiro)) return "f";
+  if (NOMES_MASC.has(primeiro)) return "m";
+  if (/a$/.test(primeiro)) return "f";
+  if (/(iane|yane|ane|ene|ine|ise|ice|elle|ele|ete|ide)$/.test(primeiro)) return "f";
+  if (/(o|or|ar|ur|ir|el|il|ol|al|os|us|as|es|is|iz|uz|on|son|ton|an|in|im|um|ur|x|u)$/.test(primeiro)) return "m";
+  return "";
+}
+function wirePalpiteGenero(root) {
+  root.querySelectorAll("select[data-genero]").forEach(sel => {
+    if (sel.dataset.palpiteWired) return;
+    sel.dataset.palpiteWired = "1";
+    const escopo = sel.closest(".person-card") || sel.closest(".grid") || root;
+    const campoNome = escopo.querySelector(`[data-f="${sel.dataset.nome || "nome"}"]`);
+    if (!campoNome) return;
+    const aceitaEmpresa = !!sel.querySelector('option[value="pj"]');
+    const palpitar = () => {
+      // Escolha do usuário e dado restaurado mandam; só o palpite anterior é trocado.
+      if (sel.value && sel.dataset.auto !== "1") return;
+      const g = palpiteGenero(campoNome.value, aceitaEmpresa);
+      sel.value = g;
+      sel.dataset.auto = g ? "1" : "";
+    };
+    campoNome.addEventListener("input", palpitar);
+    sel.addEventListener("change", (e) => { if (e.isTrusted) sel.dataset.auto = ""; });
   });
 }
 
@@ -1538,6 +1588,8 @@ function wireTipoPessoa(container) {
       const cnpj = card.querySelector('[data-f="cnpj"]');
       if (cpf) cpf.required = !pj;
       if (cnpj) cnpj.required = pj;
+      const gen = card.querySelector('[data-f="genero"]');
+      if (gen) gen.required = !pj;
       const lblNome = card.querySelector("[data-label-nome]");
       if (lblNome) lblNome.textContent = pj ? "Razão social *" : "Nome completo *";
       const lblEnd = card.querySelector("[data-label-endereco]");
@@ -1601,7 +1653,7 @@ async function handleCnhUpload(input) {
     const set = (campo, valor) => {
       if (!valor) return;
       const el = card.querySelector(`[data-f="${campo}"]`);
-      if (el) el.value = valor;
+      if (el) { el.value = valor; el.dispatchEvent(new Event("input", { bubbles: true })); }
     };
     if (ehPJ) {
       set("nome", data.razaoSocial);
@@ -2314,7 +2366,7 @@ async function handleSubmit(e) {
   const form = e.target;
   const fd = new FormData(form);
 
-  const dados = { tipo: state.tipo, layout: state.layout };
+  const dados = { tipo: state.tipo, layout: state.layout, generoConfirmado: true };
   dados.data = getByPath(fd, "data");
   dados.foro = getByPath(fd, "foro");
   dados.imovel = {
@@ -3103,7 +3155,7 @@ function camposPessoa(prefixo) {
     { name: `${prefixo}.tipoPessoa`, label: "Tipo de parte", tipo: "select",
       opts: ["Pessoa física", "Pessoa jurídica (empresa)"], vals: ["fisica", "juridica"], full: true, tipoPessoa: true },
     { name: `${prefixo}.nome`, label: "Nome completo", labelPJ: "Razão social", req: true },
-    { name: `${prefixo}.genero`, label: "Gênero", tipo: "select", opts: ["Masculino", "Feminino"], vals: ["m", "f"], grupo: "pf" },
+    { name: `${prefixo}.genero`, label: "Gênero", tipo: "select", opts: ["Masculino", "Feminino"], vals: ["m", "f"], grupo: "pf", vazio: true, req: true, genero: `${prefixo}.nome` },
     { name: `${prefixo}.cpf`, label: "CPF", ph: "000.000.000-00", grupo: "pf" },
     { name: `${prefixo}.rg`, label: "RG / órgão emissor", ph: "1.234.567 SSP/RN", grupo: "pf" },
     { name: `${prefixo}.estadoCivil`, label: "Estado civil", tipo: "select", opts: EC_OPTS, grupo: "pf" },
@@ -3158,6 +3210,7 @@ const DOC_SCHEMAS = {
         { name: "imovel.endereco", label: "Endereço", req: true, full: true },
         { name: "imovel.matricula", label: "Matrícula" },
         { name: "proposta.proprietario", label: "Proprietário / vendedor" },
+        { name: "proposta.proprietarioGenero", label: "Gênero", tipo: "select", opts: ["Masculino", "Feminino", "Empresa"], vals: ["m", "f", "pj"], vazio: true, genero: "proposta.proprietario" },
       ]},
       { titulo: "Condições da proposta", campos: [
         { name: "proposta.valor", label: "Valor oferecido (R$)", tipo: "number", req: true },
@@ -3175,6 +3228,7 @@ const DOC_SCHEMAS = {
       { titulo: "Imóvel", campos: [
         { name: "imovel.endereco", label: "Endereço", req: true, full: true },
         { name: "proposta.proprietario", label: "Proprietário / locador" },
+        { name: "proposta.proprietarioGenero", label: "Gênero", tipo: "select", opts: ["Masculino", "Feminino", "Empresa"], vals: ["m", "f", "pj"], vazio: true, genero: "proposta.proprietario" },
       ]},
       { titulo: "Condições da proposta", campos: [
         { name: "proposta.valorAluguel", label: "Aluguel oferecido (R$)", tipo: "number", req: true },
@@ -3197,6 +3251,7 @@ const DOC_SCHEMAS = {
       ]},
       { titulo: "Dados do cliente", campos: [
         { name: "cliente.nome", label: "Nome completo / Razão social", req: true },
+        { name: "cliente.genero", label: "Gênero", tipo: "select", opts: ["Masculino", "Feminino", "Empresa"], vals: ["m", "f", "pj"], vazio: true, genero: "cliente.nome" },
         { name: "cliente.cpf", label: "CPF / CNPJ", ph: "000.000.000-00 ou 00.000.000/0000-00" },
         { name: "cliente.telefone", label: "Telefone", tipo: "tel" },
         { name: "cliente.email", label: "E-mail", tipo: "email" },
@@ -3255,10 +3310,12 @@ const DOC_SCHEMAS = {
       ]},
       { titulo: "Vendedor(a) / Locador(a)", campos: [
         { name: "parte1.nome", label: "Nome ou razão social" },
+        { name: "parte1.genero", label: "Gênero", tipo: "select", opts: ["Masculino", "Feminino"], vals: ["m", "f"], vazio: true, genero: "parte1.nome" },
         { name: "parte1Tipo", label: "Tipo de parte", tipo: "select", opts: ["Pessoa física", "Pessoa jurídica"], vals: ["fisica", "juridica"] },
       ]},
       { titulo: "Comprador(a) / Locatário(a)", campos: [
         { name: "parte2.nome", label: "Nome ou razão social" },
+        { name: "parte2.genero", label: "Gênero", tipo: "select", opts: ["Masculino", "Feminino"], vals: ["m", "f"], vazio: true, genero: "parte2.nome" },
         { name: "parte2Tipo", label: "Tipo de parte", tipo: "select", opts: ["Pessoa física", "Pessoa jurídica"], vals: ["fisica", "juridica"] },
       ]},
       { titulo: "Observações", campos: [
@@ -3298,6 +3355,7 @@ const DOC_SCHEMAS = {
       ]},
       { titulo: "Fiador (se houver)", campos: [
         { name: "fiador.nome", label: "Nome completo" },
+        { name: "fiador.genero", label: "Gênero", tipo: "select", opts: ["Masculino", "Feminino"], vals: ["m", "f"], vazio: true, genero: "fiador.nome" },
         { name: "fiador.cpf", label: "CPF", ph: "000.000.000-00" },
       ]},
     ],
@@ -3316,11 +3374,13 @@ const DOC_SCHEMAS = {
       ]},
       { titulo: "Quem entrega (locador / vendedor)", campos: [
         { name: "entregador.nome", label: "Nome completo / Razão social", req: true },
+        { name: "entregador.genero", label: "Gênero", tipo: "select", opts: ["Masculino", "Feminino", "Empresa"], vals: ["m", "f", "pj"], vazio: true, genero: "entregador.nome" },
         { name: "entregador.cpf", label: "CPF / CNPJ", ph: "000.000.000-00 ou 00.000.000/0000-00" },
         { name: "entregador.telefone", label: "Telefone", tipo: "tel" },
       ]},
       { titulo: "Quem recebe (locatário / comprador)", campos: [
         { name: "recebedor.nome", label: "Nome completo / Razão social", req: true },
+        { name: "recebedor.genero", label: "Gênero", tipo: "select", opts: ["Masculino", "Feminino", "Empresa"], vals: ["m", "f", "pj"], vazio: true, genero: "recebedor.nome" },
         { name: "recebedor.cpf", label: "CPF / CNPJ", ph: "000.000.000-00 ou 00.000.000/0000-00" },
         { name: "recebedor.telefone", label: "Telefone", tipo: "tel" },
       ]},
@@ -3365,8 +3425,10 @@ function docCampoHTML(f) {
   if (f.tipo === "textarea") {
     inner = `<textarea data-f="${f.name}" rows="${f.rows || 3}" ${ph}></textarea>`;
   } else if (f.tipo === "select") {
-    const opts = f.opts.map((o, i) => `<option value="${(f.vals ? f.vals[i] : o)}">${o}</option>`).join("");
-    inner = `<select data-f="${f.name}"${f.tipoPessoa ? " data-tipo-pessoa" : ""}>${opts}</select>`;
+    const opts = (f.vazio ? `<option value="">Selecione</option>` : "") +
+      f.opts.map((o, i) => `<option value="${(f.vals ? f.vals[i] : o)}">${o}</option>`).join("");
+    const gen = f.genero ? ` data-genero data-nome="${f.genero}"` : "";
+    inner = `<select data-f="${f.name}"${f.tipoPessoa ? " data-tipo-pessoa" : ""}${gen} ${req}>${opts}</select>`;
   } else {
     const type = ({ number: "number", date: "date", tel: "tel", email: "email" })[f.tipo] || "text";
     const step = f.tipo === "number" ? 'step="0.01"' : "";
@@ -3393,6 +3455,8 @@ function wireTipoPessoaDoc(root) {
       const pj = sel.value === "juridica";
       grid.querySelectorAll("[data-pf]").forEach(el => el.style.display = pj ? "none" : "");
       grid.querySelectorAll("[data-pj]").forEach(el => el.style.display = pj ? "" : "none");
+      // Gênero obrigatório só enquanto visível: campo exigido e escondido trava o envio sem aviso.
+      grid.querySelectorAll("[data-pf] select[data-genero]").forEach(g => g.required = !pj);
       grid.querySelectorAll("[data-label-pf]").forEach(l => {
         const base = pj ? l.dataset.labelPj : l.dataset.labelPf;
         l.textContent = base + (l.parentElement.querySelector("[required]") ? " *" : "");
@@ -3457,13 +3521,14 @@ function renderDocumentos() {
   `;
 
   wireTipoPessoaDoc(el);
+  wirePalpiteGenero(el);
 
   // Copiar / WhatsApp: o texto vem do servidor pra não existir uma segunda
   // versão da lista aqui no navegador.
   const btnCopiar = el.querySelector("#btnChecklistCopiar");
   if (btnCopiar) {
     const lerFormulario = () => {
-      const dados = { tipo: "checklist_documentos" };
+      const dados = { tipo: "checklist_documentos", generoConfirmado: true };
       el.querySelectorAll("#docForm [data-f]").forEach(inp => setPath(dados, inp.dataset.f, inp.value));
       return dados;
     };
@@ -3513,7 +3578,7 @@ function renderDocumentos() {
   el.querySelector("#docForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const form = e.target;
-    const dados = { tipo: state.docTipo, layout: "padrao" };
+    const dados = { tipo: state.docTipo, layout: "padrao", generoConfirmado: true };
     form.querySelectorAll("[data-f]").forEach(inp => {
       let v = inp.value;
       if (inp.type === "number") v = v === "" ? "" : parseFloat(v);
