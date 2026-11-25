@@ -172,9 +172,11 @@
   [data-theme="dark"] .so-escuro { display: block; }
 
   /* Cabeçalho de página e sub-abas de Configurações */
-  .pagina-titulo { margin-bottom: 22px; }
-  .pagina-titulo h1 { font-family: var(--serif); font-size: 26px; font-weight: 800; letter-spacing: -.015em; margin: 0 0 4px; }
-  .pagina-titulo p { color: var(--muted); font-size: 14.5px; margin: 0; }
+  .pagina-titulo { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; margin-bottom: 22px; }
+  .pagina-titulo > div { min-width: 0; flex: 1 1 320px; }
+  .pagina-titulo h1 { font-family: var(--serif); font-size: 26px; font-weight: 800; letter-spacing: -.015em; margin: 0 0 4px; text-wrap: balance; }
+  .pagina-titulo p { color: var(--muted); font-size: 14.5px; line-height: 1.5; margin: 0; max-width: 72ch; }
+  .pagina-titulo > button { flex-shrink: 0; }
   .subabas { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--border); margin-bottom: 22px; }
   .subabas button {
     border: none; background: none; cursor: pointer; padding: 10px 14px;
@@ -188,10 +190,8 @@
   /* A tela de gerar contrato usa a largura toda: formulário e prévia lado a lado. */
   main.largo { max-width: 1520px; }
   .card { background: var(--paper); border: 1px solid var(--border); border-radius: 14px; padding: 28px; margin-bottom: 22px; box-shadow: var(--shadow-sm); }
-  /* Microinteração: cards de métrica do dashboard reagem ao passar o mouse. */
-  #view-dashboard .grid .card { transition: transform .18s ease, box-shadow .18s ease; }
-  #view-dashboard .grid .card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
-  @media (prefers-reduced-motion: reduce) { #view-dashboard .grid .card { transition: none; } #view-dashboard .grid .card:hover { transform: none; } }
+  /* Card de métrica não é clicável: levantar no hover prometia um clique que
+     não levava a lugar nenhum. */
   .card h2 { font-family: var(--serif); font-weight: 800; font-size: 18px; margin: 0 0 5px; letter-spacing: 0.01em; }
   .card .hint { font-size: 13.5px; color: var(--muted); margin: 0 0 20px; line-height: 1.5; }
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
@@ -292,9 +292,12 @@
   .lock-badge { position: absolute; top: 10px; right: 10px; font-size: 9.5px; font-weight: 700; letter-spacing: .02em; background: var(--alerta-bg); color: var(--alerta-text); padding: 3px 7px; border-radius: 999px; white-space: nowrap; }
   @media (max-width: 640px) { .layout-picker { grid-template-columns: 1fr; } }
 
+  /* Divisor de grupo dentro do formulário. Era caixa-alta azul de 11px — lia
+     como etiqueta de sistema e competia com o azul de seleção. Agora é um
+     subtítulo de verdade: frase normal, cor do texto, um degrau abaixo do h2. */
   .section-title {
-    font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
-    color: var(--info-dark); margin: 26px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border);
+    font-size: 15px; font-weight: 700; letter-spacing: -.005em;
+    color: var(--ink); margin: 30px 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border);
   }
   .logo-preview { width: 64px; height: 64px; object-fit: contain; border: 1px solid var(--border); border-radius: 10px; padding: 6px; background: var(--campo-bg); }
   .team-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; background: var(--paper); }
@@ -633,6 +636,129 @@
     .previa-folha .quebra { margin: 18px -18px; }
   }
 
+  /* ================= REVISÃO VISUAL (nov/2026) ================= */
+  /* Foco visível em todo botão, não só na lateral — quem navega por teclado
+     perdia o rastro no formulário. */
+  button:focus-visible, a:focus-visible, .botao-arquivo:focus-within { outline: 2px solid var(--info); outline-offset: 2px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+  /* Tipo de contrato em dois níveis: o negócio (venda/locação) e, na locação,
+     a garantia. Cinco botões soltos repetiam "Locação" quatro vezes e, no
+     celular, ocupavam a primeira tela inteira. */
+  .card-tipo { padding: 18px 22px; }
+  .tipo-linha { display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: flex-end; }
+  .tipo-grupo { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+  .tipo-rotulo { font-size: 12px; font-weight: 600; color: var(--label); }
+  .segmento { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 4px; background: var(--neutro-bg); border: 1px solid var(--border); border-radius: 11px; }
+  .segmento button {
+    border: none; background: transparent; padding: 8px 16px; border-radius: 8px; cursor: pointer;
+    font: inherit; font-size: 13.5px; font-weight: 600; color: var(--muted); white-space: nowrap;
+    transition: background .15s, color .15s, box-shadow .15s;
+  }
+  .segmento button:hover { color: var(--ink); }
+  .segmento button[aria-pressed="true"] { background: var(--paper); color: var(--info-dark); box-shadow: 0 1px 2px rgba(10,22,40,.08), 0 0 0 1px var(--info); }
+
+  /* Métricas do dashboard: uma faixa só, com divisórias — três cards iguais
+     com etiqueta em caixa alta eram o "kit SaaS" e diziam pouco. */
+  .card.metricas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 0; overflow: hidden; }
+  .metrica { display: flex; flex-direction: column; gap: 4px; padding: 22px 26px; min-width: 0; }
+  .metrica + .metrica { border-left: 1px solid var(--border); }
+  .metrica-rotulo { font-size: 13px; font-weight: 600; color: var(--label); }
+  .metrica-valor { font-size: 30px; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .metrica-valor.sem { color: var(--borda-forte); }
+  .metrica-nota { font-size: 12.5px; color: var(--muted); line-height: 1.4; }
+
+  /* Últimos contratos */
+  .tabela-rolagem { overflow-x: auto; margin: 0 -4px; }
+  .tabela-contratos { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .tabela-contratos th { text-align: left; font-size: 12px; font-weight: 600; color: var(--muted); padding: 8px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  .tabela-contratos td { padding: 13px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .tabela-contratos tr:last-child td { border-bottom: none; }
+  .tabela-contratos th:first-child, .tabela-contratos td:first-child { padding-left: 4px; }
+  .tabela-contratos th:last-child, .tabela-contratos td:last-child { padding-right: 4px; }
+  .tabela-contratos .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .tabela-contratos td.num { font-weight: 700; }
+  .tabela-contratos small { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .c-tipo { white-space: nowrap; }
+  .c-tipo strong { display: inline-flex; align-items: center; gap: 8px; font-weight: 650; }
+  .c-tipo small { padding-left: 16px; }
+  .ponto-tipo { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--c-locacao); }
+  .ponto-tipo.venda { background: var(--c-venda); }
+  /* Em tabela automática a célula cresce até caber o texto sem quebra; o
+     limite vai no span, senão o endereço longo espreme a Situação. */
+  .c-imovel { min-width: 160px; }
+  .c-imovel span { display: block; max-width: 25ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .c-sit { min-width: 150px; }
+  .c-acoes { white-space: nowrap; text-align: right; }
+  .acoes-linha { display: inline-flex; align-items: center; gap: 4px; }
+  .btn-mini {
+    border: 1px solid var(--border); background: var(--paper); color: var(--ink); cursor: pointer;
+    font: inherit; font-size: 12.5px; font-weight: 600; padding: 6px 10px; border-radius: 7px;
+    display: inline-flex; align-items: center; gap: 6px; transition: border-color .15s, background .15s;
+  }
+  .btn-mini:hover { border-color: var(--borda-forte); background: var(--bg); }
+  .btn-mini:disabled { opacity: .55; cursor: default; }
+  .btn-mini svg { width: 14px; height: 14px; }
+  .btn-icone { border: 1px solid transparent; background: none; color: var(--muted); cursor: pointer; padding: 6px; border-radius: 7px; display: inline-flex; margin-left: 2px; }
+  .btn-icone svg { width: 16px; height: 16px; }
+  .btn-icone.perigo:hover { color: var(--erro-text); background: var(--erro-bg); }
+
+  /* Tela vazia com o próximo passo, em vez de uma frase cinza centralizada. */
+  .vazio-acao { padding: 30px 16px 10px; text-align: center; }
+  .vazio-acao p { color: var(--muted); font-size: 14px; line-height: 1.55; max-width: 48ch; margin: 0 auto 18px; }
+
+  /* Logo e cor da marca em Configurações: o campo de arquivo nativo ("Escolher
+     arquivo") e a barra de cor esticada destoavam de todo o resto. */
+  .logo-campo { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .logo-amostra {
+    width: 96px; height: 64px; border-radius: 10px; border: 1px dashed var(--borda-forte); background: var(--campo-bg);
+    display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;
+    font-size: 11.5px; color: var(--muted);
+  }
+  .logo-amostra img { max-width: 84px; max-height: 52px; object-fit: contain; }
+  .logo-campo .hint { margin: 6px 0 0; font-size: 12.5px; }
+  .botao-arquivo { display: inline-flex; align-items: center; margin: 0; font-size: 13.5px; font-weight: 600; color: var(--ink); padding: 9px 16px; border: 1px solid var(--border); border-radius: 9px; background: var(--paper); cursor: pointer; letter-spacing: 0; }
+  .botao-arquivo:hover { border-color: var(--borda-forte); background: var(--bg); }
+  .botao-arquivo.travado { opacity: .55; cursor: not-allowed; }
+  .cor-campo { display: flex; align-items: center; gap: 10px; border: 1px solid var(--border); border-radius: 8px; padding: 4px 12px 4px 4px; background: var(--paper); }
+  .cor-campo input[type="color"] { width: 40px; height: 30px; padding: 0; border: none; background: none; border-radius: 6px; cursor: pointer; flex-shrink: 0; }
+  .cor-campo input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+  .cor-campo input[type="color"]::-webkit-color-swatch { border: none; border-radius: 6px; }
+  .cor-campo input[type="color"]::-moz-color-swatch { border: none; border-radius: 6px; }
+  .cor-hex { font-size: 13.5px; font-variant-numeric: tabular-nums; color: var(--muted); text-transform: uppercase; }
+
+  .card > .filtros-situacao:first-child { margin-top: 0; }
+  .segmento button:disabled { cursor: not-allowed; opacity: .6; }
+
+  /* Faixa de uso do plano: as cores fixas (#fff5f5, #d33) não existiam no tema escuro. */
+  .plano-uso.esgotado { border-color: var(--erro-borda); background: var(--erro-bg); }
+
+  @media (max-width: 760px) {
+    .card.metricas { grid-template-columns: 1fr; }
+    .c-imovel span { max-width: none; white-space: normal; }
+    .metrica { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 14px; row-gap: 2px; padding: 14px 18px; }
+    .metrica + .metrica { border-left: none; border-top: 1px solid var(--border); }
+    .metrica-rotulo, .metrica-nota { grid-column: 1; }
+    .metrica-valor { grid-column: 2; grid-row: 1 / span 2; align-self: center; font-size: 22px; }
+
+    /* Linha da tabela vira bloco: tipo e valor no topo, imóvel, situação e ações embaixo. */
+    .tabela-contratos thead { display: none; }
+    .tabela-contratos, .tabela-contratos tbody { display: block; }
+    .tabela-contratos tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "tipo valor" "imovel imovel" "sit sit" "acoes acoes"; gap: 6px 12px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+    .tabela-contratos tr:last-child { border-bottom: none; }
+    .tabela-contratos td { display: block; padding: 0 !important; border: none; }
+    .c-tipo { grid-area: tipo; } .c-imovel { grid-area: imovel; min-width: 0; max-width: none; }
+    .c-sit { grid-area: sit; } .tabela-contratos td.num { grid-area: valor; }
+    .c-acoes { grid-area: acoes; text-align: left; padding-top: 4px !important; }
+
+    .tipo-grupo, .segmento { width: 100%; }
+    /* Grade de duas colunas: as quatro garantias ficam 2×2, sem uma sobrando sozinha. */
+    .segmento { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); }
+    .segmento button { padding: 9px 10px; }
+    /* O botão flutuante "Ver prévia" cobria o último campo da etapa. */
+    main.largo { padding-bottom: 96px; }
+  }
+
   /* ================= CELULAR =================
      Precisa ficar no FIM da folha. Este bloco vivia lá em cima, antes das
      regras de .grid, .card, main e .auth-card: como a especificidade é a
@@ -966,7 +1092,26 @@ const ICONES = {
   revisoes: ico('<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/>'),
   ia: ico('<path d="M12 3l1.9 4.6 4.6 1.9-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9z"/><path d="M18 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/>'),
   config: ico('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/>'),
+  lapis: ico('<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>'),
+  lixeira: ico('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>'),
 };
+
+// Cabeçalho comum a todas as telas: onde estou, para que serve e, quando
+// houver, a ação principal dali. Antes só Configurações tinha título — as
+// outras abriam direto num card, e o corretor não sabia em que tela estava.
+function cabecalhoPagina(titulo, descricao, acao = "") {
+  return `<header class="pagina-titulo">
+    <div><h1>${titulo}</h1>${descricao ? `<p>${descricao}</p>` : ""}</div>
+    ${acao}
+  </header>`;
+}
+
+// Atalho para trocar de tela pelos mesmos botões da lateral (marca o item
+// ativo e redesenha, sem caminho paralelo).
+function irParaTela(view) {
+  const b = document.querySelector(`nav [data-view="${view}"]`);
+  if (b) b.click();
+}
 
 // As três telas de administração viraram sub-abas de uma só. Antes eram três
 // itens no topo, competindo com o trabalho do dia a dia.
@@ -987,10 +1132,7 @@ let subabaAtiva = "imobiliaria";
 function renderConfiguracoes() {
   const el = document.getElementById("view-config");
   el.innerHTML = `
-    <div class="pagina-titulo">
-      <h1>Configurações</h1>
-      <p>Marca da imobiliária, quem tem acesso e sua assinatura.</p>
-    </div>
+    ${cabecalhoPagina("Configurações", "Marca da imobiliária, quem tem acesso e sua assinatura.")}
     <div class="subabas" role="tablist">
       ${subabasVisiveis().map(s => `
         <button type="button" role="tab" data-subaba="${s.id}"
@@ -1120,7 +1262,7 @@ function renderApp() {
 // justamente o contrato que sai do acompanhamento sem ninguém perceber.
 function situacaoDoContrato(c) {
   const a = c.acompanhamento;
-  if (!a) return `<span class="hint-inline" title="Gerado em .pdf ou .docx e enviado por fora — não há como acompanhar a resposta">não enviado p/ revisão</span>`;
+  if (!a) return `<span class="hint-inline" title="Gerado em .pdf ou .docx e enviado por fora — não há como acompanhar a resposta">não enviado para revisão</span>`;
   const sit = situacaoPorId(a.situacao);
   const faltam = (a.partes || []).filter(p => !p.acao).map(p => p.rotulo);
   const titulo = faltam.length ? `Falta responder: ${faltam.join(", ")}` : "Todas as partes já responderam";
@@ -1287,41 +1429,52 @@ async function renderDashboard() {
     ? Math.round(((d.contratosEsteMes - d.contratosMesPassado) / d.contratosMesPassado) * 100)
     : (d.contratosEsteMes > 0 ? 100 : 0);
 
+  const acaoGerar = `<button type="button" class="primary" data-ir-tela="gerar">Gerar contrato</button>`;
+  const cabecalho = cabecalhoPagina("Dashboard", "Como andam os contratos da sua " + (state.tenant?.tipoConta === "corretor" ? "conta" : "imobiliária") + ".", acaoGerar);
+  const ligarAtalhos = () => el.querySelectorAll("[data-ir-tela]").forEach(b => b.addEventListener("click", () => irParaTela(b.dataset.irTela)));
+
   if (d.totalContratos === 0) {
     el.innerHTML = `
+      ${cabecalhoPagina("Dashboard", "Como andam os contratos da sua " + (state.tenant?.tipoConta === "corretor" ? "conta" : "imobiliária") + ".")}
       <div class="card">
-        <h2>Seu dashboard</h2>
-        <p class="hint">Assim que você gerar seu primeiro contrato, as métricas aparecem aqui: bairro com mais efetividade, valor médio de venda, comissão recebida e mais.</p>
-        <div class="empty">Nenhum contrato gerado ainda.</div>
+        <div class="vazio-acao">
+          <h2>Nenhum contrato gerado ainda</h2>
+          <p>Gere o primeiro e o painel passa a mostrar quantos contratos saem por mês, em que pé está cada um, o bairro onde você mais fecha negócio e o valor médio de venda.</p>
+          ${acaoGerar}
+        </div>
       </div>
     `;
+    ligarAtalhos();
     return;
   }
 
+  // Valor zero quase sempre é "não informado", não "vendido por R$ 0". Mostrar
+  // R$ 0 em destaque fazia o painel parecer quebrado.
+  const nVendas = d.porTipo.compra_venda || 0;
+  const metrica = (rotulo, valor, nota) => `
+    <div class="metrica">
+      <span class="metrica-rotulo">${rotulo}</span>
+      <strong class="metrica-valor${valor === null ? " sem" : ""}">${valor === null ? "—" : valor}</strong>
+      <span class="metrica-nota">${nota}</span>
+    </div>`;
+  const notaVendas = (s) => nVendas ? s : "nenhum contrato de venda ainda";
+
   el.innerHTML = `
-    <div class="grid cols3" style="margin-bottom:20px">
-      <div class="card" style="margin-bottom:0">
-        <div class="section-title" style="margin-top:0">Contratos gerados</div>
-        <div style="font-family:var(--serif);font-size:28px;font-weight: 800">${d.totalContratos}</div>
-        <div style="font-size:12.5px;color:var(--muted);margin-top:4px">${d.contratosEsteMes} este mês ${d.contratosMesPassado ? `(${variacaoMes >= 0 ? "+" : ""}${variacaoMes}% vs mês anterior)` : ""}</div>
-      </div>
-      <div class="card" style="margin-bottom:0">
-        <div class="section-title" style="margin-top:0">Valor médio de venda</div>
-        <div style="font-family:var(--serif);font-size:28px;font-weight: 800">${fmtBRL(d.valorMedioVenda)}</div>
-        <div style="font-size:12.5px;color:var(--muted);margin-top:4px">${d.porTipo.compra_venda} contrato(s) de compra e venda</div>
-      </div>
-      <div class="card" style="margin-bottom:0">
-        <div class="section-title" style="margin-top:0">Comissão recebida</div>
-        <div style="font-family:var(--serif);font-size:28px;font-weight: 800">${fmtBRL(d.comissaoTotalRecebida)}</div>
-        <div style="font-size:12.5px;color:var(--muted);margin-top:4px">soma de todas as vendas geradas</div>
-      </div>
-    </div>
+    ${cabecalho}
+    <section class="card metricas" aria-label="Resumo">
+      ${metrica("Contratos gerados", d.totalContratos,
+        `${d.contratosEsteMes} este mês${d.contratosMesPassado ? ` · ${variacaoMes >= 0 ? "+" : ""}${variacaoMes}% sobre o mês anterior` : ""}`)}
+      ${metrica("Valor médio de venda", d.valorMedioVenda ? fmtBRL(d.valorMedioVenda) : null,
+        notaVendas(d.valorMedioVenda ? `em ${nVendas} contrato${nVendas > 1 ? "s" : ""} de compra e venda` : "informe o valor ao gerar o contrato"))}
+      ${metrica("Comissão prevista", d.comissaoTotalRecebida ? fmtBRL(d.comissaoTotalRecebida) : null,
+        notaVendas(d.comissaoTotalRecebida ? "soma das comissões nos contratos de venda" : "preencha a comissão na etapa Valores"))}
+    </section>
 
     <div class="card" style="margin-bottom:20px">
       <h2>Em que pé estão</h2>
-      <p class="hint">Onde cada contrato parou. Quem não foi enviado para revisão não tem acompanhamento.</p>
+      <p class="hint">Onde cada contrato parou. Os que não foram enviados para revisão ficam sem acompanhamento.</p>
       <div class="etapas" style="margin-top:14px">
-        ${[...SITUACOES, { id: "sem_link", nome: "Não enviado p/ revisão", cor: "" }]
+        ${[...SITUACOES, { id: "sem_link", nome: "Não enviados para revisão", cor: "" }]
           .filter(sit => (d.porSituacao || {})[sit.id])
           .map(sit => `<span class="etapa ${sit.cor || ""}"><b>${d.porSituacao[sit.id]}</b> ${sit.nome}</span>`).join("")}
       </div>
@@ -1368,38 +1521,44 @@ async function renderDashboard() {
 
     <div class="card">
       <h2>Últimos contratos</h2>
-      <p class="hint">Os 10 mais recentes gerados por você ou sua equipe.</p>
+      <p class="hint">Os 10 mais recentes gerados por você ou pela sua equipe.</p>
       ${d.ultimosContratos.length ? `
-        <div style="overflow-x:auto">
-          <table style="width:100%;border-collapse:collapse;font-size:13.5px">
+        <div class="tabela-rolagem">
+          <table class="tabela-contratos">
             <thead>
-              <tr style="text-align:left;color:var(--muted);border-bottom:1px solid var(--border)">
-                <th style="padding:8px 10px 8px 0;font-weight:600">Tipo</th>
-                <th style="padding:8px 10px;font-weight:600">Endereço</th>
-                <th style="padding:8px 10px;font-weight:600">Bairro</th>
-                <th style="padding:8px 10px;font-weight:600">Situação</th>
-                <th style="padding:8px 0 8px 10px;font-weight:600;text-align:right">Valor</th>
-                <th style="padding:8px 0 8px 10px;font-weight:600;width:1%"></th>
+              <tr>
+                <th>Contrato</th>
+                <th>Imóvel</th>
+                <th>Situação</th>
+                <th class="num">Valor</th>
+                <th><span class="sr-only">Ações</span></th>
               </tr>
             </thead>
             <tbody>
-              ${d.ultimosContratos.map(c => `
-                <tr style="border-bottom:1px solid var(--border)">
-                  <td style="padding:10px 10px 10px 0">${rotuloContrato(c)}</td>
-                  <td style="padding:10px">${c.endereco || "—"}</td>
-                  <td style="padding:10px">${c.bairro || "—"}</td>
-                  <td style="padding:10px">${situacaoDoContrato(c)}</td>
-                  <td style="padding:10px 0 10px 10px;text-align:right;font-weight:600">${fmtBRL(c.valor)}</td>
-                  <td style="padding:10px 0 10px 10px;text-align:right;white-space:nowrap">
+              ${d.ultimosContratos.map(c => {
+                // "Locação (Caução)" vira "Locação" + a garantia embaixo: a
+                // coluna estreita quebrava o parêntese no meio.
+                const rotulo = rotuloContrato(c);
+                const m = /^(.*?) \((.*)\)$/.exec(rotulo);
+                const tipo = m ? m[1] : (c.tipo === "compra_venda" ? "Compra e venda" : rotulo);
+                const garantia = m ? m[2].toLowerCase() : "";
+                const endereco = c.endereco || "Endereço não informado";
+                return `
+                <tr>
+                  <td class="c-tipo"><strong><i class="ponto-tipo ${c.tipo === "compra_venda" ? "venda" : ""}" aria-hidden="true"></i>${escapeHtml(tipo)}</strong>${garantia ? `<small>${escapeHtml(garantia)}</small>` : ""}</td>
+                  <td class="c-imovel"><span title="${escapeHtml(endereco)}">${escapeHtml(endereco)}</span>${c.bairro ? `<small>${escapeHtml(c.bairro)}</small>` : ""}</td>
+                  <td class="c-sit">${situacaoDoContrato(c)}</td>
+                  <td class="num">${c.valor ? fmtBRL(c.valor) : `<span style="color:var(--muted);font-weight:500">—</span>`}</td>
+                  <td class="c-acoes"><span class="acoes-linha">
                     ${c.temDados ? `
-                      <button type="button" class="link acao" data-editar-contrato="${c.id}" title="Reabrir no formulário para editar">editar</button>
-                      <button type="button" class="link acao" data-abrir-contrato="${c.id}" data-formato="docx" title="Baixar em .docx (editável)">.docx</button>
-                      <button type="button" class="link acao" data-abrir-contrato="${c.id}" data-formato="pdf" title="Baixar em .pdf">.pdf</button>
+                      <button type="button" class="btn-mini" data-editar-contrato="${c.id}" title="Reabrir no formulário para editar">${ICONES.lapis}Editar</button>
+                      <button type="button" class="btn-mini" data-abrir-contrato="${c.id}" data-formato="docx" title="Baixar em .docx (editável no Word)">DOCX</button>
+                      <button type="button" class="btn-mini" data-abrir-contrato="${c.id}" data-formato="pdf" title="Baixar em PDF">PDF</button>
                     ` : `<span class="hint-inline" title="Gerado antes de o sistema guardar os dados do contrato">indisponível</span>`}
-                    ${c.id ? `<button type="button" class="link" data-del-contrato="${c.id}" title="Excluir contrato">excluir</button>` : ""}
-                  </td>
-                </tr>
-              `).join("")}
+                    ${c.id ? `<button type="button" class="btn-icone perigo" data-del-contrato="${c.id}" title="Excluir contrato" aria-label="Excluir contrato">${ICONES.lixeira}</button>` : ""}
+                  </span></td>
+                </tr>`;
+              }).join("")}
             </tbody>
           </table>
         </div>
@@ -1408,6 +1567,7 @@ async function renderDashboard() {
   `;
 
   ligarTooltipGrafico(el);
+  ligarAtalhos();
 
   el.querySelectorAll("[data-editar-contrato]").forEach(btn => {
     btn.addEventListener("click", () => editarContrato(btn.dataset.editarContrato));
@@ -1469,9 +1629,9 @@ function renderConfig() {
       <h2>Tipo de conta</h2>
       <p class="hint">Isso ajusta os textos do sistema — não afeta o conteúdo dos contratos.</p>
       <form id="tipoContaForm">
-        <div class="tabs-tipo" style="margin-bottom:0">
-          <button type="button" data-tipo-conta="imobiliaria" class="${(t.tipoConta || "imobiliaria") === "imobiliaria" ? "active" : ""}">Imobiliária</button>
-          <button type="button" data-tipo-conta="corretor" class="${t.tipoConta === "corretor" ? "active" : ""}">Corretor autônomo</button>
+        <div class="segmento" role="group" aria-label="Tipo de conta">
+          <button type="button" data-tipo-conta="imobiliaria" aria-pressed="${(t.tipoConta || "imobiliaria") === "imobiliaria"}">Imobiliária</button>
+          <button type="button" data-tipo-conta="corretor" aria-pressed="${t.tipoConta === "corretor"}">Corretor autônomo</button>
         </div>
       </form>
     </div>
@@ -1489,12 +1649,23 @@ function renderConfig() {
           <div class="field"><label>Endereço completo</label><input name="endereco" value="${t.endereco || ""}" placeholder="Rua X, nº 000, Bairro, Cidade/UF" /></div>
           <div class="field"><label>Cidade (para "Cidade, data")</label><input name="cidade" value="${t.cidade || "Natal"}" /></div>
           <div class="field"><label>Foro padrão</label><input name="foroPadrao" value="${t.foroPadrao || "Natal/RN"}" /></div>
-          <div class="field"><label>Cor da marca</label><input name="corPrimaria" type="color" value="#${t.corPrimaria || "0D1B2A"}" style="height:38px;padding:4px" /></div>
+          <div class="field"><label for="corMarca">Cor da marca</label>
+            <div class="cor-campo">
+              <input id="corMarca" name="corPrimaria" type="color" value="#${escapeHtml(t.corPrimaria || "0D1B2A")}" />
+              <span class="cor-hex" id="corHex">#${escapeHtml(t.corPrimaria || "0D1B2A")}</span>
+            </div>
+          </div>
         </div>
         <div class="field">
-          <label>Logo (PNG ou JPG, fundo transparente de preferência)</label>
-          <input name="logo" type="file" accept="image/png,image/jpeg" />
-          ${t.logoPath ? `<img src="${t.logoPath}" class="logo-preview" style="margin-top:8px" />` : ""}
+          <label for="logoArquivo">Logo</label>
+          <div class="logo-campo">
+            <div class="logo-amostra" id="logoAmostra">${t.logoPath ? `<img src="${escapeHtml(t.logoPath)}" alt="Logo atual" />` : "sem logo"}</div>
+            <div>
+              <label class="botao-arquivo${isOwner ? "" : " travado"}" for="logoArquivo">${t.logoPath ? "Trocar logo" : "Enviar logo"}</label>
+              <input id="logoArquivo" class="sr-only" name="logo" type="file" accept="image/png,image/jpeg" />
+              <p class="hint" id="logoNota">PNG ou JPG. Com fundo transparente fica melhor no cabeçalho do contrato.</p>
+            </div>
+          </div>
         </div>
 
         ${!isOwner ? "" : `
@@ -1530,6 +1701,25 @@ function renderConfig() {
     el.querySelectorAll("#tenantForm input, #tenantForm select, #tenantForm textarea, [data-tipo-conta]")
       .forEach(c => { c.disabled = true; });
   }
+
+  // Cor: o código ao lado da amostra acompanha a escolha.
+  const corMarca = el.querySelector("#corMarca");
+  corMarca.addEventListener("input", () => { el.querySelector("#corHex").textContent = corMarca.value; });
+
+  // Logo: mostra o arquivo escolhido antes de salvar — o campo nativo só dizia
+  // o nome do arquivo, e ninguém sabia se tinha pegado a imagem certa.
+  const logoArquivo = el.querySelector("#logoArquivo");
+  logoArquivo.addEventListener("change", () => {
+    const f = logoArquivo.files && logoArquivo.files[0];
+    if (!f) return;
+    const amostra = el.querySelector("#logoAmostra");
+    amostra.innerHTML = "";
+    const img = document.createElement("img");
+    img.alt = "Logo escolhida";
+    img.src = URL.createObjectURL(f);
+    amostra.appendChild(img);
+    el.querySelector("#logoNota").textContent = `${f.name} — clique em Salvar para usar esta logo.`;
+  });
 
   el.querySelectorAll("[data-tipo-conta]").forEach(btn => {
     btn.addEventListener("click", async () => {
@@ -2038,7 +2228,7 @@ function planoUsageBanner() {
   const limite = t.limiteContratosPorMes;
   const esgotado = usados >= limite;
   return `
-    <div class="card" id="planoUsageBanner" style="${esgotado ? "border-color:#d33;background:#fff5f5" : ""}">
+    <div class="card plano-uso${esgotado ? " esgotado" : ""}" id="planoUsageBanner">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
         <div>
           <strong>${usados}/${limite} contratos usados este mês</strong>
@@ -2063,18 +2253,37 @@ function renderGerar() {
     { nome: "Cláusulas", dica: "Condições do negócio que mudam a redação do contrato." },
     { nome: "Revisão", dica: "Confira o resumo, escolha o visual do documento e gere." },
   ];
+  // Venda ou locação primeiro; a garantia só aparece na locação. "Locação"
+  // volta para a última garantia usada, não para caução à força.
+  const ehLocacao = state.tipo !== "compra_venda";
+  if (ehLocacao) state.ultimaLocacao = state.tipo;
+  const GARANTIAS = [
+    ["locacao_caucao", "Caução"], ["locacao_fiador", "Fiador"],
+    ["locacao_seguro_fianca", "Seguro fiança"], ["locacao_sem_garantia", "Sem garantia"],
+  ];
+  const pressionado = (on) => `aria-pressed="${on ? "true" : "false"}"`;
   el.innerHTML = `
+    ${cabecalhoPagina("Gerar contrato", "Preencha as cinco etapas e acompanhe o documento na prévia, do jeito que vai sair.")}
     ${planoUsageBanner()}
     <div class="gerar-grade">
     <div class="gerar-col">
     <div class="card card-tipo">
-      <h2>Tipo de contrato</h2>
-      <div class="tabs-tipo">
-        <button data-tipo="compra_venda" class="${state.tipo === "compra_venda" ? "active" : ""}">Compra e Venda</button>
-        <button data-tipo="locacao_caucao" class="${state.tipo === "locacao_caucao" ? "active" : ""}">Locação (Caução)</button>
-        <button data-tipo="locacao_fiador" class="${state.tipo === "locacao_fiador" ? "active" : ""}">Locação (Fiador)</button>
-        <button data-tipo="locacao_seguro_fianca" class="${state.tipo === "locacao_seguro_fianca" ? "active" : ""}">Locação (Seguro Fiança)</button>
-        <button data-tipo="locacao_sem_garantia" class="${state.tipo === "locacao_sem_garantia" ? "active" : ""}">Locação (Sem Garantia)</button>
+      <h2 class="sr-only">Tipo de contrato</h2>
+      <div class="tipo-linha">
+        <div class="tipo-grupo">
+          <span class="tipo-rotulo" id="rotNegocio">Negócio</span>
+          <div class="segmento" role="group" aria-labelledby="rotNegocio">
+            <button type="button" data-tipo="compra_venda" ${pressionado(!ehLocacao)}>Compra e venda</button>
+            <button type="button" data-tipo="${state.ultimaLocacao || "locacao_caucao"}" ${pressionado(ehLocacao)}>Locação</button>
+          </div>
+        </div>
+        ${ehLocacao ? `
+        <div class="tipo-grupo">
+          <span class="tipo-rotulo" id="rotGarantia">Garantia</span>
+          <div class="segmento" role="group" aria-labelledby="rotGarantia">
+            ${GARANTIAS.map(([tipo, nome]) => `<button type="button" data-tipo="${tipo}" ${pressionado(state.tipo === tipo)}>${nome}</button>`).join("")}
+          </div>
+        </div>` : ""}
       </div>
     </div>
 
@@ -2385,7 +2594,7 @@ function renderGerar() {
       </div>
         <div class="footer-actions wiz-gerar">
           <button type="submit" class="secondary" data-formato="docx">Gerar .docx (editável)</button>
-          <button type="submit" class="secondary" data-formato="link">Enviar p/ revisão</button>
+          <button type="submit" class="secondary" data-formato="link">Enviar para revisão</button>
           <button type="submit" class="primary" data-formato="pdf">Gerar .pdf (pronto p/ assinatura)</button>
         </div>
       </section>
@@ -2410,7 +2619,10 @@ function renderGerar() {
     <button type="button" class="primary previa-abrir" id="previaAbrir">Ver prévia do contrato</button>
   `;
 
-  document.querySelectorAll("[data-tipo]").forEach(b => b.addEventListener("click", () => {
+  el.querySelectorAll("[data-tipo]").forEach(b => b.addEventListener("click", () => {
+    // Clicar no tipo que já está ativo redesenhava a tela e apagava o que
+    // tinha sido digitado.
+    if (b.dataset.tipo === state.tipo) return;
     state.tipo = b.dataset.tipo;
     renderGerar();
   }));
@@ -2802,14 +3014,16 @@ const RISCO_LABEL = { baixo: "Risco baixo", medio: "Risco médio", alto: "Risco 
 
 function renderAjudanteIA() {
   const el = document.getElementById("view-ia");
+  const topo = cabecalhoPagina("Ajudante IA", "Descreva o pedido de alteração que uma das partes fez. A IA avalia o risco e redige o texto pronto para o campo \"Cláusula especial\".");
   if (isPlanoGratis()) {
     el.innerHTML = `
-      <div class="card" style="text-align:center;padding:44px 24px">
-        <h2>🔒 Ajudante IA de cláusulas</h2>
-        <p style="color:var(--muted);font-size:14px;margin:12px auto 22px;max-width:460px;line-height:1.55">
-          Descreva o pedido de alteração de uma das partes e a IA avalia o risco e já redige o texto pronto pra colar no contrato. Ferramenta exclusiva dos planos pagos.
-        </p>
-        <a href="/#planos" style="text-decoration:none;padding:11px 22px;border-radius:9px;font-weight:600;font-size:14px;background:var(--brand);color:#fff;display:inline-block">Fazer upgrade</a>
+      ${topo}
+      <div class="card">
+        <div class="vazio-acao">
+          <h2>Disponível nos planos pagos</h2>
+          <p>No plano grátis você gera contratos normalmente; a análise de risco e a redação de cláusulas pela IA entram a partir do plano Autônomo.</p>
+          <a href="/#planos" class="primary" style="text-decoration:none;padding:11px 22px;border-radius:9px;font-weight:600;font-size:14px;background:var(--brand);color:#fff;display:inline-block">Ver planos</a>
+        </div>
       </div>
     `;
     return;
@@ -2817,13 +3031,9 @@ function renderAjudanteIA() {
   const usoIa = state.tenant?.usoIaNoMes || 0;
   const limiteIa = state.tenant?.limiteIaPorMes || 50;
   el.innerHTML = `
+    ${topo}
     <div class="card">
-      <h2>Ajudante IA de cláusulas</h2>
-      <p style="color:var(--muted);font-size:14px;margin-top:6px;max-width:640px">
-        Descreva o pedido de alteração que uma das partes fez sobre o contrato. A IA avalia o risco
-        e já redige um texto pronto pra colar no campo "Cláusula especial" na hora de gerar o documento.
-      </p>
-      <p class="hint" style="margin-top:8px">Uso de IA neste mês: <strong>${usoIa}/${limiteIa}</strong> — inclui também a leitura automática de CNH/RG. O contador zera todo dia 1º.</p>
+      <p class="hint" style="margin:0">Uso de IA neste mês: <strong>${usoIa} de ${limiteIa}</strong>. A leitura automática de CNH/RG também conta. O contador zera todo dia 1º.</p>
 
       <form id="iaForm" style="margin-top:20px">
         <div class="field">
@@ -3523,15 +3733,17 @@ async function renderRevisoes() {
   if (!res.ok) { el.innerHTML = `<div class="card"><div class="empty">Não foi possível carregar as revisões.</div></div>`; return; }
   const lista = await res.json();
 
-  const cabecalho = `
-    <h2>Revisões enviadas</h2>
-    <p class="hint">Documentos que você mandou pro cliente conferir antes de assinar. A resposta dele aparece aqui.</p>
-  `;
+  const topo = cabecalhoPagina("Revisões", "Documentos que você mandou para o cliente conferir antes de assinar. A resposta de cada parte aparece aqui.");
 
   if (!lista.length) {
-    el.innerHTML = `<div class="card">${cabecalho}
-      <div class="empty">Nada enviado ainda. Ao gerar um contrato, use "Enviar p/ revisão do cliente".</div>
+    el.innerHTML = `${topo}<div class="card">
+      <div class="vazio-acao">
+        <h2>Nenhum documento enviado para revisão</h2>
+        <p>Na última etapa de um contrato, use "Enviar para revisão". O cliente recebe um link, confere o texto e aprova ou pede ajuste — e você acompanha tudo por aqui.</p>
+        <button type="button" class="primary" data-ir-tela="gerar">Gerar contrato</button>
+      </div>
     </div>`;
+    el.querySelector("[data-ir-tela]").addEventListener("click", () => irParaTela("gerar"));
     return;
   }
 
@@ -3652,7 +3864,7 @@ async function renderRevisoes() {
     </div>
   `).join("");
 
-  el.innerHTML = `<div class="card">${cabecalho}${filtros}${
+  el.innerHTML = `${topo}<div class="card">${filtros}${
     visiveis.length ? linhas : `<div class="empty">Nenhum envio nessa situação.</div>`
   }</div>`;
 
@@ -4044,10 +4256,10 @@ function renderDocumentos() {
      <div class="grid">${sec.campos.map(docCampoHTML).join("")}</div>`).join("");
 
   el.innerHTML = `
+    ${cabecalhoPagina("Documentos", `Fichas, propostas e autorizações com a identidade visual da sua ${state.tenant?.tipoConta === "corretor" ? "conta" : "imobiliária"}. Não contam na cota mensal de contratos.`)}
     <div class="card">
-      <h2>Documentos do dia a dia</h2>
-      <p class="hint">Fichas, propostas e autorizações com a identidade visual da sua ${state.tenant?.tipoConta === "corretor" ? "conta" : "imobiliária"}. Não consomem sua cota mensal de contratos.</p>
-      <div class="doc-picker">${picker}</div>
+      <h2 class="sr-only">Escolha o documento</h2>
+      <div class="doc-picker" style="margin-top:0">${picker}</div>
     </div>
     <div class="card">
       <h2>${schema.nome}</h2>
@@ -4077,7 +4289,7 @@ function renderDocumentos() {
         ` : ""}
         <div class="footer-actions" style="margin-top:20px">
           <button type="submit" class="secondary" data-formato="docx">Gerar .docx (editável)</button>
-          <button type="submit" class="secondary" data-formato="link">Enviar p/ revisão</button>
+          <button type="submit" class="secondary" data-formato="link">Enviar para revisão</button>
           <button type="submit" class="primary" data-formato="pdf">Gerar .pdf (pronto p/ assinatura)</button>
         </div>
       </form>
