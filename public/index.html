@@ -7,544 +7,742 @@
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
-
   gtag('config', 'G-14TMWXS8BM');
   gtag('config', 'AW-18326486969');
 </script>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Minutei — Contratos imobiliários prontos em minutos</title>
-<meta name="description" content="Gere contratos de compra e venda e locação com a identidade da sua imobiliária, prontos para assinatura, em minutos." />
+<title>Minutei CRM — a imobiliária inteira num sistema só</title>
+<meta name="description" content="CRM imobiliário com roleta de leads, carteira de imóveis, site próprio, feed para os portais, comissão, esteira e administração de aluguel. Teste 14 dias grátis, sem cartão." />
+<link rel="canonical" href="https://www.minutei.app.br/" />
 <meta property="og:type" content="website" />
-<meta property="og:title" content="Minutei — Contratos imobiliários prontos em minutos" />
-<meta property="og:description" content="Gere contratos de compra e venda e locação com a identidade da sua imobiliária, prontos para assinatura, em minutos." />
-<meta property="og:url" content="https://minutei.app.br/" />
-<meta property="og:image" content="https://minutei.app.br/brand/og-image.png" />
+<meta property="og:title" content="Minutei CRM — a imobiliária inteira num sistema só" />
+<meta property="og:description" content="Leads com roleta, imóveis, site próprio, portais, comissão, esteira e aluguel. Feito dentro de uma imobiliária em operação." />
+<meta property="og:url" content="https://www.minutei.app.br/" />
+<meta property="og:image" content="https://www.minutei.app.br/img/crm/hoje@2x.webp" />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:image" content="https://minutei.app.br/brand/og-image.png" />
+<meta name="twitter:image" content="https://www.minutei.app.br/img/crm/hoje@2x.webp" />
 <link rel="icon" type="image/png" sizes="32x32" href="/brand/favicon-32.png?v=2" />
 <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png?v=2" />
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="preload" href="/brand/fonts/Metropolis-ExtraBold.woff" as="font" type="font/woff" crossorigin />
+<link rel="preload" href="/img/crm/hoje.webp" as="image" imagesrcset="/img/crm/hoje.webp 1440w, /img/crm/hoje@2x.webp 2880w" imagesizes="(max-width: 900px) 100vw, 760px" />
 <style>
+  /* Metropolis é a letra do próprio CRM: a página fala com a mesma voz do produto. */
+  @font-face { font-family: Metropolis; src: url(/brand/fonts/Metropolis-Regular.woff) format("woff"); font-weight: 400; font-display: swap; }
+  @font-face { font-family: Metropolis; src: url(/brand/fonts/Metropolis-SemiBold.woff) format("woff"); font-weight: 600; font-display: swap; }
+  @font-face { font-family: Metropolis; src: url(/brand/fonts/Metropolis-ExtraBold.woff) format("woff"); font-weight: 800; font-display: swap; }
+
   :root {
-    /* Identidade Minutei — Navy Deep + Blaze Orange */
-    --navy: #0d1b2a;
-    --navy-mid: #1e3a5f;
-    --brand: #ff6b00;
-    --brand-dark: #e05c00;
-    --brand-soft: #fff2e8;
-    --brand-text: #a84300; /* laranja escurecido: legível como texto sobre fundo claro */
-    --gold: #ff6b00;
-    --ink: #0d1b2a;
-    --muted: #5b6b7f;
-    --border: #e4e9f0;
-    --bg: #f5f5f5;
-    --paper: #ffffff;
-    --shadow-sm: 0 1px 2px rgba(13, 27, 42, 0.06);
-    --shadow-md: 0 6px 20px rgba(13, 27, 42, 0.08);
-    --shadow-lg: 0 20px 50px rgba(13, 27, 42, 0.16);
-    --serif: "Manrope", -apple-system, "Segoe UI", Roboto, sans-serif;
-    --sans: "Manrope", -apple-system, "Segoe UI", Roboto, sans-serif;
+    --ink: #0A1628;        /* marinho do menu do CRM */
+    --ink-2: #33435A;      /* texto corrido */
+    --muted: #5B6B80;
+    --paper: #F7F9FC;      /* fundo do CRM */
+    --white: #FFFFFF;
+    --line: #E3E8F0;
+    --acao: #FF6B2B;       /* laranja: só para o que se clica e para o que é urgente */
+    --acao-escuro: #E2551A;
+    --acao-texto: #B23F0C; /* laranja legível como texto sobre fundo claro */
+    --fluxo: #3B9CFF;      /* azul: o caminho do negócio */
+    --ok: #15803D;
+    --raio: 12px;
+    --sombra: 0 1px 2px rgba(10,22,40,.06), 0 12px 32px -12px rgba(10,22,40,.22);
   }
   * { box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
-  body { font-family: var(--sans); margin: 0; background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; line-height: 1.5; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }
+  body { margin: 0; background: var(--white); color: var(--ink-2); font: 400 17px/1.6 Metropolis, system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
+  img { max-width: 100%; height: auto; display: block; }
   a { color: inherit; }
-  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+  h1, h2, h3 { color: var(--ink); font-weight: 800; margin: 0; letter-spacing: -.02em; }
+  h1 { font-size: clamp(40px, 6vw, 68px); line-height: 1.02; }
+  h2 { font-size: clamp(30px, 4vw, 44px); line-height: 1.08; }
+  h3 { font-size: 22px; line-height: 1.25; letter-spacing: -.01em; }
+  p { margin: 0; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+  .lead { font-size: 20px; line-height: 1.55; color: var(--ink-2); max-width: 36em; }
+  :focus-visible { outline: 3px solid var(--fluxo); outline-offset: 3px; border-radius: 6px; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-  /* Brand */
-  .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
-  .brand-mark { width: 30px; height: 30px; flex-shrink: 0; display: block; filter: drop-shadow(0 2px 6px rgba(13, 27, 42, 0.18)); }
-  .brand-word { font-family: var(--serif); font-weight: 800; font-size: 19px; letter-spacing: 0.01em; color: var(--ink); }
-  .brand-logo { height: 36px; width: auto; display: block; }
-  .brand-logo-sm { height: 28px; }
+  /* Botões: laranja = ação principal, contorno = alternativa */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 24px; border-radius: 999px; font: 600 16px/1 Metropolis, system-ui, sans-serif; text-decoration: none; cursor: pointer; border: 2px solid transparent; transition: background .15s, border-color .15s, color .15s; white-space: nowrap; }
+  .btn-acao { background: var(--acao); color: #fff; }
+  .btn-acao:hover { background: var(--acao-escuro); }
+  .btn-contorno { border-color: var(--ink); color: var(--ink); background: transparent; }
+  .btn-contorno:hover { background: var(--ink); color: #fff; }
+  .btn-claro { border-color: rgba(255,255,255,.5); color: #fff; }
+  .btn-claro:hover { background: #fff; color: var(--ink); }
+  .btn-lg { min-height: 56px; padding: 0 26px; font-size: 16px; }
 
-  /* Header — sobre o hero escuro */
-  header { position: sticky; top: 0; z-index: 20; background: rgba(13, 27, 42, 0.88); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.08); }
-  header .bar { display: flex; align-items: center; justify-content: space-between; padding: 16px 0; }
-  header nav { display: flex; align-items: center; gap: 28px; }
-  header nav a.navlink { font-size: 14px; font-weight: 500; color: #9fb0c4; text-decoration: none; }
-  header nav a.navlink:hover { color: #fff; }
-  header .brand-word { color: #fff; }
-  header .btn-ghost { color: #fff; border-color: rgba(255,255,255,0.22); }
-  header .btn-ghost:hover { border-color: rgba(255,255,255,0.45); background: rgba(255,255,255,0.06); }
-  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: 9px; font-weight: 700; font-size: 14px; cursor: pointer; text-decoration: none; transition: all .15s; border: none; font-family: inherit; }
-  .btn-primary { background: var(--brand); color: #fff; padding: 11px 22px; box-shadow: 0 2px 10px rgba(255,107,0,0.30); }
-  .btn-primary:hover { background: var(--brand-dark); box-shadow: 0 4px 16px rgba(255,107,0,0.40); }
-  .btn-ghost { background: transparent; color: var(--ink); padding: 10px 18px; border: 1px solid var(--border); }
-  .btn-ghost:hover { border-color: #c3ccd8; background: #fff; }
-  .btn-lg { padding: 15px 30px; font-size: 15.5px; }
+  /* Barra de produtos Minutei */
+  .produtos { background: var(--ink); color: #A9B6C8; font-size: 13px; }
+  .produtos .wrap { display: flex; gap: 4px; align-items: center; min-height: 36px; overflow-x: auto; }
+  .produtos span { font-weight: 600; color: #fff; margin-right: 8px; }
+  .produtos a { text-decoration: none; padding: 4px 10px; border-radius: 999px; }
+  .produtos a:hover { color: #fff; background: rgba(255,255,255,.08); }
+  .produtos a[aria-current] { color: #fff; background: rgba(255,107,43,.25); }
 
-  /* Hero — Navy Deep, o bloco de maior impacto da marca */
-  .hero { position: relative; overflow: hidden; padding: 92px 0 76px; text-align: center; color: #fff;
-    background:
-      radial-gradient(ellipse at 15% 8%, rgba(255,107,0,0.16), transparent 52%),
-      radial-gradient(ellipse at 88% 92%, rgba(30,58,95,0.85), transparent 55%),
-      linear-gradient(165deg, #12253a 0%, var(--navy) 55%, #0a1622 100%);
-  }
-  /* malha de pontos sutil, no espírito "tech" da marca */
-  .hero::before { content: ""; position: absolute; inset: 0;
-    background-image: radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px);
-    background-size: 22px 22px; pointer-events: none; }
-  .hero > .wrap { position: relative; z-index: 1; }
-  .eyebrow { display: inline-block; font-size: 12.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--brand-text); background: var(--brand-soft); padding: 6px 14px; border-radius: 999px; margin-bottom: 22px; }
-  .hero .eyebrow { color: #ffb27a; background: rgba(255,107,0,0.14); border: 1px solid rgba(255,107,0,0.30); }
-  .hero h1 { font-family: var(--serif); font-weight: 800; font-size: 54px; line-height: 1.08; margin: 0 0 20px; letter-spacing: -0.03em; color: #fff; }
-  .hero h1 em { font-style: normal; color: var(--brand); }
-  .hero p.sub { font-size: 18px; color: #a9bacd; max-width: 620px; margin: 0 auto 36px; line-height: 1.6; }
-  .hero .cta-row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-bottom: 30px; }
-  .hero .btn-ghost { color: #fff; border-color: rgba(255,255,255,0.28); }
-  .hero .btn-ghost:hover { border-color: rgba(255,255,255,0.55); background: rgba(255,255,255,0.07); }
+  /* Topo */
+  .topo { position: sticky; top: 0; z-index: 30; background: rgba(247,249,252,.92); backdrop-filter: saturate(1.4) blur(10px); -webkit-backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid var(--line); }
+  .topo .wrap { display: flex; align-items: center; gap: 24px; min-height: 68px; }
+  .marca { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); font-weight: 800; font-size: 20px; letter-spacing: -.01em; }
+  .marca img { height: 30px; width: auto; }
+  .marca b { color: var(--fluxo); font-weight: 800; }
+  .topo nav { display: flex; gap: 22px; margin-left: auto; align-items: center; font-size: 15px; font-weight: 600; }
+  .topo nav a { text-decoration: none; color: var(--ink-2); }
+  .topo nav a:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; }
+  .topo .btn { min-height: 42px; padding: 0 18px; font-size: 15px; }
+  @media (max-width: 900px) { .topo nav .so-largo { display: none; } }
+  @media (max-width: 520px) { .topo nav { gap: 14px; } .topo .entrar { display: none; } .marca span { display: none; } }
 
-  /* Linha de garantias (risk reversal) */
-  .trust-row { display: flex; justify-content: center; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 13.5px; color: #a9bacd; }
-  .trust-row span { display: inline-flex; align-items: center; gap: 8px; }
-  .trust-row .tick-o { width: 19px; height: 19px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.35); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; }
-  .trust-row .sep { width: 1px; height: 15px; background: rgba(255,255,255,0.18); }
-  @media (max-width: 600px) { .trust-row .sep { display: none; } }
-
-  /* Prévia realista do documento gerado */
-  .doc-preview { position: relative; max-width: 760px; margin: 56px auto 0; border-radius: 14px; overflow: hidden; box-shadow: 0 32px 70px rgba(0,0,0,0.45); border: 1px solid rgba(255,255,255,0.10); background: var(--paper); text-align: left; color: var(--ink); }
-  .doc-preview .bar { background: #eef1f6; padding: 10px 16px; display: flex; align-items: center; gap: 6px; border-bottom: 1px solid var(--border); }
-  .doc-preview .dot { width: 10px; height: 10px; border-radius: 50%; background: #ccd3dd; }
-  .doc-preview .bar .file { margin-left: 12px; font-size: 12px; color: var(--muted); font-weight: 500; }
-  .doc-page { position: relative; padding: 34px 42px 0; max-height: 430px; overflow: hidden; }
-  .doc-page::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 130px; background: linear-gradient(transparent, var(--paper)); pointer-events: none; }
-  .doc-head { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--brand); padding-bottom: 14px; margin-bottom: 22px; }
-  .doc-head .imob { display: flex; align-items: center; gap: 10px; }
-  .doc-head .imob .m { width: 30px; height: 30px; border-radius: 7px; background: linear-gradient(135deg, #1e3a5f, #0d1b2a); display: flex; align-items: center; justify-content: center; color: #fff; font-family: var(--serif); font-weight: 700; font-size: 15px; }
-  .doc-head .imob b { font-family: var(--serif); font-size: 14.5px; color: var(--ink); }
-  .doc-head .creci { font-size: 10.5px; color: var(--muted); text-align: right; line-height: 1.5; }
-  .doc-title { text-align: center; font-family: var(--serif); font-weight: 800; font-size: 16.5px; color: var(--ink); margin: 0 0 20px; letter-spacing: .01em; }
-  .doc-p { font-size: 12.5px; line-height: 1.75; color: #3b4653; margin: 0 0 14px; text-align: justify; }
-  .doc-p b { color: var(--ink); font-weight: 600; }
-  .doc-clause { font-family: var(--serif); font-weight: 800; font-size: 12.5px; text-transform: uppercase; letter-spacing: .03em; color: var(--ink); border-bottom: 2px solid var(--brand); display: inline-block; padding-bottom: 3px; margin: 6px 0 10px; }
-  .doc-badge { position: absolute; right: 22px; bottom: 20px; z-index: 2; display: inline-flex; align-items: center; gap: 6px; background: var(--brand); color: #fff; font-size: 12px; font-weight: 600; padding: 8px 15px; border-radius: 999px; box-shadow: 0 8px 20px rgba(255,107,0,0.32); }
-
-  /* Sections */
-  section { padding: 80px 0; }
-  .section-head { text-align: center; max-width: 640px; margin: 0 auto 52px; }
-  .section-head .eyebrow { margin-bottom: 16px; }
-  .section-head h2 { font-family: var(--serif); font-weight: 800; font-size: 34px; margin: 0 0 14px; letter-spacing: -0.01em; }
-  .section-head p { color: var(--muted); font-size: 16px; margin: 0; }
-
-  /* Problem/solution */
-  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
-  .split h2 { font-family: var(--serif); font-weight: 800; font-size: 30px; margin: 0 0 18px; letter-spacing: -0.01em; }
-  .split p { color: var(--muted); font-size: 16px; margin: 0 0 16px; }
-  .check-list { list-style: none; padding: 0; margin: 24px 0 0; }
-  .check-list li { display: flex; gap: 12px; margin-bottom: 14px; font-size: 15px; }
-  .check-list .tick { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; background: var(--brand-soft); color: var(--brand-text); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; }
-
-  /* Features grid */
-  .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
-  .feature-card { background: var(--paper); border: 1px solid var(--border); border-radius: 14px; padding: 28px; box-shadow: var(--shadow-sm); }
-  .feature-card .icon { width: 44px; height: 44px; border-radius: 11px; background: var(--brand-soft); color: var(--brand); display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
-  .feature-card .icon svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
-  .feature-card h3 { font-family: var(--serif); font-weight: 800; font-size: 17px; margin: 0 0 8px; }
-  .feature-card p { color: var(--muted); font-size: 14.5px; margin: 0; line-height: 1.55; }
-
-  /* How it works */
-  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
-  .step { text-align: center; }
-  .step .num { width: 44px; height: 44px; border-radius: 50%; background: var(--ink); color: #fff; font-family: var(--serif); font-weight: 800; font-size: 18px; display: flex; align-items: center; justify-content: center; margin: 0 auto 18px; }
-  .step h3 { font-family: var(--serif); font-weight: 800; font-size: 17px; margin: 0 0 8px; }
-  .step p { color: var(--muted); font-size: 14.5px; margin: 0; }
-
-  /* Pricing */
-  .billing-toggle { display: inline-flex; gap: 4px; padding: 5px; background: var(--paper); border: 1px solid var(--border); border-radius: 999px; margin: 0 auto 40px; box-shadow: var(--shadow-sm); }
-  .billing-toggle button { border: none; background: transparent; padding: 9px 20px; border-radius: 999px; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 600; color: var(--muted); display: inline-flex; align-items: center; gap: 8px; transition: all .15s; }
-  .billing-toggle button.active { background: var(--brand); color: #fff; box-shadow: 0 2px 8px rgba(255,107,0,0.25); }
-  .billing-toggle .save-pill { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; padding: 2px 7px; border-radius: 999px; background: var(--gold); color: #fff; }
-  .billing-toggle button.active .save-pill { background: rgba(255,255,255,0.25); }
-  .price .per-month-eq { display: block; font-family: var(--sans); font-size: 12.5px; font-weight: 500; color: var(--muted); margin-top: 2px; }
-  .pricing-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; align-items: stretch; }
-  .plan { background: var(--paper); border: 1px solid var(--border); border-radius: 16px; padding: 28px 24px; display: flex; flex-direction: column; box-shadow: var(--shadow-sm); position: relative; }
-  .plan.featured { border-color: var(--brand); box-shadow: var(--shadow-md); transform: translateY(-6px); }
-  .plan .ribbon { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--brand); color: #fff; font-size: 11.5px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; padding: 5px 14px; border-radius: 999px; white-space: nowrap; }
-  .plan h3 { font-family: var(--serif); font-weight: 800; font-size: 19px; margin: 4px 0 6px; }
-  .plan .price { font-family: var(--serif); font-size: 34px; font-weight: 800; margin: 10px 0 2px; }
-  .plan .price .cents { font-size: 18px; }
-  .plan .price small { font-size: 14px; font-weight: 500; color: var(--muted); font-family: var(--sans); }
-  .plan .plan-desc { font-size: 13.5px; color: var(--muted); margin: 0 0 20px; min-height: 34px; }
-  .plan ul { list-style: none; padding: 0; margin: 0 0 24px; flex-grow: 1; }
-  .plan li { display: flex; gap: 10px; font-size: 14px; margin-bottom: 12px; align-items: flex-start; }
-  .plan li .tick { flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%; background: var(--brand-soft); color: var(--brand-text); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; margin-top: 1px; }
-  .plan .btn { width: 100%; }
-  .plan .plan-temp-note { font-size: 12.5px; color: var(--muted); text-align: center; margin: 10px 0 0; }
-
-  /* FAQ */
-  .faq { max-width: 760px; margin: 0 auto; }
-  .faq-item { border-bottom: 1px solid var(--border); padding: 22px 0; }
-  .faq-item h3 { font-family: var(--serif); font-weight: 800; font-size: 16.5px; margin: 0 0 8px; }
-  .faq-item p { color: var(--muted); font-size: 14.5px; margin: 0; line-height: 1.6; }
-
-  /* Final CTA */
-  .cta-band { background: var(--ink); border-radius: 24px; padding: 64px 48px; text-align: center; color: #fff; }
-  .cta-band h2 { font-family: var(--serif); font-weight: 800; font-size: 32px; margin: 0 0 14px; }
-  .cta-band p { color: #b9c4d2; font-size: 16px; margin: 0 0 32px; }
-  .cta-band .btn-primary { background: var(--brand); }
-
-  footer { border-top: 1px solid var(--border); padding: 40px 0; }
-  footer .foot-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
-  footer .foot-links { display: flex; gap: 24px; font-size: 13.5px; color: var(--muted); }
-  footer .foot-links a { text-decoration: none; }
-  footer .foot-links a:hover { color: var(--ink); }
-  footer .copy { font-size: 13px; color: var(--muted); }
-
+  /* Hero */
+  .hero { background: var(--paper); overflow: hidden; padding: 72px 0 0; }
+  .hero-grade { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 48px; align-items: start; }
+  .hero h1 { margin-bottom: 24px; }
+  .hero .lead { margin-bottom: 32px; }
+  .hero-acoes { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+  .garantias { display: flex; flex-wrap: wrap; gap: 6px 20px; font-size: 15px; color: var(--muted); padding: 0; margin: 0 0 32px; list-style: none; }
+  .garantias li::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); margin-right: 8px; vertical-align: 2px; }
+  .fundador { border-left: 3px solid var(--acao); padding: 4px 0 4px 16px; font-size: 16px; max-width: 30em; }
+  .fundador strong { color: var(--ink); }
+  .hero-visual { position: relative; margin-right: -180px; padding-bottom: 72px; }
+  .hero-visual .tela { width: 100%; }
+  .hero-visual .celular { position: absolute; left: -56px; bottom: 32px; width: 190px; }
+  @media (max-width: 1100px) { .hero-visual { margin-right: -24px; } }
   @media (max-width: 900px) {
-    .hero h1 { font-size: 36px; }
-    .split { grid-template-columns: 1fr; }
-    .features { grid-template-columns: 1fr 1fr; }
-    .steps { grid-template-columns: 1fr; }
-    .pricing-grid { grid-template-columns: 1fr 1fr; }
-    .plan.featured { transform: none; }
+    .hero { padding-top: 48px; }
+    .hero-grade { grid-template-columns: 1fr; gap: 40px; }
+    .hero-visual { margin: 0 -24px 0 0; padding-bottom: 40px; }
+    .hero-visual .celular { left: auto; right: 24px; bottom: 16px; width: 150px; }
   }
-  @media (max-width: 600px) {
-    .wrap { padding: 0 18px; }
-    header nav .navlink { display: none; }
-    .hero { padding: 56px 0 40px; }
-    .hero h1 { font-size: 30px; }
-    .hero p.sub { font-size: 16px; }
-    .features { grid-template-columns: 1fr; }
-    .pricing-grid { grid-template-columns: 1fr; }
-    .cta-band { padding: 44px 24px; border-radius: 16px; }
-    .cta-band h2 { font-size: 26px; }
-  }
-</style>
 
-<style id="mn-barra-produtos">
-  /* Barra de produtos — autocontida de proposito: nao usa as variaveis de
-     cada pagina, que sao diferentes entre si. Assim ela fica identica em
-     todas e nao entra em conflito com o CSS local. */
-  .mn-produtos{background:#0d1b2a;border-bottom:1px solid rgba(255,255,255,.08);
-    font-family:"Manrope",-apple-system,"Segoe UI",Roboto,sans-serif;}
-  .mn-produtos-in{max-width:1080px;margin:0 auto;padding:0 24px;display:flex;
-    align-items:center;gap:4px;flex-wrap:wrap;min-height:38px;}
-  .mn-produtos .mn-rot{font-size:11px;letter-spacing:.12em;text-transform:uppercase;
-    color:#7c8ea3;font-weight:700;margin-right:10px;}
-  .mn-produtos a{display:inline-block;padding:6px 12px;border-radius:999px;
-    font-size:12.5px;font-weight:600;color:#b8c4d2;text-decoration:none;
-    transition:background .15s,color .15s;white-space:nowrap;}
-  .mn-produtos a:hover{color:#fff;background:rgba(255,255,255,.08);}
-  .mn-produtos a.mn-aqui{color:#fff;background:rgba(255,107,0,.22);}
-  .mn-produtos a .mn-tag{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;
-    background:#ff6b00;color:#fff;border-radius:4px;padding:1px 5px;margin-left:6px;
-    vertical-align:1px;font-weight:700;}
-  @media(max-width:640px){
-    .mn-produtos-in{padding:6px 14px;gap:2px}
-    .mn-produtos .mn-rot{width:100%;margin:0 0 2px}
+  /* Molduras das telas reais */
+  .tela { background: #fff; border-radius: var(--raio); box-shadow: var(--sombra); border: 1px solid var(--line); overflow: hidden; }
+  .tela-barra { display: flex; align-items: center; height: 32px; padding: 0 14px; background: #EEF2F7; border-bottom: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+  .tela-barra span { background: #fff; border-radius: 6px; padding: 2px 12px; margin: 0 auto; }
+  .celular { background: var(--ink); border-radius: 30px; padding: 8px; box-shadow: var(--sombra); }
+  .celular img { border-radius: 23px; }
+
+  /* "No lugar de" */
+  .troca { border-bottom: 1px solid var(--line); padding: 28px 0; background: #fff; }
+  .troca .wrap { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 28px; }
+  .troca p { font-weight: 600; color: var(--ink); font-size: 16px; }
+  .troca ul { display: flex; flex-wrap: wrap; gap: 8px 28px; list-style: none; padding: 0; margin: 0; }
+  .troca li { font-size: 18px; color: var(--muted); text-decoration: line-through; text-decoration-color: var(--acao); text-decoration-thickness: 2px; }
+
+  section { scroll-margin-top: 80px; }
+  .secao { padding: 112px 0; }
+  .secao-cab { max-width: 760px; margin-bottom: 64px; }
+  .secao-cab h2 { margin-bottom: 18px; }
+
+  /* Prova: a Imob Gest */
+  .prova { background: var(--ink); color: #C9D3E0; }
+  .prova h2 { color: #fff; }
+  .prova-grade { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 56px; align-items: center; }
+  .prova .lead { color: #C9D3E0; margin: 20px 0 28px; }
+  .prova-numeros { display: flex; flex-wrap: wrap; gap: 28px 40px; margin: 0 0 32px; padding: 0; list-style: none; }
+  .prova-numeros b { display: block; font-size: 40px; line-height: 1; color: #fff; font-weight: 800; letter-spacing: -.02em; }
+  .prova-numeros span { font-size: 15px; }
+  .prova-visual { position: relative; }
+  .prova-visual .celular { position: absolute; right: -16px; bottom: -40px; width: 170px; border: 1px solid rgba(255,255,255,.15); }
+  .prova .tela { border-color: rgba(255,255,255,.12); }
+  @media (max-width: 900px) { .prova-grade { grid-template-columns: 1fr; } .prova-visual .celular { right: 8px; width: 120px; bottom: -24px; } }
+
+  /* O caminho do negócio: sequência real, por isso numerada */
+  .caminho { position: relative; list-style: none; margin: 0; padding: 0; counter-reset: passo; }
+  .caminho::before { content: ""; position: absolute; left: 21px; top: 8px; bottom: 8px; width: 2px; background: linear-gradient(var(--fluxo), var(--fluxo)) no-repeat; background-size: 2px 100%; opacity: .45; }
+  .passo { position: relative; display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 7fr); gap: 56px; padding: 0 0 120px 80px; align-items: start; }
+  .passo:last-child { padding-bottom: 0; }
+  .passo::before { counter-increment: passo; content: counter(passo); position: absolute; left: 0; top: 0; width: 44px; height: 44px; border-radius: 50%; background: #fff; border: 2px solid var(--fluxo); color: var(--ink); font-weight: 800; font-size: 18px; display: grid; place-items: center; }
+  .passo-etapa { font-size: 15px; font-weight: 600; color: var(--fluxo); margin: 10px 0 10px; }
+  .passo h3 { font-size: 30px; line-height: 1.12; letter-spacing: -.02em; margin-bottom: 16px; }
+  .passo p { margin-bottom: 18px; }
+  .itens { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; font-size: 16px; }
+  .itens li { padding-left: 22px; position: relative; }
+  .itens li::before { content: ""; position: absolute; left: 0; top: .62em; width: 10px; height: 2px; background: var(--ink); }
+  .passo-visual { position: relative; }
+  .passo-visual.com-celular { padding-right: 120px; }
+  .passo-visual.com-celular .celular { position: absolute; right: 0; top: 48px; width: 210px; }
+  .so-celular { max-width: 300px; }
+  @media (max-width: 900px) {
+    .caminho::before { left: 17px; }
+    .passo { grid-template-columns: 1fr; gap: 28px; padding: 0 0 80px 56px; }
+    .passo::before { width: 36px; height: 36px; font-size: 16px; }
+    .passo h3 { font-size: 26px; }
+    .passo-visual { margin-right: -24px; }
+    .passo-visual.com-celular { padding-right: 0; }
+    .passo-visual.com-celular .celular { position: static; width: 200px; margin-top: 16px; }
+  }
+
+  /* Gestão */
+  .gestao { background: var(--paper); }
+  .gestao-grade { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 56px; align-items: center; }
+  @media (max-width: 900px) { .gestao-grade { grid-template-columns: 1fr; } }
+
+  /* Mais módulos: lista corrida, não cartões */
+  .modulos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 48px; margin: 0; }
+  .modulos div { padding: 22px 0; border-top: 1px solid var(--line); }
+  .modulos dt { font-weight: 800; color: var(--ink); font-size: 18px; margin-bottom: 4px; }
+  .modulos dd { margin: 0; font-size: 16px; color: var(--muted); }
+  @media (max-width: 900px) { .modulos { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 600px) { .modulos { grid-template-columns: 1fr; } }
+
+  /* Migração */
+  .migracao { background: var(--paper); }
+  .migra-lista { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 48px; list-style: none; padding: 0; margin: 0; }
+  .migra-lista h3 { margin-bottom: 10px; }
+  .migra-lista p { font-size: 16px; }
+  @media (max-width: 900px) { .migra-lista { grid-template-columns: 1fr; gap: 32px; } }
+
+  /* Planos: uma régua só, dividida — como a faixa de números do CRM */
+  .planos-faixa { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: 20px; overflow: hidden; background: #fff; }
+  .plano { padding: 32px 28px; border-right: 1px solid var(--line); display: flex; flex-direction: column; }
+  .plano:last-child { border-right: 0; }
+  .plano.destaque { background: var(--paper); box-shadow: inset 0 4px 0 var(--acao); }
+  .plano-nome { display: flex; align-items: center; gap: 10px; font-weight: 800; color: var(--ink); font-size: 22px; }
+  .plano-nome small { font-size: 13px; font-weight: 600; color: var(--acao-texto); background: #FFEDE4; padding: 3px 10px; border-radius: 999px; letter-spacing: 0; }
+  .plano-para { font-size: 15px; color: var(--muted); margin: 6px 0 22px; min-height: 2.6em; }
+  .preco { display: flex; align-items: baseline; gap: 6px; color: var(--ink); }
+  .preco b { font-size: 52px; line-height: 1; font-weight: 800; letter-spacing: -.03em; }
+  .preco span { font-size: 16px; color: var(--muted); }
+  .preco-cheio { font-size: 15px; color: var(--muted); margin: 8px 0 24px; }
+  .preco-cheio s { text-decoration-color: var(--acao); }
+  .plano .itens { margin-bottom: 28px; flex: 1; }
+  .plano .btn { width: 100%; }
+  .nota-planos { margin-top: 20px; font-size: 15px; color: var(--muted); max-width: 60em; }
+  .pro { margin-top: 40px; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 40px; align-items: center; padding: 32px; border-radius: 20px; background: var(--ink); color: #C9D3E0; }
+  .pro h3 { color: #fff; font-size: 26px; margin-bottom: 10px; }
+  .pro-precos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; list-style: none; padding: 0; margin: 0; }
+  .pro-precos li { border-left: 2px solid rgba(255,255,255,.2); padding-left: 16px; font-size: 15px; }
+  .pro-precos b { display: block; color: #fff; font-size: 28px; font-weight: 800; letter-spacing: -.02em; }
+  @media (max-width: 900px) {
+    .planos-faixa { grid-template-columns: 1fr; }
+    .plano { border-right: 0; border-bottom: 1px solid var(--line); }
+    .plano:last-child { border-bottom: 0; }
+    .plano-para { min-height: 0; }
+    .pro { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 520px) { .pro-precos { grid-template-columns: 1fr; } }
+
+  /* Transparência */
+  .duas-colunas { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; }
+  .duas-colunas h3 { margin-bottom: 6px; }
+  .duas-colunas > div > p { color: var(--muted); font-size: 15px; margin-bottom: 18px; }
+  .lista-feito, .lista-vem { list-style: none; padding: 0; margin: 0; }
+  .lista-feito li, .lista-vem li { padding: 12px 0 12px 32px; border-top: 1px solid var(--line); position: relative; font-size: 16px; }
+  .lista-feito li::before { content: ""; position: absolute; left: 4px; top: 17px; width: 12px; height: 7px; border-left: 2.5px solid var(--ok); border-bottom: 2.5px solid var(--ok); transform: rotate(-45deg); }
+  .lista-vem li::before { content: ""; position: absolute; left: 4px; top: 18px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--fluxo); }
+  @media (max-width: 900px) { .duas-colunas { grid-template-columns: 1fr; gap: 40px; } }
+
+  /* Conversa */
+  .conversa { background: var(--ink); color: #C9D3E0; }
+  .conversa h2 { color: #fff; margin-bottom: 18px; }
+  .conversa-grade { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 64px; align-items: start; }
+  .conversa .lead { color: #C9D3E0; }
+  .conversa .lead + .lead { margin-top: 16px; font-size: 17px; }
+  form.ficha { background: #fff; color: var(--ink-2); border-radius: 20px; padding: 32px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px 16px; }
+  .campo { display: flex; flex-direction: column; gap: 6px; }
+  .campo.inteiro { grid-column: 1 / -1; }
+  .campo label { font-size: 14px; font-weight: 600; color: var(--ink); }
+  .campo label small { font-weight: 400; color: var(--muted); }
+  .campo input, .campo select { font: 400 16px Metropolis, system-ui, sans-serif; color: var(--ink); min-height: 48px; padding: 0 14px; border: 1.5px solid #CDD5E0; border-radius: 10px; background: #fff; width: 100%; }
+  .campo input:focus, .campo select:focus { border-color: var(--fluxo); outline: none; box-shadow: 0 0 0 3px rgba(59,156,255,.25); }
+  .isca { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+  .ficha .btn { grid-column: 1 / -1; width: 100%; }
+  .ficha-aviso { grid-column: 1 / -1; font-size: 14px; color: var(--muted); }
+  .ficha-msg { grid-column: 1 / -1; font-size: 15px; font-weight: 600; min-height: 1.4em; }
+  .ficha-msg.erro { color: #B42318; }
+  .ficha-ok { grid-column: 1 / -1; text-align: left; padding: 8px 0; }
+  .ficha-ok h3 { margin-bottom: 8px; }
+  @media (max-width: 900px) { .conversa-grade { grid-template-columns: 1fr; gap: 40px; } }
+  @media (max-width: 520px) { form.ficha { grid-template-columns: 1fr; padding: 24px 20px; } }
+
+  /* Dúvidas */
+  .duvidas { max-width: 820px; }
+  .duvidas details { border-top: 1px solid var(--line); }
+  .duvidas details:last-child { border-bottom: 1px solid var(--line); }
+  .duvidas summary { cursor: pointer; list-style: none; padding: 22px 40px 22px 0; font-weight: 800; color: var(--ink); font-size: 19px; position: relative; }
+  .duvidas summary::-webkit-details-marker { display: none; }
+  .duvidas summary::after { content: ""; position: absolute; right: 8px; top: 30px; width: 10px; height: 10px; border-right: 2.5px solid var(--ink); border-bottom: 2.5px solid var(--ink); transform: rotate(45deg); transition: transform .2s; }
+  .duvidas details[open] summary::after { transform: rotate(-135deg); top: 34px; }
+  .duvidas details p { padding: 0 0 22px; max-width: 42em; }
+
+  /* Fechamento */
+  .final { background: var(--paper); text-align: left; }
+  .final .wrap { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 40px; align-items: end; }
+  .final h2 { font-size: clamp(34px, 5vw, 56px); }
+  .final .lead { margin-top: 18px; }
+  .final-acoes { display: flex; flex-direction: column; gap: 12px; align-items: stretch; }
+  .final-acoes small { font-size: 14px; color: var(--muted); }
+  @media (max-width: 900px) { .final .wrap { grid-template-columns: 1fr; } }
+
+  footer { background: var(--ink); color: #A9B6C8; font-size: 15px; padding: 48px 0; }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: 24px 40px; align-items: center; justify-content: space-between; }
+  footer nav { display: flex; flex-wrap: wrap; gap: 12px 28px; }
+  footer a { text-decoration: none; }
+  footer a:hover { color: #fff; text-decoration: underline; }
+  footer img { height: 26px; width: auto; }
+
+  @media (max-width: 600px) {
+    body { font-size: 16px; }
+    .lead { font-size: 18px; }
+    .secao { padding: 80px 0; }
+    .secao-cab { margin-bottom: 44px; }
+    .wrap { padding: 0 16px; }
+    .hero-visual, .passo-visual { margin-right: -16px; }
+    .btn-lg { width: 100%; }
   }
 </style>
 </head>
 <body>
-<div class="mn-produtos"><div class="mn-produtos-in"><span class="mn-rot">Minutei</span><a href="/" class="mn-aqui" aria-current="page">Contratos</a><a href="/crm/" class="">CRM<span class="mn-tag">novo</span></a><a href="/educacional/" class="">Educacional</a></div></div>
 
-<header>
-  <div class="wrap bar">
-    <a href="/" class="brand"><img src="/brand/minutei-logo-light.png" alt="Minutei" class="brand-logo" /></a>
-    <nav>
-      <a class="navlink" href="#recursos">Recursos</a>
-      <a class="navlink" href="#como-funciona">Como funciona</a>
-      <a class="navlink" href="#planos">Planos</a>
-      <a class="navlink" href="#faq">Dúvidas</a>
-      <a class="navlink" href="/blog/">Blog</a>
-      <a class="btn btn-ghost" href="/app.html">Entrar</a>
-      <a class="btn btn-primary" href="/app.html#signup">Criar conta grátis</a>
+<div class="produtos"><div class="wrap"><span>Minutei</span><a href="/" aria-current="page">CRM</a><a href="/contratos/">Contratos</a><a href="/educacional/">Educacional</a></div></div>
+
+<header class="topo">
+  <div class="wrap">
+    <a class="marca" href="/" aria-label="Minutei CRM, início"><img src="/brand/minutei-icon-192.png" alt="" width="30" height="30" /><span>Minutei <b>CRM</b></span></a>
+    <nav aria-label="Seções">
+      <a class="so-largo" href="#como-funciona">Como funciona</a>
+      <a class="so-largo" href="#planos">Planos</a>
+      <a class="so-largo" href="#duvidas">Dúvidas</a>
+      <a class="entrar" href="https://minutei-crm-app.web.app/">Entrar</a>
+      <a class="btn btn-acao" href="https://minutei-crm-app.web.app/#cadastro" data-evento="teste_topo">Testar grátis</a>
     </nav>
   </div>
 </header>
 
 <main>
-  <section class="hero">
-    <div class="wrap">
-      <span class="eyebrow">Feito para corretores e imobiliárias</span>
-      <h1>Contratos imobiliários<br>prontos em <em>minutos</em>, não em horas</h1>
-      <p class="sub">Gere contratos de compra e venda e locação com a identidade da sua imobiliária — qualificação completa das partes, cláusulas corretas, prontos pra assinatura digital.</p>
-      <div class="cta-row">
-        <a class="btn btn-primary btn-lg" href="/app.html#signup">Criar conta grátis</a>
-        <a class="btn btn-ghost btn-lg" href="#planos">Ver planos</a>
-      </div>
-      <p class="trust-row">
-        <span><i class="tick-o">✓</i> Sem cartão de crédito</span>
-        <i class="sep"></i>
-        <span><i class="tick-o">✓</i> 1 contrato grátis por mês</span>
-        <i class="sep"></i>
-        <span><i class="tick-o">✓</i> Cancele quando quiser</span>
-      </p>
 
-      <div class="doc-preview">
-        <div class="bar">
-          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-          <span class="file">Contrato_Compra-e-Venda_RuaDasAcacias.pdf</span>
+<section class="hero">
+  <div class="wrap hero-grade">
+    <div>
+      <h1>A imobiliária inteira num sistema só.</h1>
+      <p class="lead">Leads com roleta, carteira de imóveis, site próprio, portais, comissão, esteira e aluguel. Feito dentro de uma imobiliária de Natal e usado nela todo dia.</p>
+      <div class="hero-acoes">
+        <a class="btn btn-acao btn-lg" href="https://minutei-crm-app.web.app/#cadastro" data-evento="teste_hero">Testar 14 dias grátis</a>
+        <a class="btn btn-contorno btn-lg" href="#conversa">Quero que me mostrem</a>
+      </div>
+      <ul class="garantias">
+        <li>Sem cartão</li>
+        <li>Sem fidelidade</li>
+        <li>Todos os recursos em todos os planos</li>
+      </ul>
+      <p class="fundador">Preço de fundador até <strong>31 de março de 2027</strong>: a partir de <strong>R$ 39 por mês</strong>, menos da metade da tabela, travado enquanto você for assinante.</p>
+    </div>
+    <div class="hero-visual">
+      <figure class="tela" style="margin:0">
+        <div class="tela-barra" aria-hidden="true"><span>minutei-crm-app.web.app</span></div>
+        <img src="/img/crm/hoje.webp" srcset="/img/crm/hoje.webp 1440w, /img/crm/hoje@2x.webp 2880w" sizes="(max-width: 900px) 100vw, 760px" width="1440" height="900" alt="Dashboard do Minutei CRM com o painel Hoje: leads esperando aceite na roleta, leads novos sem contato, follow-ups do dia, tarefas, chave fora do prazo, imóveis a confirmar e comissões paradas." fetchpriority="high" />
+      </figure>
+      <div class="celular"><img src="/img/crm/hoje-celular.webp" srcset="/img/crm/hoje-celular.webp 390w, /img/crm/hoje-celular@2x.webp 780w" sizes="190px" width="390" height="844" alt="O mesmo painel Hoje no celular do corretor." loading="lazy" /></div>
+    </div>
+  </div>
+</section>
+
+<div class="troca">
+  <div class="wrap">
+    <p>Um sistema no lugar de:</p>
+    <ul>
+      <li>CRM de leads</li>
+      <li>sistema de anúncios e portais</li>
+      <li>construtor de site</li>
+      <li>planilha de comissão</li>
+      <li>controle de aluguel</li>
+    </ul>
+  </div>
+</div>
+
+<section class="prova secao" aria-labelledby="prova-t">
+  <div class="wrap prova-grade">
+    <div>
+      <h2 id="prova-t">Não é protótipo. É a Imob Gest funcionando hoje.</h2>
+      <p class="lead">O Minutei nasceu dentro da Imob Gest, em Natal, para resolver o que nenhum sistema resolvia junto: lead, carteira, comissão e aluguel. A equipe inteira trabalha nele todos os dias, e o site da imobiliária sai direto do cadastro de imóveis.</p>
+      <ul class="prova-numeros">
+        <li><b>300+</b><span>imóveis no site, com fotos</span></li>
+        <li><b>1 cadastro</b><span>alimenta o site e os portais</span></li>
+      </ul>
+      <a class="btn btn-claro" href="https://minutei-imoveis.web.app/" target="_blank" rel="noopener">Ver o site da Imob Gest</a>
+    </div>
+    <div class="prova-visual">
+      <figure class="tela" style="margin:0">
+        <div class="tela-barra" aria-hidden="true"><span>site da Imob Gest, gerado pelo Minutei</span></div>
+        <img src="/img/crm/site.webp" srcset="/img/crm/site.webp 1440w, /img/crm/site@2x.webp 2880w" sizes="(max-width: 900px) 100vw, 680px" width="1440" height="900" alt="Site da Imob Gest gerado pelo Minutei: busca pelo quanto o cliente pode pagar por mês, com entrada e parcela." loading="lazy" />
+      </figure>
+      <div class="celular"><img src="/img/crm/site-celular.webp" srcset="/img/crm/site-celular.webp 390w, /img/crm/site-celular@2x.webp 780w" sizes="170px" width="390" height="844" alt="O site da Imob Gest no celular." loading="lazy" /></div>
+    </div>
+  </div>
+</section>
+
+<section class="secao" id="como-funciona" aria-labelledby="caminho-t">
+  <div class="wrap">
+    <div class="secao-cab">
+      <h2 id="caminho-t">Do anúncio ao repasse do aluguel, sem trocar de sistema.</h2>
+      <p class="lead">Cada etapa do negócio tem a sua tela, e uma passa para a outra. O imóvel vira anúncio, o anúncio traz o lead, o lead vira venda, a venda vira comissão e contrato de administração.</p>
+    </div>
+
+    <ol class="caminho">
+      <li class="passo">
+        <div>
+          <p class="passo-etapa">Anúncio</p>
+          <h3>Cadastrou uma vez, está no site e nos portais.</h3>
+          <p>A carteira inteira com fotos, busca por qualquer coisa e o aviso de quando o anúncio ficou velho demais para seguir no ar.</p>
+          <ul class="itens">
+            <li>Site próprio com a sua marca, montado a partir do cadastro</li>
+            <li>Feed para o Canal Pro (ZAP, Viva Real e OLX), com destaques</li>
+            <li>Endereço e preço só vão a público se o proprietário liberou</li>
+            <li>Controle de chaves: quem retirou, para quê e até quando</li>
+          </ul>
         </div>
-        <div class="doc-page">
-          <div class="doc-head">
-            <div class="imob"><span class="m">IG</span><b>Imobiliária Modelo</b></div>
-            <div class="creci">CRECI 12345-J<br>CNPJ 00.000.000/0001-00</div>
+        <figure class="passo-visual" style="margin:0">
+          <div class="tela">
+            <div class="tela-barra" aria-hidden="true"><span>Imóveis</span></div>
+            <img src="/img/crm/imoveis.webp" srcset="/img/crm/imoveis.webp 1440w, /img/crm/imoveis@2x.webp 2880w" sizes="(max-width: 900px) 100vw, 700px" width="1440" height="900" alt="Tela de imóveis do Minutei CRM com fotos, filtros de venda e locação, selos de no site, destaque e dias sem revisão." loading="lazy" />
           </div>
-          <div class="doc-title">CONTRATO PARTICULAR DE PROMESSA<br>DE COMPRA E VENDA DE IMÓVEL</div>
-          <p class="doc-p">De um lado, <b>JOÃO CARLOS DA SILVA</b>, brasileiro, casado, engenheiro civil, inscrito no CPF sob o nº 123.456.789-00, portador do RG nº 1.234.567 SSP/RN, residente e domiciliado à Rua das Acácias, nº 120, Tirol, Natal/RN, doravante denominado <b>PROMITENTE VENDEDOR</b>;</p>
-          <p class="doc-p">E de outro, <b>MARIA FERNANDA SOUZA</b>, brasileira, solteira, arquiteta, inscrita no CPF sob o nº 987.654.321-00, doravante denominada <b>PROMISSÁRIA COMPRADORA</b>.</p>
-          <div class="doc-clause">Cláusula Primeira – Do Objeto</div>
-          <p class="doc-p">O <b>PROMITENTE VENDEDOR</b> é legítimo proprietário do imóvel localizado à Rua das Acácias, nº 120, Tirol, Natal/RN, matrícula nº 45.678, objeto do presente contrato, comprometendo-se a transferir sua propriedade à <b>PROMISSÁRIA COMPRADORA</b>, nas condições adiante estipuladas.</p>
-          <div class="doc-badge">✓ Pronto para assinatura digital</div>
-        </div>
-      </div>
-    </div>
-  </section>
+        </figure>
+      </li>
 
-  <section id="recursos">
-    <div class="wrap">
-      <div class="split">
+      <li class="passo">
         <div>
-          <span class="eyebrow">O problema</span>
-          <h2>Minuta de contrato ainda é feita copiando e colando no Word</h2>
-          <p>Cada corretor tem sua própria versão desatualizada, campos ficam em branco, cláusulas somem — e o cliente espera enquanto isso.</p>
+          <p class="passo-etapa">Lead</p>
+          <h3>Nenhum lead esperando na fila.</h3>
+          <p>O contato do site, dos anúncios do Instagram e Facebook e dos portais entra sozinho e é oferecido ao corretor da vez. Se ele não aceitar no prazo, passa para o próximo.</p>
+          <ul class="itens">
+            <li>Roleta com prazo de resposta e repasse automático</li>
+            <li>Funil por etapa, de novo a fechado, arrastando o cartão</li>
+            <li>Cadastro único: a mesma pessoa, pelo telefone, aparece uma vez só</li>
+          </ul>
         </div>
+        <figure class="passo-visual" style="margin:0">
+          <div class="tela">
+            <div class="tela-barra" aria-hidden="true"><span>CRM de Leads</span></div>
+            <img src="/img/crm/leads.webp" srcset="/img/crm/leads.webp 1440w, /img/crm/leads@2x.webp 2880w" sizes="(max-width: 900px) 100vw, 700px" width="1440" height="900" alt="Funil de leads do Minutei CRM com colunas Novo, Em contato, Visita agendada, Proposta e Fechado." loading="lazy" />
+          </div>
+        </figure>
+      </li>
+
+      <li class="passo">
         <div>
-          <span class="eyebrow">A solução</span>
-          <h2>Um formulário guiado gera o contrato certo, sempre</h2>
-          <ul class="check-list">
-            <li><span class="tick">✓</span> Qualificação completa de vendedores, compradores, locadores e fiadores</li>
-            <li><span class="tick">✓</span> Cláusulas de pagamento, chaves e corretagem preenchidas automaticamente</li>
-            <li><span class="tick">✓</span> Identidade visual da sua imobiliária em todo documento</li>
-            <li><span class="tick">✓</span> Exporta em .docx (editável) e .pdf (assinatura)</li>
+          <p class="passo-etapa">Atendimento</p>
+          <h3>O follow-up de hoje já vem escrito.</h3>
+          <p>O CRM separa quem precisa de contato hoje, do mais parado para o mais recente, com a mensagem pronta para mandar no WhatsApp com um toque.</p>
+          <ul class="itens">
+            <li>Cadência de follow-up que muda o tom a cada tentativa</li>
+            <li>Recuperação de lead parado há mais de 30 dias</li>
+            <li>Copiloto de IA que lê a etapa e sugere o próximo passo</li>
           </ul>
         </div>
-      </div>
-    </div>
-  </section>
+        <figure class="passo-visual" style="margin:0">
+          <div class="celular so-celular"><img src="/img/crm/followup-celular.webp" srcset="/img/crm/followup-celular.webp 390w, /img/crm/followup-celular@2x.webp 780w" sizes="300px" width="390" height="844" alt="Follow-up no celular do corretor: lista de quem cobrar hoje com a mensagem pronta e o botão Enviar no WhatsApp." loading="lazy" /></div>
+        </figure>
+      </li>
 
-  <section style="background:var(--paper); border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
-    <div class="wrap">
-      <div class="section-head">
-        <span class="eyebrow">Recursos</span>
-        <h2>Tudo que sua imobiliária precisa pra fechar contrato</h2>
-        <p>Sem planilha, sem versão desatualizada, sem cláusula esquecida.</p>
-      </div>
-      <div class="features">
-        <div class="feature-card">
-          <div class="icon"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg></div>
-          <h3>Compra, venda e locação</h3>
-          <p>Contratos de promessa de compra e venda e locação (com caução ou fiador), com toda a qualificação jurídica das partes.</p>
-        </div>
-        <div class="feature-card">
-          <div class="icon"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1-.24-.27-.39-.62-.39-1 0-.83.67-1.5 1.5-1.5H16a5 5 0 0 0 5-5c0-4.42-4.03-8-9-8z"/><circle cx="7.5" cy="11.5" r="1.1"/><circle cx="12" cy="8" r="1.1"/><circle cx="16.5" cy="11.5" r="1.1"/></svg></div>
-          <h3>Marca da sua imobiliária</h3>
-          <p>Logo, cores e dados (CRECI, CNPJ, endereço) aparecem automaticamente no cabeçalho, rodapé e cláusula de corretagem.</p>
-        </div>
-        <div class="feature-card">
-          <div class="icon"><svg viewBox="0 0 24 24"><path d="M13 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9z"/><path d="M13 3v6h6"/><path d="M12 12v6"/><path d="M9.5 15.5 12 18l2.5-2.5"/></svg></div>
-          <h3>DOCX e PDF</h3>
-          <p>Baixe editável em Word ou já pronto em PDF para assinatura digital — sem precisar de outro programa.</p>
-        </div>
-        <div class="feature-card">
-          <div class="icon"><svg viewBox="0 0 24 24"><path d="M16 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 18.5V20"/><circle cx="10" cy="8" r="3.2"/><path d="M20 20v-1.5a3.5 3.5 0 0 0-2.6-3.4"/><path d="M15.5 5.2a3.2 3.2 0 0 1 0 5.6"/></svg></div>
-          <h3>Equipe compartilhada</h3>
-          <p>Convide corretores da sua imobiliária — todos geram contratos com a mesma identidade visual, sem duplicar cadastro.</p>
-        </div>
-        <div class="feature-card">
-          <div class="icon"><svg viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2.2"/><path d="M8 10.5V7.2a4 4 0 0 1 8 0v3.3"/><circle cx="12" cy="15.4" r="1.3"/></svg></div>
-          <h3>Seus dados, protegidos</h3>
-          <p>Senhas com hash, sessões seguras e banco de dados isolado por imobiliária — ninguém vê os dados de outra conta.</p>
-        </div>
-        <div class="feature-card">
-          <div class="icon"><svg viewBox="0 0 24 24"><path d="M13.2 2.5 4.8 13.4h6.1L10.3 21.5l8.9-11.2h-6.4z"/></svg></div>
-          <h3>Rápido de verdade</h3>
-          <p>Preencha um formulário guiado e gere o documento em segundos — sem procurar o último contrato pra copiar.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section id="como-funciona">
-    <div class="wrap">
-      <div class="section-head">
-        <span class="eyebrow">Como funciona</span>
-        <h2>Três passos até o contrato pronto</h2>
-      </div>
-      <div class="steps">
-        <div class="step">
-          <div class="num">1</div>
-          <h3>Configure sua marca</h3>
-          <p>Logo, cor, CRECI e CNPJ — uma vez só, aparece em todo contrato gerado pela sua conta.</p>
-        </div>
-        <div class="step">
-          <div class="num">2</div>
-          <h3>Preencha o formulário</h3>
-          <p>Dados do imóvel, das partes e da forma de pagamento, num formulário guiado que não deixa nada de fora.</p>
-        </div>
-        <div class="step">
-          <div class="num">3</div>
-          <h3>Baixe e assine</h3>
-          <p>Contrato pronto em .docx ou .pdf, com todas as cláusulas certas — mande pra assinatura na hora.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section id="planos" style="background:var(--paper); border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
-    <div class="wrap">
-      <div class="section-head">
-        <span class="eyebrow">Planos</span>
-        <h2>Preço que cabe do corretor autônomo à rede de imobiliárias</h2>
-        <p>Comece grátis. Mude de plano quando sua operação crescer.</p>
-      </div>
-      <div style="text-align:center">
-        <div class="billing-toggle" role="group" aria-label="Ciclo de cobrança">
-          <button type="button" id="toggle-mensal" class="active">Mensal</button>
-          <button type="button" id="toggle-anual">Anual <span class="save-pill">2 meses grátis</span></button>
-        </div>
-      </div>
-      <div class="pricing-grid">
-        <div class="plan">
-          <h3>Grátis</h3>
-          <div class="price">R$0<small>/mês</small></div>
-          <p class="plan-desc">Pra testar o produto sem compromisso.</p>
-          <ul>
-            <li><span class="tick">✓</span> 1 contrato por mês</li>
-            <li><span class="tick">✓</span> 1 usuário</li>
-            <li><span class="tick">✓</span> Layout padrão de contrato</li>
-            <li><span class="tick">✓</span> Exportação em PDF e DOCX</li>
-            <li><span class="tick">✓</span> Identidade visual da imobiliária</li>
+      <li class="passo">
+        <div>
+          <p class="passo-etapa">Fechamento</p>
+          <h3>A comissão de cada um, sem planilha e sem discussão.</h3>
+          <p>Cada negócio tem a sua ficha: quem agenciou, quem fechou, quem captou e quanto fica com a casa. A divisão sai calculada e o funil mostra o que ainda falta receber.</p>
+          <ul class="itens">
+            <li>Funil de vendas por etapa: negociação, assinado, a receber, recebida</li>
+            <li>Divisão entre corretores, duplas, imobiliária e sócios</li>
+            <li>Locações com meta do mês e contrato de administração</li>
           </ul>
-          <a class="btn btn-ghost" href="/app.html#signup">Criar conta grátis</a>
         </div>
+        <figure class="passo-visual" style="margin:0">
+          <div class="tela">
+            <div class="tela-barra" aria-hidden="true"><span>Vendas</span></div>
+            <img src="/img/crm/vendas.webp" srcset="/img/crm/vendas.webp 1440w, /img/crm/vendas@2x.webp 2880w" sizes="(max-width: 900px) 100vw, 700px" width="1440" height="900" alt="Funil de vendas com volume, comissão, valor a receber e negócios por etapa, cada um com a comissão da casa." loading="lazy" />
+          </div>
+        </figure>
+      </li>
 
-        <div class="plan featured">
-          <span class="ribbon">Mais popular</span>
-          <h3>Autônomo</h3>
-          <div class="price" id="price-autonomo">R$49<small>/mês</small></div>
-          <p class="plan-desc">Pra corretor solo que fecha contrato toda semana.</p>
-          <ul>
-            <li><span class="tick">✓</span> Contratos ilimitados</li>
-            <li><span class="tick">✓</span> 1 usuário</li>
-            <li><span class="tick">✓</span> Os 3 modelos visuais de contrato</li>
-            <li><span class="tick">✓</span> Assistente de IA para cláusulas</li>
-            <li><span class="tick">✓</span> Preenchimento automático via CNH/RG</li>
-            <li><span class="tick">✓</span> Exportação em PDF e DOCX</li>
-            <li><span class="tick">✓</span> Suporte por e-mail</li>
+      <li class="passo">
+        <div>
+          <p class="passo-etapa">Banco e cartório</p>
+          <h3>A venda não acaba no fechado.</h3>
+          <p>Depois do aceite vêm documentos, análise, contrato e assinatura. É onde o negócio trava e ninguém sabe dizer por quê. A esteira mostra a etapa, o documento que falta e quem aprovou.</p>
+          <ul class="itens">
+            <li>Esteira de venda e de locação, com checklist por etapa</li>
+            <li>Simulador de financiamento SAC e Price, com faixas do MCMV</li>
+            <li>Proposta, ficha de locação e autorização de venda com a sua marca</li>
           </ul>
-          <a class="btn btn-primary" id="cta-autonomo" href="/app.html?plano=autonomo#signup">Começar agora</a>
         </div>
+        <figure class="passo-visual" style="margin:0">
+          <div class="tela">
+            <div class="tela-barra" aria-hidden="true"><span>Esteira de processos</span></div>
+            <img src="/img/crm/esteira.webp" srcset="/img/crm/esteira.webp 1440w, /img/crm/esteira@2x.webp 2880w" sizes="(max-width: 900px) 100vw, 700px" width="1440" height="900" alt="Esteira de uma venda no Minutei CRM: cadastro, documentação, análise do gestor e contrato concluídos, assinatura em andamento." loading="lazy" />
+          </div>
+        </figure>
+      </li>
 
-        <div class="plan">
-          <h3>Imobiliária</h3>
-          <div class="price" id="price-imobiliaria">R$149<small>/mês</small></div>
-          <p class="plan-desc">Pra equipes pequenas e médias.</p>
-          <ul>
-            <li><span class="tick">✓</span> Tudo do plano Autônomo</li>
-            <li><span class="tick">✓</span> Até 5 usuários</li>
-            <li><span class="tick">✓</span> Suporte prioritário</li>
-            <li><span class="tick">✓</span> Onboarding assistido</li>
+      <li class="passo">
+        <div>
+          <p class="passo-etapa">Aluguel</p>
+          <h3>A carteira de aluguel conferida com o extrato.</h3>
+          <p>Contratos de administração com taxa, reajuste e vencimento. Importe o extrato do banco e o sistema confere o que entrou, o que falta e o que precisa repassar.</p>
+          <ul class="itens">
+            <li>Adimplência do mês e cobrança do atrasado pelo WhatsApp</li>
+            <li>Conciliação bancária com extrato em PDF, Excel ou OFX</li>
+            <li>Cauções com saldo corrigido e aviso de reajuste</li>
           </ul>
-          <a class="btn btn-ghost" id="cta-imobiliaria" href="/app.html?plano=imobiliaria#signup">Começar agora</a>
         </div>
+        <figure class="passo-visual" style="margin:0">
+          <div class="tela">
+            <div class="tela-barra" aria-hidden="true"><span>Administração</span></div>
+            <img src="/img/crm/administracao.webp" srcset="/img/crm/administracao.webp 1440w, /img/crm/administracao@2x.webp 2880w" sizes="(max-width: 900px) 100vw, 700px" width="1440" height="900" alt="Carteira de administração de aluguel com contratos em dia, aguardando pagamento e atrasados, taxa de administração e reajustes." loading="lazy" />
+          </div>
+        </figure>
+      </li>
+    </ol>
+  </div>
+</section>
 
-        <div class="plan">
-          <h3>Rede</h3>
-          <div class="price" style="font-size:26px">Sob consulta</div>
-          <p class="plan-desc">Pra redes e franquias com múltiplas unidades.</p>
-          <ul>
-            <li><span class="tick">✓</span> Usuários ilimitados</li>
-            <li><span class="tick">✓</span> Múltiplas imobiliárias</li>
-            <li><span class="tick">✓</span> Onboarding dedicado</li>
-            <li><span class="tick">✓</span> Suporte prioritário</li>
-          </ul>
-          <a class="btn btn-ghost" href="mailto:contato@minutei.app.br?subject=Plano%20Rede">Falar com a gente</a>
-        </div>
+<section class="gestao secao" aria-labelledby="gestao-t">
+  <div class="wrap gestao-grade">
+    <figure style="margin:0">
+      <div class="tela">
+        <div class="tela-barra" aria-hidden="true"><span>Painel do gestor</span></div>
+        <img src="/img/crm/gestor.webp" srcset="/img/crm/gestor.webp 1440w, /img/crm/gestor@2x.webp 2880w" sizes="(max-width: 900px) 100vw, 700px" width="1440" height="900" alt="Painel do gestor: carteira de cada corretor, leads novos, follow-ups vencidos e quem está sem contato." loading="lazy" />
+      </div>
+    </figure>
+    <div>
+      <h2 id="gestao-t">O dono enxerga a imobiliária. O corretor enxerga o dia dele.</h2>
+      <p class="lead" style="margin:20px 0 24px">Quem administra vê a operação inteira e troca para a própria carteira com um clique. O corretor só vê o que é dele, e a regra vale no servidor, não só na tela.</p>
+      <ul class="itens">
+        <li>Painel "Hoje" com tudo que pede ação, em ordem</li>
+        <li>Metas em reais e em locações, com projeção pelo ritmo do mês</li>
+        <li>Painel do gestor: quem está com lead parado e quem não registra nada</li>
+        <li>Relatórios, fechamento do mês e ranking da equipe</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="secao" aria-labelledby="mais-t">
+  <div class="wrap">
+    <div class="secao-cab">
+      <h2 id="mais-t">E o resto que uma imobiliária usa.</h2>
+    </div>
+    <dl class="modulos">
+      <div><dt>Empreendimentos</dt><dd>Book, tabela de preços, memorial e plantas num lugar só, com envio pelo WhatsApp.</dd></div>
+      <div><dt>Marketing</dt><dd>Posts com a sua marca, artigos para o site e investimento por canal contra leads gerados.</dd></div>
+      <div><dt>Leads do Instagram e Facebook</dt><dd>O formulário do anúncio cai direto na roleta, sem planilha no meio.</dd></div>
+      <div><dt>Orçamento e conciliação</dt><dd>Receita e despesa da imobiliária mês a mês, conferidas com o banco.</dd></div>
+      <div><dt>Pessoas</dt><dd>Proprietários, leads e clientes de administração num cadastro só, sem duplicar.</dd></div>
+      <div><dt>No celular e no escritório</dt><dd>O mesmo sistema no navegador, com tema claro ou escuro e backup diário.</dd></div>
+    </dl>
+  </div>
+</section>
+
+<section class="migracao secao" aria-labelledby="migra-t">
+  <div class="wrap">
+    <div class="secao-cab">
+      <h2 id="migra-t">Sai do sistema atual sem redigitar nada.</h2>
+      <p class="lead">Trocar de sistema costuma ser a parte que ninguém quer encarar. Aqui ela é a primeira coisa que funciona.</p>
+    </div>
+    <ul class="migra-lista">
+      <li><h3>Imóveis com fotos</h3><p>Quem vem do Jetimob conecta a chave da API e a carteira chega inteira: fotos, características, valores, proprietários e até os imóveis desativados.</p></li>
+      <li><h3>Contatos e contratos</h3><p>Pessoas pela planilha exportada do sistema antigo, sem duplicar quem já existe. Contratos de aluguel por CSV.</p></li>
+      <li><h3>Portais sem apagão</h3><p>Dá para conferir o feed novo lado a lado com o atual antes de trocar. Anúncios e destaques seguem no ar.</p></li>
+    </ul>
+  </div>
+</section>
+
+<section class="secao" id="planos" aria-labelledby="planos-t">
+  <div class="wrap">
+    <div class="secao-cab">
+      <h2 id="planos-t">Preço de fundador, travado para sempre.</h2>
+      <p class="lead">Quem assinar até 31 de março de 2027 paga o valor de fundador enquanto mantiver a assinatura ativa, mesmo depois que a tabela cheia entrar.</p>
+    </div>
+    <div class="planos-faixa">
+      <div class="plano">
+        <p class="plano-nome">Corretor</p>
+        <p class="plano-para">Corretor autônomo tocando a própria carteira.</p>
+        <p class="preco"><b>R$ 39</b><span>por mês</span></p>
+        <p class="preco-cheio">Tabela cheia <s>R$ 89</s></p>
+        <ul class="itens">
+          <li>1 usuário</li>
+          <li>Todos os recursos do sistema</li>
+          <li>Site próprio e feed para portais</li>
+          <li>50 usos de IA por mês</li>
+        </ul>
+        <a class="btn btn-contorno" href="https://minutei-crm-app.web.app/#cadastro" data-evento="teste_corretor">Testar 14 dias grátis</a>
+      </div>
+      <div class="plano destaque">
+        <p class="plano-nome">Equipe <small>Mais escolhido</small></p>
+        <p class="plano-para">Imobiliária pequena, até 5 pessoas na operação.</p>
+        <p class="preco"><b>R$ 119</b><span>por mês</span></p>
+        <p class="preco-cheio">Tabela cheia <s>R$ 249</s></p>
+        <ul class="itens">
+          <li>Até 5 usuários</li>
+          <li>Todos os recursos do sistema</li>
+          <li>Roleta de leads entre a equipe</li>
+          <li>200 usos de IA por mês</li>
+        </ul>
+        <a class="btn btn-acao" href="https://minutei-crm-app.web.app/#cadastro" data-evento="teste_equipe">Testar 14 dias grátis</a>
+      </div>
+      <div class="plano">
+        <p class="plano-nome">Imobiliária</p>
+        <p class="plano-para">Equipe formada, com administração de aluguel e corretores.</p>
+        <p class="preco"><b>R$ 199</b><span>por mês</span></p>
+        <p class="preco-cheio">Tabela cheia <s>R$ 449</s></p>
+        <ul class="itens">
+          <li>Até 15 usuários</li>
+          <li>Todos os recursos do sistema</li>
+          <li>Painel do gestor e ranking da equipe</li>
+          <li>500 usos de IA por mês</li>
+        </ul>
+        <a class="btn btn-contorno" href="https://minutei-crm-app.web.app/#cadastro" data-evento="teste_imobiliaria">Testar 14 dias grátis</a>
       </div>
     </div>
-  </section>
+    <p class="nota-planos">Nenhum recurso fica preso a plano: carteira, site, portais, administração, conciliação e esteira estão em todos. O que muda é o número de pessoas e de usos de IA. Teste de 14 dias sem cartão. No plano anual, 12 meses pelo preço de 10. Usuário extra além do limite: R$ 29 por mês.</p>
 
-  <section id="faq">
-    <div class="wrap">
-      <div class="section-head">
-        <span class="eyebrow">Dúvidas frequentes</span>
-        <h2>Antes de você perguntar</h2>
+    <div class="pro">
+      <div>
+        <h3>Minutei Pro: CRM e Contratos juntos</h3>
+        <p>O CRM cuida do negócio. O <a href="/contratos/" style="color:#fff">Minutei Contratos</a> gera a minuta pronta, com a sua marca, cláusulas variáveis e leitura de CNH por IA. Juntos, saem 20% mais barato que assinar separado.</p>
       </div>
-      <div class="faq">
-        <div class="faq-item">
-          <h3>O contrato gerado tem validade jurídica?</h3>
-          <p>Sim — o modelo já inclui cláusula de assinatura digital nos termos da legislação brasileira (Lei nº 14.063/2020 e ICP-Brasil), com a mesma validade de uma assinatura manuscrita.</p>
-        </div>
-        <div class="faq-item">
-          <h3>Preciso saber usar algum programa jurídico?</h3>
-          <p>Não. É um formulário guiado — você preenche os dados do imóvel, das partes e do pagamento, e o Minutei monta o contrato completo com todas as cláusulas.</p>
-        </div>
-        <div class="faq-item">
-          <h3>Dá pra cancelar quando quiser?</h3>
-          <p>Sim, sem fidelidade nem multa. Você pode voltar pro plano grátis a qualquer momento.</p>
-        </div>
-        <div class="faq-item">
-          <h3>Outros corretores da minha imobiliária podem usar a mesma conta?</h3>
-          <p>Sim — nos planos Autônomo, Imobiliária e Rede você convida sua equipe, e todos geram contratos com a mesma identidade visual, dentro do limite de usuários do seu plano.</p>
-        </div>
-        <div class="faq-item">
-          <h3>Meus dados ficam seguros?</h3>
-          <p>Sim. Senhas são armazenadas com hash (nunca em texto puro), cada imobiliária tem seus dados isolados no banco, e a conexão é sempre criptografada (HTTPS).</p>
-        </div>
+      <ul class="pro-precos">
+        <li><b>R$ 59</b>Pro Corretor</li>
+        <li><b>R$ 159</b>Pro Equipe</li>
+        <li><b>R$ 279</b>Pro Imobiliária</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="secao" style="background:var(--paper)" aria-labelledby="transp-t">
+  <div class="wrap">
+    <div class="secao-cab">
+      <h2 id="transp-t">Prometemos para março de 2027. Entregamos em novembro de 2026.</h2>
+      <p class="lead">No pré-lançamento dissemos que cadastro de imóveis, site próprio e feed para os portais chegariam até março. Está tudo no ar. Este é o retrato honesto de hoje.</p>
+    </div>
+    <div class="duas-colunas">
+      <div>
+        <h3>Funciona hoje</h3>
+        <p>Em uso diário numa imobiliária real.</p>
+        <ul class="lista-feito">
+          <li>Cadastro de imóveis com fotos, chaves e alerta de anúncio velho</li>
+          <li>Site próprio e feed para o Canal Pro (ZAP, Viva Real e OLX)</li>
+          <li>Leads do site, do Instagram e do Facebook direto na roleta</li>
+          <li>Vendas, locações, divisão de comissão e esteira</li>
+          <li>Administração de aluguel, cauções e conciliação do extrato</li>
+          <li>Painel Hoje, metas, relatórios, marketing e copiloto de IA</li>
+          <li>Importação completa do Jetimob, com fotos e proprietários</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Vem a seguir</h3>
+        <p>Incluso no seu plano, sem custo adicional.</p>
+        <ul class="lista-vem">
+          <li>Aviso de lead novo no WhatsApp do corretor, pela API oficial</li>
+          <li>Leads do Canal Pro recebidos direto, sem intermediário</li>
+          <li>Feed para o Chaves na Mão</li>
+          <li>Assinatura eletrônica ponta a ponta</li>
+        </ul>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <section>
-    <div class="wrap">
-      <div class="cta-band">
-        <h2>Pare de copiar e colar contrato no Word</h2>
-        <p>Crie sua conta grátis agora e gere seu primeiro contrato em minutos.</p>
-        <a class="btn btn-primary btn-lg" href="/app.html#signup">Criar conta grátis</a>
-      </div>
+<section class="conversa secao" id="conversa" aria-labelledby="conversa-t">
+  <div class="wrap conversa-grade">
+    <div>
+      <h2 id="conversa-t">Prefere que a gente te mostre?</h2>
+      <p class="lead">Deixe seu contato e a gente chama você no WhatsApp para uma conversa de 20 minutos, com a tela aberta, usando imóveis parecidos com os seus.</p>
+      <p class="lead">Se você vem do Jetimob, já dá para sair da conversa com a carteira importada no seu teste.</p>
     </div>
-  </section>
+    <form class="ficha" id="ficha" novalidate>
+      <div class="campo inteiro"><label for="f-nome">Seu nome</label><input id="f-nome" name="nome" autocomplete="name" required maxlength="120" /></div>
+      <div class="campo"><label for="f-whats">WhatsApp</label><input id="f-whats" name="whatsapp" type="tel" inputmode="tel" autocomplete="tel" placeholder="84 99999-9999" required maxlength="30" /></div>
+      <div class="campo"><label for="f-email">E-mail <small>(opcional)</small></label><input id="f-email" name="email" type="email" autocomplete="email" maxlength="160" /></div>
+      <div class="campo inteiro"><label for="f-imob">Imobiliária ou CRECI <small>(opcional)</small></label><input id="f-imob" name="imobiliaria" autocomplete="organization" maxlength="160" /></div>
+      <div class="campo"><label for="f-pessoas">Pessoas na operação</label>
+        <select id="f-pessoas" name="pessoas"><option value="">Escolha</option><option>Só eu</option><option>2 a 5</option><option>6 a 15</option><option>Mais de 15</option></select></div>
+      <div class="campo"><label for="f-sistema">Usa hoje</label>
+        <select id="f-sistema" name="sistema"><option value="">Escolha</option><option>Jetimob</option><option>Vista</option><option>Imoview</option><option>Kenlo</option><option>Planilha</option><option>Nenhum</option><option>Outro</option></select></div>
+      <div class="isca" aria-hidden="true"><label for="f-site">Site</label><input id="f-site" name="site" tabindex="-1" autocomplete="off" /></div>
+      <p class="ficha-msg" id="ficha-msg" role="status" aria-live="polite"></p>
+      <button class="btn btn-acao btn-lg" type="submit" id="ficha-btn">Quero que me chamem</button>
+      <p class="ficha-aviso">Usamos seu contato só para essa conversa. Nada de lista de spam.</p>
+    </form>
+  </div>
+</section>
+
+<section class="secao" id="duvidas" aria-labelledby="duvidas-t">
+  <div class="wrap">
+    <div class="secao-cab"><h2 id="duvidas-t">Perguntas que todo mundo faz.</h2></div>
+    <div class="duvidas">
+      <details><summary>Preciso de cartão para testar?</summary><p>Não. São 14 dias com o sistema inteiro liberado e até 5 usuários, sem cartão. O cartão só entra se você decidir continuar.</p></details>
+      <details><summary>O site da imobiliária já vem incluso?</summary><p>Sim, em todos os planos. Ele é montado a partir do seu cadastro de imóveis, com a sua marca, e todo contato feito nele entra no CRM. A gente configura o seu domínio com você.</p></details>
+      <details><summary>Quais portais recebem meus anúncios?</summary><p>O feed segue o padrão VRSync, lido pelo Canal Pro, que publica no ZAP Imóveis, Viva Real e OLX, com destaques e super destaques dentro do limite contratado no portal. O feed para o Chaves na Mão é o próximo da fila.</p></details>
+      <details><summary>Os leads chegam sozinhos no CRM?</summary><p>Os do seu site e dos anúncios do Instagram e Facebook, sim: caem direto na roleta. Os dos portais chegam hoje pela integração com o Jetimob, e a recepção direta do Canal Pro é a próxima entrega.</p></details>
+      <details><summary>Consigo trazer meus dados do sistema que uso hoje?</summary><p>Sim. Do Jetimob, a carteira vem pela integração, com fotos, proprietários e imóveis desativados. Contatos entram pela planilha exportada do sistema antigo, e contratos de aluguel por CSV.</p></details>
+      <details><summary>O preço de fundador sobe depois?</summary><p>Não, enquanto a sua assinatura seguir ativa. A tabela cheia vale para quem chegar depois de 31 de março de 2027. Se cancelar e voltar mais tarde, aí entra pela tabela nova.</p></details>
+      <details><summary>Meus dados ficam misturados com os de outra imobiliária?</summary><p>Não. Cada imobiliária tem sua área isolada, validada no servidor a cada leitura e escrita, com backup diário. Se a assinatura vencer, nada é apagado: o sistema fica só para leitura até você regularizar.</p></details>
+      <details><summary>Qual a diferença para o Minutei Contratos?</summary><p>O Contratos gera a minuta pronta para assinar. O CRM cuida de tudo que acontece antes e depois: lead, imóvel, negociação, comissão, carteira de aluguel e processo. O plano Pro junta os dois com 20% de desconto.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="final secao" aria-labelledby="final-t">
+  <div class="wrap">
+    <div>
+      <h2 id="final-t">Teste com a sua carteira, não com a nossa.</h2>
+      <p class="lead">Cadastre a imobiliária, traga seus imóveis e convide a equipe. Em 14 dias você sabe se ele substitui o que você usa hoje.</p>
+    </div>
+    <div class="final-acoes">
+      <a class="btn btn-acao btn-lg" href="https://minutei-crm-app.web.app/#cadastro" data-evento="teste_final">Testar 14 dias grátis</a>
+      <a class="btn btn-contorno btn-lg" href="#conversa">Quero que me mostrem</a>
+      <small>Sem cartão. Sem fidelidade. Cancela quando quiser.</small>
+    </div>
+  </div>
+</section>
+
 </main>
 
 <footer>
-  <div class="wrap foot-row">
-    <a href="/" class="brand"><img src="/brand/minutei-logo-dark.png" alt="Minutei" class="brand-logo brand-logo-sm" /></a>
-    <div class="foot-links">
-      <a href="#recursos">Recursos</a>
-      <a href="#planos">Planos</a>
-      <a href="#faq">Dúvidas</a>
+  <div class="wrap">
+    <a href="/" aria-label="Minutei"><img src="/brand/minutei-logo-light.png" alt="Minutei" /></a>
+    <nav aria-label="Rodapé">
+      <a href="https://minutei-crm-app.web.app/">Entrar no CRM</a>
+      <a href="/contratos/">Minutei Contratos</a>
+      <a href="/educacional/">Educacional</a>
       <a href="/blog/">Blog</a>
-      <a href="/app.html">Entrar</a>
-    </div>
-    <span class="copy">© 2026 Minutei. Todos os direitos reservados.</span>
+      <a href="mailto:contato@minutei.app.br">contato@minutei.app.br</a>
+    </nav>
+    <p>© 2026 Minutei</p>
   </div>
 </footer>
 
 <script>
+  // Mede os cliques de teste por posição na página (topo, hero, planos, final).
+  document.querySelectorAll('[data-evento]').forEach(function (a) {
+    a.addEventListener('click', function () { try { gtag('event', 'iniciar_teste', { posicao: a.dataset.evento }); } catch (e) {} });
+  });
+
   (function () {
-    var PRECOS = {
-      autonomo: {
-        mensal: 'R$49<small>/mês</small>',
-        anual: 'R$490<small>/ano</small><span class="per-month-eq">equivale a R$40,83/mês</span>',
-      },
-      imobiliaria: {
-        mensal: 'R$149<small>/mês</small>',
-        anual: 'R$1.490<small>/ano</small><span class="per-month-eq">equivale a R$124,17/mês</span>',
-      },
-    };
-    var btnMensal = document.getElementById('toggle-mensal');
-    var btnAnual = document.getElementById('toggle-anual');
-
-    function aplicar(ciclo) {
-      btnMensal.classList.toggle('active', ciclo === 'mensal');
-      btnAnual.classList.toggle('active', ciclo === 'anual');
-      ['autonomo', 'imobiliaria'].forEach(function (plano) {
-        document.getElementById('price-' + plano).innerHTML = PRECOS[plano][ciclo];
-        var cta = document.getElementById('cta-' + plano);
-        cta.href = '/app.html?plano=' + plano + (ciclo === 'anual' ? '&ciclo=anual' : '') + '#signup';
-      });
-    }
-
-    btnMensal.addEventListener('click', function () { aplicar('mensal'); });
-    btnAnual.addEventListener('click', function () { aplicar('anual'); });
+    var form = document.getElementById('ficha'), msg = document.getElementById('ficha-msg'), btn = document.getElementById('ficha-btn');
+    function erro(t, campo) { msg.textContent = t; msg.className = 'ficha-msg erro'; if (campo) campo.focus(); }
+    form.addEventListener('submit', async function (ev) {
+      ev.preventDefault();
+      var d = Object.fromEntries(new FormData(form).entries());
+      d.produto = 'CRM'; d.origem = 'home';
+      if ((d.nome || '').trim().length < 2) return erro('Diga seu nome para a gente saber com quem falar.', form.nome);
+      var dig = (d.whatsapp || '').replace(/\D/g, '');
+      if (dig.length < 10 || dig.length > 13) return erro('Confira o WhatsApp: use DDD e número, como 84 99999-9999.', form.whatsapp);
+      btn.disabled = true; btn.textContent = 'Enviando…'; msg.textContent = ''; msg.className = 'ficha-msg';
+      try {
+        var r = await fetch('/api/interesse', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) });
+        var j = await r.json().catch(function () { return {}; });
+        if (!r.ok) throw new Error(j.error || 'Não conseguimos registrar agora. Tente de novo em instantes.');
+        try { gtag('event', 'generate_lead', { origem: 'home' }); } catch (e) {}
+        form.innerHTML = '<div class="ficha-ok" tabindex="-1"><h3>Recebemos, ' + (d.nome.trim().split(' ')[0].replace(/[<>&"]/g, '')) + '.</h3><p>A gente chama você no WhatsApp em até um dia útil. Se quiser adiantar, <a href="https://minutei-crm-app.web.app/#cadastro">comece o teste agora</a>: o que você cadastrar fica lá.</p></div>';
+        form.querySelector('.ficha-ok').focus();
+      } catch (e) {
+        btn.disabled = false; btn.textContent = 'Quero que me chamem';
+        erro(e.message);
+      }
+    });
   })();
 </script>
-
 </body>
 </html>

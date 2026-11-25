@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Interessados — Minutei</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/brand/favicon-32.png?v=2" />
+<style>
+  @font-face { font-family: Metropolis; src: url(/brand/fonts/Metropolis-Regular.woff) format("woff"); font-weight: 400; }
+  @font-face { font-family: Metropolis; src: url(/brand/fonts/Metropolis-ExtraBold.woff) format("woff"); font-weight: 800; }
+  :root { --ink: #0A1628; --muted: #5B6B80; --line: #E3E8F0; --paper: #F7F9FC; --acao: #FF6B2B; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 400 15px/1.5 Metropolis, system-ui, sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-weight: 800; font-size: 28px; margin: 0 0 4px; letter-spacing: -.02em; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  .aviso { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+  .aviso a { color: var(--ink); font-weight: 800; }
+  .lista { display: grid; gap: 10px; }
+  .item { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; display: grid; grid-template-columns: 1fr auto; gap: 6px 16px; align-items: center; }
+  .item b { font-weight: 800; font-size: 17px; }
+  .meta { color: var(--muted); font-size: 14px; }
+  .acoes { grid-row: 1 / span 2; grid-column: 2; display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+  .btn { display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px; border-radius: 999px; font-weight: 800; font-size: 14px; text-decoration: none; background: var(--acao); color: #fff; }
+  .btn.sec { background: transparent; color: var(--ink); border: 2px solid var(--ink); }
+  @media (max-width: 600px) { .item { grid-template-columns: 1fr; } .acoes { grid-row: auto; grid-column: 1; justify-content: flex-start; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Interessados</h1>
+  <p class="sub">Quem pediu para ser chamado na página de vendas, do mais recente para o mais antigo.</p>
+  <div id="conteudo"><p class="sub">Carregando…</p></div>
+</main>
+<script>
+(async function () {
+  var el = document.getElementById('conteudo');
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  var r = await fetch('/api/interesse/admin', { credentials: 'same-origin' }).catch(function () { return null; });
+  if (!r) { el.innerHTML = '<div class="aviso">Sem conexão com o servidor. Recarregue a página.</div>'; return; }
+  if (r.status === 401) { el.innerHTML = '<div class="aviso">Entre com a conta de administrador do Minutei Contratos e volte para esta página. <a href="/app.html">Entrar</a></div>'; return; }
+  if (!r.ok) { el.innerHTML = '<div class="aviso">Esta conta não tem acesso à lista. O acesso é do e-mail definido em ADMIN_EMAIL no servidor.</div>'; return; }
+  var lista = (await r.json()).interessados || [];
+  if (!lista.length) { el.innerHTML = '<div class="aviso">Ninguém pediu contato ainda. Quando alguém preencher o formulário da home, aparece aqui.</div>'; return; }
+  el.innerHTML = '<div class="lista">' + lista.map(function (i) {
+    var dig = String(i.whatsapp || '').replace(/\D/g, '');
+    var wa = dig ? 'https://wa.me/' + (dig.length <= 11 ? '55' + dig : dig) : '';
+    var quando = i.criadoEm ? new Date(i.criadoEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '';
+    var meta = [i.imobiliaria, i.pessoas && ('equipe: ' + i.pessoas), i.sistema && ('usa: ' + i.sistema), i.email, quando].filter(Boolean).map(esc).join(' | ');
+    return '<div class="item"><b>' + esc(i.nome) + ' <span class="meta">' + esc(i.whatsapp) + '</span></b>'
+      + '<div class="acoes">' + (wa ? '<a class="btn" href="' + wa + '" target="_blank" rel="noopener">Chamar no WhatsApp</a>' : '')
+      + (i.email ? '<a class="btn sec" href="mailto:' + esc(i.email) + '">E-mail</a>' : '') + '</div>'
+      + '<span class="meta">' + meta + '</span></div>';
+  }).join('') + '</div>';
+})();
+</script>
+</body>
+</html>

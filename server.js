@@ -362,11 +362,63 @@ app.get("/healthz", async (req, res) => {
 });
 
 // ================= CAMINHOS DOS PRODUTOS =================
-// A home vende Contratos, e /contratos e o mesmo produto. Em vez de servir a
-// mesma pagina em dois enderecos (conteudo duplicado, que divide o SEO entre
-// os dois), /contratos redireciona pra raiz — o caminho funciona e existe uma
-// URL canonica so.
-app.get(["/contratos", "/contratos/"], (req, res) => res.redirect(301, "/"));
+// Desde 25/11/2026 a home vende o Minutei CRM (o produto completo) e o
+// gerador de contratos mora em /contratos/. A antiga /crm/ era a página de
+// pré-lançamento do CRM — hoje é o mesmo conteúdo da home, então redireciona
+// pra raiz e fica uma URL canônica só.
+app.get(["/crm", "/crm/"], (req, res) => res.redirect(301, "/"));
+// /contratos sem barra: o express.static já redireciona para /contratos/.
+// (Uma rota aqui casaria também com /contratos/ — o Express ignora a barra
+// final por padrão — e viraria laço de redirecionamento.)
+
+// ================= INTERESSADOS (página de vendas) =================
+// "Prefere que a gente te mostre?" — a pessoa deixa o contato e o Ricardo
+// liga. Sem conta, sem login: por isso o limite por IP e o campo-isca
+// (robô preenche tudo, gente não vê o campo "site").
+const interesseLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Recebemos vários pedidos deste endereço. Tente de novo em uma hora." },
+});
+const corta = (v, n) => String(v === undefined || v === null ? "" : v).trim().slice(0, n);
+
+app.post("/api/interesse", interesseLimiter, async (req, res) => {
+  const b = req.body || {};
+  if (corta(b.site, 200)) return res.json({ ok: true }); // isca: finge sucesso para o robô
+  const dados = {
+    nome: corta(b.nome, 120),
+    imobiliaria: corta(b.imobiliaria, 160),
+    whatsapp: corta(b.whatsapp, 30),
+    email: corta(b.email, 160).toLowerCase(),
+    pessoas: corta(b.pessoas, 40),
+    sistema: corta(b.sistema, 80),
+    produto: corta(b.produto, 40),
+    origem: corta(b.origem, 80),
+  };
+  const digitos = dados.whatsapp.replace(/\D/g, "");
+  if (dados.nome.length < 2) return res.status(400).json({ error: "Diga seu nome para a gente saber com quem falar." });
+  if (digitos.length < 10 || digitos.length > 13) return res.status(400).json({ error: "Confira o WhatsApp: use DDD e número, como 84 99999-9999." });
+  if (dados.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(dados.email)) return res.status(400).json({ error: "Confira o e-mail ou deixe em branco." });
+  try {
+    await store.addInteressado(crypto.randomUUID(), dados);
+  } catch (err) {
+    console.error("Falha ao gravar interessado:", err.message);
+    return res.status(500).json({ error: "Não conseguimos registrar agora. Tente de novo em instantes." });
+  }
+  // O aviso por e-mail é bônus: o contato já está gravado e aparece em
+  // /interessados.html mesmo que o e-mail não esteja configurado.
+  const para = process.env.EMAIL_INTERESSADOS || process.env.EMAIL_SUPORTE || "contato@minutei.app.br";
+  mailer.novoInteressado({ para, ...dados }).catch(() => {});
+  res.json({ ok: true });
+});
+
+app.get("/api/interesse/admin", requireAuth, async (req, res) => {
+  const admin = (process.env.ADMIN_EMAIL || "").trim().toLowerCase();
+  if (!admin || req.user.email.toLowerCase() !== admin) return res.status(404).json({ error: "Não encontrado" });
+  res.json({ interessados: await store.getInteressados() });
+});
 
 app.use(express.static(path.join(__dirname, "public")));
 app.use("/uploads", express.static(UPLOAD_DIR));
